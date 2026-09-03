@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fitornot/sheet-reading",
+  "title": "SheetReading",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sheetType", "warningSigns", "medicines", "followUp", "dietLine", "activityLine", "hospitalContact", "unreadable"],
+  "$defs": {
+    "Speakable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["yue", "cmn", "en"],
+      "properties": {
+        "yue": { "type": "string", "description": "Colloquial written Cantonese, traditional characters" },
+        "cmn": { "type": "string", "description": "Mandarin, simplified characters" },
+        "en": { "type": "string", "description": "Plain, warm English at roughly a 12-year-old reading level" }
+      }
+    },
+    "SourceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["section", "lineIndex", "quote"],
+      "properties": {
+        "section": { "type": "string" },
+        "lineIndex": { "type": ["integer", "null"], "minimum": 0 },
+        "quote": { "type": "string", "description": "Verbatim source text" }
+      }
+    },
+    "WarningSign": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symptom", "action", "source"],
+      "properties": {
+        "symptom": { "$ref": "#/$defs/Speakable" },
+        "action": { "$ref": "#/$defs/Speakable" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      }
+    },
+    "Medicine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "strength", "amount", "frequency", "duration", "spoken", "source"],
+      "properties": {
+        "name": { "type": "string" },
+        "strength": { "type": ["string", "null"] },
+        "amount": { "type": ["string", "null"] },
+        "frequency": { "type": ["string", "null"] },
+        "duration": { "type": ["string", "null"] },
+        "spoken": { "$ref": "#/$defs/Speakable" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      }
+    },
+    "FollowUpItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clinic", "when", "tests", "spoken", "source"],
+      "properties": {
+        "clinic": { "type": ["string", "null"] },
+        "when": { "type": ["string", "null"] },
+        "tests": { "type": ["string", "null"] },
+        "spoken": { "$ref": "#/$defs/Speakable" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      }
+    },
+    "TextLine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "spoken", "source"],
+      "properties": {
+        "text": { "type": "string" },
+        "spoken": { "$ref": "#/$defs/Speakable" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      }
+    },
+    "DietLine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "spoken", "source"],
+      "properties": {
+        "raw": { "type": "string" },
+        "spoken": { "$ref": "#/$defs/Speakable" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      },
+      "description": "recognisedType is added by rules after validation; the model never sets it"
+    },
+    "UnreadableRegion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["section", "description", "source"],
+      "properties": {
+        "section": { "type": "string" },
+        "description": { "type": "string" },
+        "source": { "$ref": "#/$defs/SourceReference" }
+      }
+    }
+  },
+  "properties": {
+    "sheetType": { "type": "string", "enum": ["hk_en", "cn_zh", "unknown"] },
+    "warningSigns": { "type": "array", "items": { "$ref": "#/$defs/WarningSign" } },
+    "medicines": { "type": "array", "items": { "$ref": "#/$defs/Medicine" } },
+    "followUp": { "type": "array", "items": { "$ref": "#/$defs/FollowUpItem" } },
+    "dietLine": { "oneOf": [{ "$ref": "#/$defs/DietLine" }, { "type": "null" }] },
+    "activityLine": { "oneOf": [{ "$ref": "#/$defs/TextLine" }, { "type": "null" }] },
+    "hospitalContact": { "oneOf": [{ "$ref": "#/$defs/TextLine" }, { "type": "null" }] },
+    "unreadable": { "type": "array", "items": { "$ref": "#/$defs/UnreadableRegion" } }
+  }
+}

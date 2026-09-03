@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#FAF7F2"/>
+  <!-- speech bubble -->
+  <path d="M96 128c0-26.5 21.5-48 48-48h224c26.5 0 48 21.5 48 48v176c0 26.5-21.5 48-48 48H232l-76 60c-9.9 7.8-24 .7-24-11.9V352h-36c-26.5 0-48-21.5-48-48V128z" fill="#0F6E68"/>
+  <!-- folded page inside the bubble -->
+  <path d="M188 136h96l40 40v112a12 12 0 0 1-12 12H188a12 12 0 0 1-12-12V148a12 12 0 0 1 12-12z" fill="#FAF7F2"/>
+  <path d="M284 136v40h40" fill="#B8600F"/>
+  <!-- text lines -->
+  <rect x="200" y="200" width="88" height="10" rx="5" fill="#0F6E68"/>
+  <rect x="200" y="226" width="72" height="10" rx="5" fill="#0F6E68"/>
+  <rect x="200" y="252" width="96" height="10" rx="5" fill="#B8600F"/>
+</svg>

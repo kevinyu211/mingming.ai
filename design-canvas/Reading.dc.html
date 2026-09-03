@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #FAF7F2; color: #1F1B16; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang HK", "Noto Sans TC", system-ui, sans-serif; font-size: 18px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E68; } a:hover { color: #0B5652; }
+    .foot { padding: 10px 20px 16px; border-top: 1px solid #EDE7DE; }
+    .foot p { margin: 0; font-size: 12px; line-height: 1.45; color: #6B625A; }
+    @keyframes scan { 0% { transform: translateY(0); } 100% { transform: translateY(232px); } }
+    @keyframes dot { 0%,100% { opacity: .3; } 50% { opacity: 1; } }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #FAF7F2; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 0 32px;">
+
+    <div style="position: relative; width: 196px; height: 268px; border-radius: 14px; background: #FFFFFF; overflow: hidden; padding: 26px 24px; display: flex; flex-direction: column; gap: 11px; box-shadow: 0 2px 4px rgba(31,27,22,.05), 0 18px 40px rgba(31,27,22,.10);">
+      <span style="width: 96px; height: 8px; border-radius: 4px; background: #1F1B16; opacity: .75;"></span>
+      <span style="width: 142px; height: 6px; border-radius: 3px; background: #E9E2D8;"></span>
+      <span style="width: 120px; height: 6px; border-radius: 3px; background: #E9E2D8;"></span>
+      <span style="width: 148px; height: 6px; border-radius: 3px; background: #E9E2D8; margin-top: 6px;"></span>
+      <span style="width: 132px; height: 6px; border-radius: 3px; background: #E9E2D8;"></span>
+      <span style="width: 146px; height: 6px; border-radius: 3px; background: #F0A95C; margin-top: 6px;"></span>
+      <span style="width: 104px; height: 6px; border-radius: 3px; background: #F0A95C;"></span>
+      <span style="width: 138px; height: 6px; border-radius: 3px; background: #E9E2D8; margin-top: 6px;"></span>
+      <span style="width: 82px; height: 6px; border-radius: 3px; background: #E9E2D8;"></span>
+      <span style="position: absolute; left: 0; right: 0; top: 18px; height: 40px; background: linear-gradient(to bottom, rgba(15,110,104,0), rgba(15,110,104,.14)); border-bottom: 2px solid #0F6E68; animation: scan 2.6s ease-in-out infinite alternate;"></span>
+    </div>
+
+    <div style="width: 100%; display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #0F6E68; color: #FFFFFF;">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+        </span>
+        <span style="font-size: 18px; color: #6B625A;">讀緊</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; background: #E6F0EF;">
+          <span style="width: 9px; height: 9px; border-radius: 999px; background: #0F6E68; animation: dot 1s ease-in-out infinite;"></span>
+        </span>
+        <span style="font-size: 19px; font-weight: 600; color: #0F6E68;">執緊重點</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px #E4DED4;"></span>
+        <span style="font-size: 18px; color: #B5AB9F;">準備讀出</span>
+      </div>
+    </div>
+
+    <div style="display: inline-flex; align-items: center; gap: 8px; background: #FFF1DF; color: #B8600F; border-radius: 999px; padding: 10px 16px;">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5"></path><circle cx="12" cy="16.5" r=".6" fill="currentColor"></circle><circle cx="12" cy="12" r="9"></circle></svg>
+      <span style="font-size: 15px; font-weight: 600;">首先會讀警號</span>
+    </div>
+  </div>
+
+  <div class="foot"><p>本工具只係幫你理解出院紙，唔係醫療建議，唔可以代替醫護人員嘅診斷同治療。有疑問請問返醫生或者藥劑師。AI 寫嘅內容可能有錯。</p></div>
+</div>
+</x-dc>
+</body>
+</html>

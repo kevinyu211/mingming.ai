@@ -1,0 +1,26 @@
+{
+  "artboards": [
+    { "file": "Consent.dc.html", "x": 0, "y": 0, "w": 390, "h": 844, "title": "S1 同意" },
+    { "file": "Setup.dc.html", "x": 490, "y": 0, "w": 390, "h": 844, "title": "S7 設定稱呼" },
+    { "file": "Capture.dc.html", "x": 980, "y": 0, "w": 390, "h": 844, "title": "S3 影相" },
+    { "file": "Reading.dc.html", "x": 1470, "y": 0, "w": 390, "h": 844, "title": "S3 讀緊" },
+    { "file": "NotASheet.dc.html", "x": 1960, "y": 0, "w": 390, "h": 844, "title": "S3 唔似出院紙" },
+
+    { "file": "Main.dc.html", "x": 0, "y": 1000, "w": 390, "h": 844, "title": "S4 卡片（警號讀緊）" },
+    { "file": "SourceSheet.dc.html", "x": 490, "y": 1000, "w": 390, "h": 844, "title": "S5 原文" },
+    { "file": "NoVoice.dc.html", "x": 980, "y": 1000, "w": 390, "h": 844, "title": "S10 冇聲" },
+    { "file": "Plan.dc.html", "x": 1470, "y": 1000, "w": 390, "h": 844, "title": "S8 計劃" },
+    { "file": "Settings.dc.html", "x": 1960, "y": 1000, "w": 390, "h": 844, "title": "S9 設定 · 刪除" },
+
+    { "file": "AskAnswered.dc.html", "x": 0, "y": 2000, "w": 390, "h": 844, "title": "S6 答到" },
+    { "file": "AskRefused.dc.html", "x": 490, "y": 2000, "w": 390, "h": 844, "title": "S6 唔答（要問藥劑師）" },
+    { "file": "AskReferral.dc.html", "x": 980, "y": 2000, "w": 390, "h": 844, "title": "S6 轉介資源" },
+    { "file": "AppIcon.dc.html", "x": 1470, "y": 2000, "w": 440, "h": 460, "title": "App icon" }
+  ],
+  "annotations": [
+    { "id": "note-flow", "x": 0, "y": -150, "w": 900, "text": "第一次入嚟：同意 → 設定稱呼 → 影相 → 讀緊 → 卡片。\n每一頁都有免責聲明，同埋 AI 標示。" },
+    { "id": "note-cards", "x": 0, "y": 1900, "w": 460, "text": "問問題：答案一定要引用一張卡同原文。改藥、停藥嘅問題唔會傳去模型，直接畀藥劑師電話。" },
+    { "id": "note-style", "x": 2450, "y": 1000, "w": 300, "text": "iOS grouped list + Wispr Flow 嘅語音條 + Notion 嘅留白。\n暖白底 #FAF7F2、白卡、teal #0F6E68、警號 amber #B8600F。" }
+  ],
+  "launch": { "view": "canvas" }
+}

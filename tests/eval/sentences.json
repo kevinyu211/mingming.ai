@@ -1,0 +1,41 @@
+{
+  "$comment": "Fixed inputs for the day-one listening test (provider_shortlist.md section 5, research.md R5). Three sentences per dialect: one warning sign, one medicine line with an English drug name and a number, one follow-up date. Synthetic content only - no real patient, no real hospital. Do not edit between provider runs, or the blind comparison is worthless.",
+  "sentences": [
+    {
+      "id": "yue-warning",
+      "dialect": "yue",
+      "kind": "warning",
+      "text": "如果胸口痛、氣促或者隻腳腫，即刻返急症室。"
+    },
+    {
+      "id": "yue-medicine",
+      "dialect": "yue",
+      "kind": "medicine",
+      "text": "Amlodipine 5mg，一粒，每日一次。"
+    },
+    {
+      "id": "yue-followup",
+      "dialect": "yue",
+      "kind": "followup",
+      "text": "兩個禮拜之後返專科門診覆診，要空肚抽血。"
+    },
+    {
+      "id": "cmn-warning",
+      "dialect": "cmn",
+      "kind": "warning",
+      "text": "如果出现胸痛、气促或者腿肿，请立即去急诊。"
+    },
+    {
+      "id": "cmn-medicine",
+      "dialect": "cmn",
+      "kind": "medicine",
+      "text": "氨氯地平片 5mg，一片，每天一次。"
+    },
+    {
+      "id": "cmn-followup",
+      "dialect": "cmn",
+      "kind": "followup",
+      "text": "两周后到心内科门诊复诊，需要空腹抽血。"
+    }
+  ]
+}

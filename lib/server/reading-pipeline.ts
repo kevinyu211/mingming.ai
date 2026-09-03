@@ -1,0 +1,190 @@
+/**
+ * SERVER ONLY. The read pipeline: everything `/api/read` does between "the model replied" and
+ * "these are the cards", with no HTTP in it.
+ *
+ *   validate → diet rules → build cards → banned-term filter → regenerate once → template
+ *
+ * Split out from the route on purpose. The route owns parsing, status codes and the NDJSON
+ * stream; this owns the safety gates, so they can be unit-tested against a mock provider with no
+ * API key and no `Request` (constitution III: rules decide, and a gate that is hard to test is a
+ * gate that rots).
+ *
+ * The only model call here is `phrase`, and only ever as a repair after the deterministic filter
+ * has already rejected a string. A model output never decides whether a card is shown.
+ *
+ * Logging discipline (principle V): nothing in this module logs, and nothing it returns is
+ * derived from anything but the supplied reading.
+ */
+import {
+  SheetReadingSchema,
+  type Card,
+  type CardType,
+  type SheetReading,
+  type SourceReference,
+  type Speakable,
+  type StoredReading,
+} from "@/lib/domain/schemas";
+import { ModelOutputError, type ModelProvider } from "@/lib/model/client";
+import type { PhraseDialect } from "@/lib/model/prompts";
+import { checkCard, checkSpeakable } from "@/lib/rules/banned-terms";
+import { buildCards } from "@/lib/rules/card-order";
+import { applyDietRules } from "@/lib/rules/diet-line";
+import { templateFor, type TemplateFacts } from "@/lib/rules/template-fallback";
+
+/** What the filter had to do, for the `done` event and the eval log. Never any text. */
+export interface FilterCounts {
+  /** Bodies the model successfully re-phrased after a banned-term hit. */
+  regenerated: number;
+  /** Bodies replaced by a fixed template because re-phrasing failed or hit the filter again. */
+  templated: number;
+}
+
+export type ReadingPipelineResult =
+  /** `sheetType: "unknown"` — the app declines rather than summarising (FR-006, principle IV). */
+  | { kind: "unknown" }
+  | { kind: "reading"; cards: Card[]; reading: StoredReading; filter: FilterCounts };
+
+export interface ReadingPipelineOptions {
+  /** Injected so tests can pin `readAt`. */
+  now?: () => Date;
+  /** Which dialect the repair prompt leads with. Both, unless a caller knows better. */
+  dialect?: PhraseDialect;
+}
+
+/** Stand-in for a card that quotes nothing off the page (`noWarnings`, `referral`). */
+export const NO_SOURCE: SourceReference = { section: "", lineIndex: null, quote: "" };
+
+/**
+ * Last resort. `lib/rules/template-fallback.ts` documents the one case where a template can still
+ * trip the filter: the template is built from verbatim fact fields, so a sheet that itself prints
+ * a numeric target about the person ("鹽 2g/日" on the diet line) renders into a filtered string.
+ * Principle VI is a MUST — every shown or spoken string passes the filter — so that case falls
+ * back to this fixed sentence and the user reads the line off the page instead.
+ */
+export const SEE_THE_SHEET: Speakable = {
+  yue: "呢一行請直接睇返張紙，或者打張紙上面嘅電話問。",
+  cmn: "这一行请直接看纸，或者打纸上面的电话问。",
+  en: "Have a look at this line on the sheet itself, or ring the number printed on it and ask.",
+};
+
+/** `templateFor`, with the principle VI guarantee actually enforced. */
+export function safeTemplate(type: CardType, facts: TemplateFacts): Speakable {
+  const template = templateFor(type, facts);
+  return checkSpeakable(template).ok ? template : SEE_THE_SHEET;
+}
+
+/**
+ * Runs the rules over one model reading.
+ *
+ * `provider` is narrowed to `phrase` so a test can pass `{ phrase: vi.fn() }` — and so it is
+ * structurally impossible for this module to start a second read.
+ *
+ * Throws `ModelOutputError` when the reading does not match the schema. The provider already
+ * validated it, so this is a second gate rather than the first one: the contract says nothing but
+ * `status` may be emitted before the reading is validated, and that guarantee should not depend on
+ * a different module keeping its promise.
+ */
+export async function runReadingPipeline(
+  reading: SheetReading,
+  provider: Pick<ModelProvider, "phrase">,
+  options: ReadingPipelineOptions = {},
+): Promise<ReadingPipelineResult> {
+  const parsed = SheetReadingSchema.safeParse(reading);
+  if (!parsed.success) {
+    throw new ModelOutputError(
+      "schema",
+      parsed.error.issues.map((issue) => ({ path: issue.path.join("."), code: issue.code })),
+    );
+  }
+  const validated = parsed.data;
+  if (validated.sheetType === "unknown") return { kind: "unknown" };
+
+  // Rule-generated, not model-generated (FR-025): the printed line decides the diet type.
+  const stored: StoredReading = {
+    ...validated,
+    dietLine: applyDietRules(validated),
+    readAt: (options.now?.() ?? new Date()).toISOString(),
+  };
+
+  const filter: FilterCounts = { regenerated: 0, templated: 0 };
+  const dialect = options.dialect ?? "both";
+  const cards: Card[] = [];
+
+  // Sequential on purpose: a hit is rare, and firing every repair at once would turn one bad
+  // reading into a burst of model calls.
+  for (const card of buildCards(stored)) {
+    const check = checkCard(card);
+    if (check.ok) {
+      cards.push(card);
+      continue;
+    }
+    cards.push(await repair(card, check.matches, provider, dialect, filter));
+  }
+
+  return { kind: "reading", cards, reading: withFilteredSpoken(stored, cards), filter };
+}
+
+/**
+ * One banned-term hit: re-phrase once naming the matched terms, re-check, then template
+ * (constitution VI). A `phrase` call that fails outright is treated as a failed repair rather than
+ * a failed read — the expensive part already succeeded, and the template is a safe answer.
+ */
+async function repair(
+  card: Card,
+  avoid: string[],
+  provider: Pick<ModelProvider, "phrase">,
+  dialect: PhraseDialect,
+  filter: FilterCounts,
+): Promise<Card> {
+  const facts: TemplateFacts = card.facts ?? {};
+
+  let regenerated: Speakable | null = null;
+  try {
+    const { result } = await provider.phrase({
+      cardType: card.type,
+      facts,
+      source: card.source ?? NO_SOURCE,
+      avoid,
+      dialect,
+    });
+    regenerated = result.spoken;
+  } catch {
+    regenerated = null;
+  }
+
+  if (regenerated !== null && checkSpeakable(regenerated).ok) {
+    filter.regenerated += 1;
+    return { ...card, body: regenerated };
+  }
+
+  filter.templated += 1;
+  // A template is rule-generated, so the AI label comes off with the AI text.
+  return { ...card, body: safeTemplate(card.type, facts), aiGenerated: false };
+}
+
+/**
+ * Copies filtered bodies back onto the reading, so the stored copy cannot resurrect rejected text
+ * if the client re-renders it with `buildCards` after a reload.
+ *
+ * Only the fields with a lossless 1:1 card mapping are copied. A warning card's body is
+ * `symptom` and `action` joined, which has no inverse, so `warningSigns` is left exactly as
+ * extracted: `cards` is the authoritative filtered output, and a re-render from the stored reading
+ * has to re-run the filter.
+ */
+function withFilteredSpoken(stored: StoredReading, cards: Card[]): StoredReading {
+  const bodies = new Map(cards.map((card) => [card.id, card.body]));
+  return {
+    ...stored,
+    medicines: stored.medicines.map((m, i) => withSpoken(m, bodies.get(`medicine-${i}`))),
+    followUp: stored.followUp.map((f, i) => withSpoken(f, bodies.get(`followup-${i}`))),
+    dietLine: stored.dietLine === null ? null : withSpoken(stored.dietLine, bodies.get("diet")),
+    activityLine:
+      stored.activityLine === null
+        ? null
+        : withSpoken(stored.activityLine, bodies.get("activity")),
+  };
+}
+
+function withSpoken<T extends { spoken: Speakable }>(item: T, spoken: Speakable | undefined): T {
+  return spoken === undefined ? item : { ...item, spoken };
+}

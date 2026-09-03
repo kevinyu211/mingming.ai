@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #FAF7F2; color: #1F1B16; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang HK", "Noto Sans TC", system-ui, sans-serif; font-size: 18px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E68; } a:hover { color: #0B5652; }
+    .foot { padding: 10px 20px 16px; border-top: 1px solid #EDE7DE; }
+    .foot p { margin: 0; font-size: 12px; line-height: 1.45; color: #6B625A; }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #FAF7F2; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; padding: 0 34px; text-align: center;">
+    <div style="position: relative; width: 138px; height: 178px; border-radius: 14px; background: #FFFFFF; box-shadow: inset 0 0 0 2px #EDE7DE; display: flex; align-items: center; justify-content: center;">
+      <span style="position: absolute; inset: 0; border-radius: 14px; background: repeating-linear-gradient(135deg, rgba(233,226,216,.35) 0 6px, transparent 6px 14px);"></span>
+      <svg viewBox="0 0 24 24" width="52" height="52" fill="none" stroke="#B5AB9F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="position: relative;"><path d="M9.3 9.2a2.7 2.7 0 1 1 3.9 2.4c-.8.4-1.2 1-1.2 1.9v.5"></path><circle cx="12" cy="17.6" r=".8" fill="#B5AB9F"></circle></svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <h1 style="margin: 0; font-size: 26px; line-height: 1.3; font-weight: 700; letter-spacing: -0.4px;">睇落唔似出院紙</h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.65; color: #6B625A;">影返成張出院紙，或者用示範紙睇下點運作。</p>
+    </div>
+  </div>
+
+  <div style="padding: 0 20px 18px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border-radius: 999px; background: #0F6E68; color: #FFFFFF; font-size: 18px; font-weight: 600; box-shadow: 0 6px 18px rgba(15,110,104,.24);">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.2"></circle></svg>
+      <span>再影一次</span>
+    </div>
+    <div style="display: inline-flex; align-items: center; justify-content: center; min-height: 54px; border-radius: 999px; background: #FFFFFF; color: #1F1B16; font-size: 18px; font-weight: 600; box-shadow: 0 1px 2px rgba(31,27,22,.05), 0 6px 18px rgba(31,27,22,.05);">用示範紙</div>
+  </div>
+  <div class="foot"><p>本工具只係幫你理解出院紙，唔係醫療建議，唔可以代替醫護人員嘅診斷同治療。有疑問請問返醫生或者藥劑師。AI 寫嘅內容可能有錯。</p></div>
+</div>
+</x-dc>
+</body>
+</html>

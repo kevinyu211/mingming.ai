@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>好味小廚 菜單（negative fixture — not a discharge sheet）</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1100px; height: 1500px;
+    background: #fdf6e6; color: #2a1a10;
+    font-family: "Songti SC", "SimSun", "STSong", serif;
+    font-size: 26px; line-height: 1.5;
+    padding: 60px 70px;
+  }
+  .name { text-align: center; font-family: "Kaiti SC", "STKaiti", "KaiTi", serif; font-size: 62px; letter-spacing: 10px; color: #8c1c13; }
+  .sub { text-align: center; font-size: 22px; letter-spacing: 6px; color: #6b4a30; margin-top: 6px; }
+  .rule { border-top: 3px double #8c1c13; margin: 22px 0; }
+  h2 { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 30px; letter-spacing: 4px; color: #8c1c13; margin: 26px 0 10px; }
+  .item { display: flex; align-items: baseline; margin-bottom: 9px; }
+  .dish { white-space: nowrap; }
+  .dots { flex: 1; border-bottom: 2px dotted #b79a78; margin: 0 12px; position: relative; top: -6px; }
+  .price { white-space: nowrap; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+  .foot { margin-top: 34px; text-align: center; font-size: 20px; color: #6b4a30; }
+  .note { position: absolute; bottom: 26px; left: 70px; right: 70px; text-align: center; font-size: 14px; color: #9a8a76; }
+</style>
+</head>
+<body>
+  <div class="name">好味小廚</div>
+  <div class="sub">家常小菜 · 麵飯 · 例湯</div>
+  <div class="rule"></div>
+
+  <h2>招牌小菜</h2>
+  <div class="item"><span class="dish">豉油皇炒麵</span><span class="dots"></span><span class="price">$58</span></div>
+  <div class="item"><span class="dish">薑蔥牛肉飯</span><span class="dots"></span><span class="price">$62</span></div>
+  <div class="item"><span class="dish">蒸水蛋（配肉碎）</span><span class="dots"></span><span class="price">$46</span></div>
+  <div class="item"><span class="dish">椒鹽豆腐</span><span class="dots"></span><span class="price">$48</span></div>
+  <div class="item"><span class="dish">蒜蓉炒時蔬</span><span class="dots"></span><span class="price">$42</span></div>
+
+  <h2>湯麵 · 粥品</h2>
+  <div class="item"><span class="dish">雲吞湯麵</span><span class="dots"></span><span class="price">$44</span></div>
+  <div class="item"><span class="dish">牛腩河粉</span><span class="dots"></span><span class="price">$52</span></div>
+  <div class="item"><span class="dish">皮蛋瘦肉粥</span><span class="dots"></span><span class="price">$38</span></div>
+  <div class="item"><span class="dish">白粥（例）</span><span class="dots"></span><span class="price">$18</span></div>
+
+  <h2>飲品</h2>
+  <div class="item"><span class="dish">凍檸茶</span><span class="dots"></span><span class="price">$22</span></div>
+  <div class="item"><span class="dish">熱奶茶</span><span class="dots"></span><span class="price">$22</span></div>
+  <div class="item"><span class="dish">豆漿（熱／凍）</span><span class="dots"></span><span class="price">$16</span></div>
+
+  <div class="rule"></div>
+  <div class="foot">堂食加一 · 外賣自取九折<br>營業時間 11:00 – 21:30 · 逢星期二休息</div>
+  <div class="foot" style="margin-top:18px;font-size:16px;">虛構餐廳，測試用樣張 — fictional restaurant, test fixture</div>
+</body>
+</html>

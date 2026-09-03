@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+/*
+ * Palette and type from design.md section 3, as approved on the design canvas.
+ *
+ * Warm, never clinical: no hospital blue, no lab-coat white, and amber rather than red for the
+ * warning card so it reads as "attention" and not as a verdict about the person.
+ *
+ * Light only, deliberately. The canvas was designed and reviewed in one palette; a dark theme that
+ * nobody has looked at is a worse demo than a light app on a dark phone, and `color-scheme: light`
+ * keeps the browser's own controls in step. Bring dark back by designing it, not by inverting.
+ */
+:root {
+  color-scheme: light;
+
+  --ground: #faf7f2;
+  --ink: #1f1b16;
+  --muted: #6b625a;
+  --faint: #b5ab9f;
+  --accent: #0f6e68;
+  --accent-ink: #ffffff;
+  /*
+   * The canvas drew this amber as #B8600F, which measures 4.0:1 on its own tint — under the 4.5:1
+   * the brief requires, and the warning card is the one place text must never be hard to read.
+   * #A85408 is the nearest amber that clears it: 4.80 on the tint, 4.99 on the ground, 5.33 on
+   * white. Same hue, same "attention not alarm" reading.
+   */
+  --warning-fg: #a85408;
+  --warning-bg: #fff1df;
+  --danger: #b3402e;
+  --card: #ffffff;
+  --card-border: #e9e2d8;
+  --hairline: #ede7de;
+  --soft: #f3eee6;
+  --panel: #f0ebe3;
+  --track: #ede8e0;
+  --chip: #e6f0ef;
+
+  /* Height reserved for the fixed disclaimer footer, so nothing hides behind it. */
+  --disclaimer-height: 4.5rem;
+
+  /*
+   * System font stacks, no web-font download. iOS/macOS resolve to SF Pro and PingFang, which is
+   * where the native feel comes from; Android gets Noto Sans CJK; Windows gets YaHei/JhengHei.
+   */
+  --font-noto-tc:
+    "PingFang HK", "PingFang TC", "Hiragino Sans TC", "Noto Sans TC", "Noto Sans CJK TC",
+    "Microsoft JhengHei", "Source Han Sans TC", sans-serif;
+  --font-noto-sc:
+    "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei",
+    "Source Han Sans SC", sans-serif;
+  --font-inter:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, ui-sans-serif, system-ui,
+    sans-serif;
+}
+
+@theme inline {
+  --color-ground: var(--ground);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-warning-fg: var(--warning-fg);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger: var(--danger);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-hairline: var(--hairline);
+  --color-soft: var(--soft);
+  --color-panel: var(--panel);
+  --color-track: var(--track);
+  --color-chip: var(--chip);
+
+  --radius-card: 16px;
+
+  --font-sans:
+    var(--font-inter), var(--font-noto-tc), var(--font-noto-sc), ui-sans-serif, system-ui,
+    sans-serif;
+  --font-hant: var(--font-noto-tc), var(--font-inter), sans-serif;
+  --font-hans: var(--font-noto-sc), var(--font-inter), sans-serif;
+
+  /* design.md section 3, iOS scale: large title 34, card title 22, dose 20, body 18, meta 15. */
+  --text-display: 34px;
+  --text-display--line-height: 1.15;
+  --text-display--letter-spacing: -0.6px;
+  --text-card-title: 22px;
+  --text-card-title--line-height: 1.35;
+  --text-card-title--letter-spacing: -0.3px;
+  --text-med: 20px;
+  --text-med--line-height: 1.4;
+  --text-body: 18px;
+  --text-body--line-height: 1.55;
+  --text-meta: 15px;
+  --text-meta--line-height: 1.45;
+  --text-fine: 13px;
+  --text-fine--line-height: 1.45;
+
+  /* One soft, layered card shadow. Separation comes from the shadow, not from an outline. */
+  --shadow-card: 0 1px 2px rgb(31 27 22 / 0.04), 0 8px 24px rgb(31 27 22 / 0.045);
+  --shadow-raised: 0 6px 18px rgb(15 110 104 / 0.24);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    /* 18px body: the bystander is 72 and reading over a shoulder. */
+    font-size: 18px;
+    line-height: 1.55;
+    /*
+     * Room for the fixed disclaimer footer. `components/Disclaimer.tsx` measures itself and
+     * writes the real height here, which already includes its own safe-area padding — so the
+     * inset must not be added a second time. The 4.5rem seed above is only the value used for
+     * the first paint, before that measurement lands.
+     */
+    padding-bottom: var(--disclaimer-height);
+  }
+
+  /* Simplified text gets the SC face; traditional keeps the TC face from --font-sans. */
+  [lang="zh-CN"],
+  [lang="zh-Hans"],
+  .font-hans {
+    font-family: var(--font-hans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    text-wrap: balance;
+  }
+
+  :where(input, button, select, textarea) {
+    font: inherit;
+    color: inherit;
+  }
+
+  :where(button, a, [role="button"]):focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  /* Minimum tap target, design.md section 7: 48 x 48, no exceptions. */
+  .tap {
+    min-block-size: 48px;
+    min-inline-size: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Printed facts: drug names, strengths, frequencies. Tabular figures, a size up. */
+  .dose {
+    font-family: var(--font-inter), var(--font-noto-tc), sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.2px;
+  }
+
+  /* The grouped-list card: white on the warm ground, no border, one soft shadow. */
+  .surface {
+    background-color: var(--card);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* The hairline between rows inside one card, inset from the left like iOS. */
+  .hairrow + .hairrow {
+    border-top: 1px solid var(--hairline);
+  }
+}
+
+/* design.md section 3: respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

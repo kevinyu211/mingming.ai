@@ -1,0 +1,166 @@
+{
+  "sheetType": "hk_en",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果胸口痛。",
+        "cmn": "这张纸上写着，如果胸口痛。",
+        "en": "The sheet says: if she gets chest pain."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 4,
+        "quote": "Return to A&E immediately if chest pain, shortness of breath or leg swelling"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果唞唔到氣、好喘。",
+        "cmn": "这张纸上写着，如果呼吸急促、喘不上气。",
+        "en": "The sheet says: if she's short of breath or can't catch her breath."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 4,
+        "quote": "Return to A&E immediately if chest pain, shortness of breath or leg swelling"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果隻腳腫咗。",
+        "cmn": "这张纸上写着，如果腿肿了。",
+        "en": "The sheet says: if her leg swells up."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 4,
+        "quote": "Return to A&E immediately if chest pain, shortness of breath or leg swelling"
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "Amlodipine",
+      "strength": "5mg",
+      "amount": "1 tab",
+      "frequency": "daily",
+      "duration": null,
+      "spoken": {
+        "yue": "Amlodipine 5mg，一粒，每日一次。",
+        "cmn": "Amlodipine 5mg，一片，每天一次。",
+        "en": "Amlodipine 5mg, 1 tab, once a day."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 0,
+        "quote": "1. Amlodipine 5mg 1 tab daily"
+      }
+    },
+    {
+      "name": "Metformin",
+      "strength": "500mg",
+      "amount": "1 tab",
+      "frequency": "BD with meals",
+      "duration": null,
+      "spoken": {
+        "yue": "Metformin 500mg，一粒，一日兩次，同飯一齊食。",
+        "cmn": "Metformin 500mg，一片，一天两次，随餐服用。",
+        "en": "Metformin 500mg, 1 tab, twice a day, with meals."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 1,
+        "quote": "2. Metformin 500mg 1 tab BD with meals"
+      }
+    },
+    {
+      "name": "Atorvastatin",
+      "strength": "20mg",
+      "amount": "1 tab",
+      "frequency": "nocte",
+      "duration": null,
+      "spoken": {
+        "yue": "Atorvastatin 20mg，一粒，每晚一次。",
+        "cmn": "Atorvastatin 20mg，一片，每晚一次。",
+        "en": "Atorvastatin 20mg, 1 tab, once at night."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 2,
+        "quote": "3. Atorvastatin 20mg 1 tab nocte"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "SOPD",
+      "when": "2/52",
+      "tests": "fasting bloods",
+      "spoken": {
+        "yue": "張紙寫住，兩個星期後去 SOPD 專科門診覆診，去之前要空肚抽血。",
+        "cmn": "这张纸上写着，两周后去 SOPD 专科门诊复诊，去之前要空腹抽血。",
+        "en": "The sheet says to come back to the SOPD clinic in two weeks, with a fasting blood test before you go."
+      },
+      "source": {
+        "section": "Discharge Medication(s) & Follow-up Plan",
+        "lineIndex": 3,
+        "quote": "FU SOPD 2/52 with fasting bloods"
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "Diet: low salt, low fat.",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低鹽、低脂。",
+      "cmn": "这张纸饮食那一行写着：低盐、低脂。",
+      "en": "The food line on the sheet says: low salt, low fat."
+    },
+    "source": {
+      "section": "Treatment and Outcome",
+      "lineIndex": 3,
+      "quote": "Diet: low salt, low fat."
+    }
+  },
+  "activityLine": {
+    "text": "Light activity, no heavy lifting x 2/52.",
+    "spoken": {
+      "yue": "張紙寫住：做返啲輕鬆嘅活動，兩個星期內唔好搬重嘢。",
+      "cmn": "这张纸上写着：做轻度活动，两周内不要提重物。",
+      "en": "The sheet says: keep activity light, and no heavy lifting for two weeks."
+    },
+    "source": {
+      "section": "Treatment and Outcome",
+      "lineIndex": 3,
+      "quote": "Light activity, no heavy lifting x 2/52."
+    }
+  },
+  "hospitalContact": {
+    "text": "Ward enquiries: 2xxx xxxx",
+    "spoken": {
+      "yue": "病房查詢電話：2xxx xxxx。",
+      "cmn": "病房咨询电话：2xxx xxxx。",
+      "en": "Ward enquiries: 2xxx xxxx."
+    },
+    "source": {
+      "section": "Ward enquiries",
+      "lineIndex": 0,
+      "quote": "Ward enquiries: 2xxx xxxx"
+    }
+  },
+  "unreadable": []
+}

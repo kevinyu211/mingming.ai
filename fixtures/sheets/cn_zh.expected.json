@@ -1,0 +1,166 @@
+{
+  "sheetType": "cn_zh",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果出現胸痛。",
+        "cmn": "这张纸上写着，如果出现胸痛。",
+        "en": "The sheet says: if she gets chest pain."
+      },
+      "action": {
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊，不要等。",
+        "en": "go straight to A&E — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 6,
+        "quote": "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果氣促、唞唔到氣。",
+        "cmn": "这张纸上写着，如果气促、喘不上气。",
+        "en": "The sheet says: if she's short of breath or can't catch her breath."
+      },
+      "action": {
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊，不要等。",
+        "en": "go straight to A&E — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 6,
+        "quote": "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果下肢水腫、隻腳腫咗。",
+        "cmn": "这张纸上写着，如果下肢水肿、腿肿了。",
+        "en": "The sheet says: if her legs swell up."
+      },
+      "action": {
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊，不要等。",
+        "en": "go straight to A&E — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 6,
+        "quote": "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "苯磺酸氨氯地平片",
+      "strength": "5mg",
+      "amount": null,
+      "frequency": "每日一次",
+      "duration": null,
+      "spoken": {
+        "yue": "苯磺酸氨氯地平片 5mg，每日一次。張紙冇寫每次食幾多粒。",
+        "cmn": "苯磺酸氨氯地平片 5mg，每天一次。这张纸没有写每次服几片。",
+        "en": "苯磺酸氨氯地平片 5mg, 每日一次. The sheet doesn't say how many to take each time."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 1,
+        "quote": "2. 苯磺酸氨氯地平片 5mg 每日一次"
+      }
+    },
+    {
+      "name": "盐酸二甲双胍片",
+      "strength": "0.5g",
+      "amount": null,
+      "frequency": "每日两次 随餐",
+      "duration": null,
+      "spoken": {
+        "yue": "盐酸二甲双胍片 0.5g，每日兩次，隨餐食。張紙冇寫每次食幾多粒。",
+        "cmn": "盐酸二甲双胍片 0.5g，每天两次，随餐服用。这张纸没有写每次服几片。",
+        "en": "盐酸二甲双胍片 0.5g, 每日两次 随餐. The sheet doesn't say how many to take each time."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 2,
+        "quote": "3. 盐酸二甲双胍片 0.5g 每日两次 随餐"
+      }
+    },
+    {
+      "name": "阿托伐他汀钙片",
+      "strength": "20mg",
+      "amount": null,
+      "frequency": "每晚一次",
+      "duration": null,
+      "spoken": {
+        "yue": "阿托伐他汀钙片 20mg，每晚一次。張紙冇寫每次食幾多粒。",
+        "cmn": "阿托伐他汀钙片 20mg，每晚一次。这张纸没有写每次服几片。",
+        "en": "阿托伐他汀钙片 20mg, 每晚一次. The sheet doesn't say how many to take each time."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 3,
+        "quote": "4. 阿托伐他汀钙片 20mg 每晚一次"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "心内科门诊",
+      "when": "2周后",
+      "tests": "复查空腹血糖",
+      "spoken": {
+        "yue": "張紙寫住，2周后去心内科门诊覆診，仲要复查空腹血糖。",
+        "cmn": "这张纸上写着，2周后去心内科门诊复诊，并复查空腹血糖。",
+        "en": "The sheet says to come back to 心内科门诊 in 2周后, with a 复查空腹血糖 as well."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 5,
+        "quote": "6. 2周后心内科门诊复诊，复查空腹血糖"
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "低盐低脂饮食，戒烟限酒",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低盐低脂饮食，戒烟限酒。",
+      "cmn": "这张纸饮食那一行写着：低盐低脂饮食，戒烟限酒。",
+      "en": "The food line on the sheet says: 低盐低脂饮食，戒烟限酒."
+    },
+    "source": {
+      "section": "出院医嘱",
+      "lineIndex": 0,
+      "quote": "1. 低盐低脂饮食，戒烟限酒"
+    }
+  },
+  "activityLine": {
+    "text": "适当活动，两周内避免提重物",
+    "spoken": {
+      "yue": "張紙寫住：适当活动，两周内避免提重物。",
+      "cmn": "这张纸上写着：适当活动，两周内避免提重物。",
+      "en": "The sheet says: 适当活动，两周内避免提重物."
+    },
+    "source": {
+      "section": "出院医嘱",
+      "lineIndex": 7,
+      "quote": "8. 适当活动，两周内避免提重物"
+    }
+  },
+  "hospitalContact": {
+    "text": "联系电话：0XXX-XXXXXXX（心内科病房）",
+    "spoken": {
+      "yue": "聯絡電話：0XXX-XXXXXXX，心内科病房。",
+      "cmn": "联系电话：0XXX-XXXXXXX，心内科病房。",
+      "en": "Contact number: 0XXX-XXXXXXX, 心内科病房."
+    },
+    "source": {
+      "section": "联系方式",
+      "lineIndex": 0,
+      "quote": "联系电话：0XXX-XXXXXXX（心内科病房）"
+    }
+  },
+  "unreadable": []
+}

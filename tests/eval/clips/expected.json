@@ -1,0 +1,55 @@
+{
+  "$comment": "Expected transcripts for the ten speech-to-text clips (provider_shortlist.md section 5, research.md R6). Record the clips as described in README.md, one file per id, then run `npx tsx tests/eval/stt.ts`. Content is synthetic: a fictional sheet, a fictional medicine line. Never record a real patient.",
+  "clips": [
+    {
+      "id": "yue-01",
+      "language": "yue",
+      "text": "呢隻藥係咪一日食三次？"
+    },
+    {
+      "id": "yue-02",
+      "language": "yue",
+      "text": "幾時要返去覆診？"
+    },
+    {
+      "id": "yue-03",
+      "language": "yue",
+      "text": "如果佢覺得頭暈，係咪要即刻返醫院？"
+    },
+    {
+      "id": "yue-04",
+      "language": "yue",
+      "text": "張紙度寫住飲食方面要注意乜嘢？"
+    },
+    {
+      "id": "cmn-01",
+      "language": "cmn",
+      "text": "这个药一天吃几次？"
+    },
+    {
+      "id": "cmn-02",
+      "language": "cmn",
+      "text": "什么时候回来复诊？"
+    },
+    {
+      "id": "cmn-03",
+      "language": "cmn",
+      "text": "出院记录上写的低盐低脂是什么意思？"
+    },
+    {
+      "id": "en-01",
+      "language": "en",
+      "text": "What does follow up SOPD two weeks mean?"
+    },
+    {
+      "id": "en-02",
+      "language": "en",
+      "text": "How many times a day does she take the Amlodipine?"
+    },
+    {
+      "id": "en-03",
+      "language": "en",
+      "text": "Which warning signs mean we go back to the hospital?"
+    }
+  ]
+}

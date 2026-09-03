@@ -1,0 +1,167 @@
+/**
+ * Domain schemas: the single source of truth for the shape of a SheetReading and the
+ * model's structured outputs. Mirrors specs/001-discharge-sheet-agent/contracts/sheet-reading.schema.json.
+ *
+ * This module has NO dependency on the model SDK so that lib/rules (deterministic gates,
+ * constitution principle III) can import types from here without crossing the lint boundary.
+ * lib/model/schemas.ts re-exports everything for the model layer.
+ */
+import { z } from "zod";
+
+/**
+ * One spoken line in the three forms the app can read aloud: colloquial written Cantonese
+ * (traditional), Mandarin (simplified), and plain English. All three are required — a card the
+ * app cannot speak in every offered language is a half-built card.
+ */
+export const SpeakableSchema = z.strictObject({
+  yue: z.string().describe("Colloquial written Cantonese, traditional characters"),
+  cmn: z.string().describe("Mandarin, simplified characters"),
+  en: z.string().describe("Plain, warm English at roughly a 12-year-old reading level"),
+});
+export type Speakable = z.infer<typeof SpeakableSchema>;
+
+/** Where on the page a card came from. `quote` is verbatim and exempt from the banned-term filter. */
+export const SourceReferenceSchema = z.strictObject({
+  section: z.string().describe("Section heading as printed on the page"),
+  lineIndex: z.number().int().min(0).nullable().describe("0-based line within the section"),
+  quote: z.string().describe("Verbatim source text"),
+});
+export type SourceReference = z.infer<typeof SourceReferenceSchema>;
+
+export const WarningSignSchema = z.strictObject({
+  symptom: SpeakableSchema,
+  action: SpeakableSchema,
+  source: SourceReferenceSchema,
+});
+export type WarningSign = z.infer<typeof WarningSignSchema>;
+
+export const MedicineSchema = z.strictObject({
+  name: z.string().describe("Verbatim, script untouched"),
+  strength: z.string().nullable(),
+  amount: z.string().nullable(),
+  frequency: z.string().nullable().describe("Verbatim; null when not printed"),
+  duration: z.string().nullable(),
+  spoken: SpeakableSchema,
+  source: SourceReferenceSchema,
+});
+export type Medicine = z.infer<typeof MedicineSchema>;
+
+export const FollowUpItemSchema = z.strictObject({
+  clinic: z.string().nullable(),
+  when: z.string().nullable(),
+  tests: z.string().nullable(),
+  spoken: SpeakableSchema,
+  source: SourceReferenceSchema,
+});
+export type FollowUpItem = z.infer<typeof FollowUpItemSchema>;
+
+export const TextLineSchema = z.strictObject({
+  text: z.string(),
+  spoken: SpeakableSchema,
+  source: SourceReferenceSchema,
+});
+export type TextLine = z.infer<typeof TextLineSchema>;
+
+/** As produced by the model. `recognisedType` is added by lib/rules/diet-line.ts afterwards. */
+export const DietLineSchema = z.strictObject({
+  raw: z.string(),
+  spoken: SpeakableSchema,
+  source: SourceReferenceSchema,
+});
+export type DietLine = z.infer<typeof DietLineSchema>;
+
+export const DietTypeSchema = z.enum(["low_salt", "low_fat", "diabetic", "light", "other"]);
+export type DietType = z.infer<typeof DietTypeSchema>;
+
+export const DietLineWithTypeSchema = DietLineSchema.extend({
+  recognisedType: DietTypeSchema,
+});
+export type DietLineWithType = z.infer<typeof DietLineWithTypeSchema>;
+
+export const UnreadableRegionSchema = z.strictObject({
+  section: z.string(),
+  description: z.string(),
+  source: SourceReferenceSchema,
+});
+export type UnreadableRegion = z.infer<typeof UnreadableRegionSchema>;
+
+export const SheetTypeSchema = z.enum(["hk_en", "cn_zh", "unknown"]);
+export type SheetType = z.infer<typeof SheetTypeSchema>;
+
+/** The model's structured output for one read. */
+export const SheetReadingSchema = z.strictObject({
+  sheetType: SheetTypeSchema,
+  warningSigns: z.array(WarningSignSchema),
+  medicines: z.array(MedicineSchema),
+  followUp: z.array(FollowUpItemSchema),
+  dietLine: DietLineSchema.nullable(),
+  activityLine: TextLineSchema.nullable(),
+  hospitalContact: TextLineSchema.nullable(),
+  unreadable: z.array(UnreadableRegionSchema),
+});
+export type SheetReading = z.infer<typeof SheetReadingSchema>;
+
+/** What the client keeps after rules have run: recognised diet type, timestamp, sample flag. */
+export const StoredReadingSchema = SheetReadingSchema.extend({
+  dietLine: DietLineWithTypeSchema.nullable(),
+  readAt: z.string().describe("ISO timestamp set by the client; never sent to the model"),
+  sample: z.boolean().optional().describe("True when loaded from a bundled fixture"),
+});
+export type StoredReading = z.infer<typeof StoredReadingSchema>;
+
+/** Structured output of /api/ask's model call. */
+export const AskResultSchema = z.strictObject({
+  grounded: z.boolean().describe("True only if the answer comes from a supplied card"),
+  citedCardId: z.string().nullable(),
+  answer: SpeakableSchema.nullable(),
+});
+export type AskResult = z.infer<typeof AskResultSchema>;
+
+/** Structured output of /api/phrase's model call. */
+export const PhraseResultSchema = z.strictObject({
+  spoken: SpeakableSchema,
+});
+export type PhraseResult = z.infer<typeof PhraseResultSchema>;
+
+/** Card types rendered by the UI; `noWarnings` and `referral` are rule-generated. */
+export const CardTypeSchema = z.enum([
+  "warning",
+  "medicine",
+  "followUp",
+  "diet",
+  "activity",
+  "unreadable",
+  "noWarnings",
+  "referral",
+]);
+export type CardType = z.infer<typeof CardTypeSchema>;
+
+export const CardSchema = z.strictObject({
+  id: z.string(),
+  type: CardTypeSchema,
+  body: SpeakableSchema,
+  source: SourceReferenceSchema.nullable(),
+  aiGenerated: z.boolean(),
+  /** Typed facts for the phrase route, e.g. a Medicine's fields. Never contains profile data. */
+  facts: z.record(z.string(), z.union([z.string(), z.null()])).optional(),
+});
+export type Card = z.infer<typeof CardSchema>;
+
+/** Which of the three spoken forms is read aloud. Keys of `Speakable`, exactly. */
+export type Dialect = "yue" | "cmn" | "en";
+/** Language the question was asked in. Same three, named for the other side of the conversation. */
+export type InputLanguage = "yue" | "cmn" | "en";
+
+/**
+ * JSON Schema for the model's structured output. Draft 2020-12, additionalProperties:false
+ * everywhere (strict objects), every field required, nulls as explicit unions.
+ */
+export function sheetReadingJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(SheetReadingSchema, { target: "draft-2020-12" }) as Record<string, unknown>;
+}
+export function askResultJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(AskResultSchema, { target: "draft-2020-12" }) as Record<string, unknown>;
+}
+export function phraseResultJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(PhraseResultSchema, { target: "draft-2020-12" }) as Record<string, unknown>;
+}

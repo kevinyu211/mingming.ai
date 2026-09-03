@@ -1,0 +1,40 @@
+{
+  "name": "discharge-sheet-agent",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "NODE_OPTIONS=--use-openssl-ca vitest run",
+    "test:watch": "NODE_OPTIONS=--use-openssl-ca vitest",
+    "e2e": "NODE_OPTIONS=--use-openssl-ca playwright test",
+    "eval": "NODE_OPTIONS=--use-openssl-ca tsx tests/eval/reading.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "next": "16.3.4",
+    "opencc-js": "^1.4.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/opencc-js": "^1.0.3",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitest/ui": "^4.1.11",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^4.1.11"
+  }
+}

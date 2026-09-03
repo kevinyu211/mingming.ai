@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>cn_zh.png photographed badly on a kitchen table</title>
+<style>
+  /* Simulated phone snapshot of cn_zh.png: tilted, slightly blurred, warm
+     kitchen light, a shadow falling across one side, and a thumb over the
+     bottom-left corner. Rendered by render.ts at 1100x1500, JPEG q70. */
+  :root {
+    /* geometry, in cn_zh.png page pixels scaled by --k */
+    --k: 0.7863;              /* 975 / 1240 */
+    --paper-w: 975px;
+    --paper-h: 1379px;        /* 975 * 1754/1240 */
+    /* 出院医嘱 line 8 occupies page y 1262..1292 (render.ts logs the boxes);
+       x 0.7863 -> paper y 992..1016. Line 7 ends at page y 1260 -> paper 990,
+       so the thumb starts just below it and line 7 stays fully readable. */
+    --line8-top: 992px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1100px; height: 1500px; overflow: hidden; position: relative;
+    background:
+      radial-gradient(ellipse at 26% 12%, rgba(255,236,196,0.55), rgba(255,236,196,0) 58%),
+      repeating-linear-gradient(97deg,
+        #a9764a 0px, #b07f52 7px, #9c6a41 15px, #a97a4d 23px, #b58657 31px, #a17049 40px),
+      #a9764a;
+  }
+  /* table grain, softened */
+  body::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(96deg, rgba(60,32,14,0.22) 0px, rgba(60,32,14,0) 3px, rgba(255,220,170,0.10) 6px, rgba(60,32,14,0) 11px);
+    filter: blur(1.1px);
+  }
+
+  .paper {
+    position: absolute;
+    width: var(--paper-w); height: var(--paper-h);
+    left: 62px; top: 60px;
+    transform: rotate(6.2deg);
+    box-shadow: 14px 22px 34px rgba(40,20,8,0.42), 2px 3px 6px rgba(40,20,8,0.30);
+    background: #fff;
+  }
+  .paper img {
+    display: block; width: 100%; height: 100%;
+    filter: blur(0.6px) contrast(0.9) brightness(0.95);
+  }
+  /* uneven paper lighting: warm on the lit side, dim on the shaded side */
+  .paper .lighting {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      linear-gradient(104deg, rgba(255,244,220,0.20) 0%, rgba(255,244,220,0.05) 34%, rgba(40,22,10,0.06) 62%, rgba(40,22,10,0.20) 100%);
+  }
+
+  /* soft shadow gradient thrown across the right-hand side of the whole frame */
+  .castshadow {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(101deg,
+      rgba(28,14,4,0.00) 0%, rgba(28,14,4,0.00) 52%, rgba(28,14,4,0.16) 68%,
+      rgba(28,14,4,0.34) 84%, rgba(28,14,4,0.46) 100%);
+    filter: blur(6px);
+  }
+
+  /* thumb over the bottom-left corner, covering part of 出院医嘱 line 8 */
+  .thumb {
+    position: absolute;
+    left: -150px;
+    top: var(--line8-top);
+    width: 580px; height: 360px;
+    border-radius: 50% 50% 46% 46% / 44% 44% 56% 56%;
+    transform: rotate(3deg);
+    background:
+      radial-gradient(ellipse at 30% 24%, rgba(150,104,78,0.96) 0%, rgba(88,56,38,0.98) 46%, rgba(36,21,13,0.99) 80%);
+    box-shadow: 8px -5px 20px rgba(20,10,4,0.45);
+    filter: blur(2px);
+  }
+  .thumb::after { /* nail-ish highlight so it reads as a thumb, not a blot */
+    content: ""; position: absolute; left: 40%; top: 22%;
+    width: 168px; height: 132px; border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+    background: radial-gradient(ellipse at 40% 32%, rgba(208,168,142,0.50), rgba(120,80,58,0.08) 74%);
+    transform: rotate(7deg);
+  }
+</style>
+</head>
+<body>
+  <div class="paper">
+    <img src="cn_zh.png" alt="">
+    <div class="lighting"></div>
+    <div class="thumb"></div>
+  </div>
+  <div class="castshadow"></div>
+</body>
+</html>

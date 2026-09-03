@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; background: #FAF7F2; color: #1F1B16; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang HK", "Noto Sans TC", system-ui, sans-serif; font-size: 18px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: #0F6E68; } a:hover { color: #0B5652; }
+    .title { font-size: 34px; line-height: 1.15; font-weight: 700; letter-spacing: -0.6px; margin: 0; }
+    .card { background: #FFFFFF; border-radius: 16px; box-shadow: 0 1px 2px rgba(31,27,22,0.04), 0 8px 24px rgba(31,27,22,0.045); }
+    .num { font-variant-numeric: tabular-nums; letter-spacing: -0.2px; }
+    .foot { padding: 10px 20px 16px; border-top: 1px solid #EDE7DE; }
+    .foot p { margin: 0; font-size: 12px; line-height: 1.45; color: #6B625A; }
+    @keyframes bars { 0%,100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+  </style>
+</helmet>
+<div style="width: 390px; height: 844px; background: #FAF7F2; display: flex; flex-direction: column; overflow: hidden;">
+
+  <div style="padding: 22px 20px 0; display: flex; align-items: center; justify-content: space-between;">
+    <h1 class="title">問問題</h1>
+    <span style="display: inline-flex; align-items: center; gap: 4px; min-height: 48px; color: #0F6E68; font-size: 16px; font-weight: 600;">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 6l-6 6 6 6"></path></svg>
+      <span>張紙</span>
+    </span>
+  </div>
+
+  <div style="flex: 1; overflow: hidden; padding: 18px 20px 0; display: flex; flex-direction: column; gap: 14px;">
+
+    <div style="display: flex; justify-content: flex-end;">
+      <div style="max-width: 82%; background: #EDE8E0; border-radius: 20px 20px 6px 20px; padding: 12px 16px;">
+        <p style="margin: 0; font-size: 17px; line-height: 1.5;">白色嗰粒係朝早定夜晚食？</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="display: inline-flex; align-items: center; gap: 6px; background: #E6F0EF; color: #0F6E68; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 600;">
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.75 9.4 5.6a1 1 0 0 0 .6.6l3.85 1.4-3.85 1.4a1 1 0 0 0-.6.6L8 13.45 6.6 9.6a1 1 0 0 0-.6-.6L2.15 7.6 6 6.2a1 1 0 0 0 .6-.6L8 1.75Z"></path></svg>
+          <span>出自「藥」</span>
+        </span>
+      </div>
+      <p style="margin: 0; font-size: 22px; line-height: 1.45; font-weight: 600; letter-spacing: -0.2px;">張紙寫住 Atorvastatin 20mg，一粒，每晚一次。</p>
+      <div class="num" style="background: #F3EEE6; border-radius: 12px; padding: 12px 14px; border-left: 3px solid #0F6E68;">
+        <p style="margin: 0 0 4px; font-size: 12px; color: #6B625A;">Discharge Medication(s) · 第 3 行</p>
+        <p style="margin: 0; font-size: 16px; font-weight: 500;">Atorvastatin 20mg 1 tab nocte</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 999px; background: #0F6E68; color: #FFFFFF; font-size: 16px; font-weight: 600;">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h6A2.5 2.5 0 0 1 15 6.5v5A2.5 2.5 0 0 1 12.5 14H9l-4 3.5V14h-.5"></path><path d="M18 8.5a4 4 0 0 1 0 7"></path></svg>
+          <span>讀出嚟</span>
+        </div>
+        <span style="display: inline-flex; align-items: center; min-height: 48px; color: #6B625A; font-size: 13px;">AI 寫嘅，可能有錯</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #F0EBE3; border-radius: 24px 24px 0 0; padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; justify-content: center; background: #E4DED4; border-radius: 999px; padding: 3px; align-self: center;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 76px; height: 32px; border-radius: 999px; background: #FFFFFF; font-size: 14px; font-weight: 600; box-shadow: 0 1px 3px rgba(31,27,22,.12);">廣東話</span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 76px; height: 32px; border-radius: 999px; color: #6B625A; font-size: 14px; font-weight: 500;">普通話</span>
+      <span style="display: inline-flex; align-items: center; justify-content: center; min-width: 76px; height: 32px; border-radius: 999px; color: #6B625A; font-size: 14px; font-weight: 500;">English</span>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 999px; background: #E4DED4; color: #6B625A;">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </div>
+      <div style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 3px; height: 52px; border-radius: 999px; background: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(31,27,22,.05);" aria-hidden="true">
+        <span style="width: 3px; height: 8px; border-radius: 2px; background: #0F6E68; opacity: .35;"></span>
+        <span style="width: 3px; height: 14px; border-radius: 2px; background: #0F6E68; opacity: .55; transform-origin: center; animation: bars 1s ease-in-out infinite;"></span>
+        <span style="width: 3px; height: 22px; border-radius: 2px; background: #0F6E68; transform-origin: center; animation: bars 1s ease-in-out infinite .1s;"></span>
+        <span style="width: 3px; height: 30px; border-radius: 2px; background: #0F6E68; transform-origin: center; animation: bars 1s ease-in-out infinite .2s;"></span>
+        <span style="width: 3px; height: 22px; border-radius: 2px; background: #0F6E68; transform-origin: center; animation: bars 1s ease-in-out infinite .3s;"></span>
+        <span style="width: 3px; height: 14px; border-radius: 2px; background: #0F6E68; opacity: .55; transform-origin: center; animation: bars 1s ease-in-out infinite .4s;"></span>
+        <span style="width: 3px; height: 8px; border-radius: 2px; background: #0F6E68; opacity: .35;"></span>
+      </div>
+      <div style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 999px; background: #0F6E68; color: #FFFFFF; box-shadow: 0 6px 16px rgba(15,110,104,.28);">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v10"></path><rect x="9" y="3" width="6" height="10" rx="3"></rect><path d="M6 12a6 6 0 0 0 12 0"></path><path d="M12 18v3"></path></svg>
+      </div>
+    </div>
+    <p style="margin: 0; text-align: center; font-size: 13px; color: #6B625A;">撳住講 · 或者打字問</p>
+  </div>
+  <div class="foot"><p>本工具只係幫你理解出院紙，唔係醫療建議，唔可以代替醫護人員嘅診斷同治療。有疑問請問返醫生或者藥劑師。AI 寫嘅內容可能有錯。</p></div>
+</div>
+</x-dc>
+</body>
+</html>

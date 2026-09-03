@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>出院记录 — 示例人民医院（合成测试样张）</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #ffffff; color: #111111;
+    font-family: "Songti SC", "SimSun", "STSong", "Noto Serif CJK SC", serif;
+    font-size: 20px; line-height: 1.48;
+    padding: 58px 70px 44px 70px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hosp { text-align: center; font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 27px; letter-spacing: 4px; }
+  .doctype { text-align: center; font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 33px; font-weight: bold; letter-spacing: 12px; margin-top: 8px; }
+  .rule { border-top: 2px solid #111; margin-top: 12px; }
+  .rule.thin { border-top: 1px solid #111; margin-top: 0; }
+
+  .meta { margin-top: 14px; }
+  .meta .row { display: flex; margin-bottom: 6px; }
+  .meta .cell { white-space: nowrap; }
+  .meta .cell b { font-family: "Heiti SC", "PingFang SC", sans-serif; font-weight: normal; }
+  .u { display: inline-block; min-width: 128px; border-bottom: 1px solid #111; text-align: center; }
+  .u.w1 { min-width: 74px; }
+  .u.w3 { min-width: 210px; }
+
+  .sec { margin-top: 15px; }
+  .sec > .h {
+    font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 21px; font-weight: bold; letter-spacing: 2px;
+    border-left: 5px solid #111; padding-left: 9px; margin-bottom: 4px;
+  }
+  .sec .ln { display: block; text-align: justify; }
+  .sec.orders .ln { margin-bottom: 2px; }
+  .sec.orders { margin-top: 16px; }
+
+  .foot { margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sigwrap { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 20px; }
+  .sigwrap i { font-family: "Kaiti SC", "STKaiti", "KaiTi", serif; font-style: normal; font-size: 26px; border-bottom: 1px solid #111; padding: 0 26px 1px 6px; }
+  .bottomrow { margin-top: 20px; display: flex; }
+  .contactblk { width: 560px; margin-left: auto; }
+  .contactblk .h { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 21px; font-weight: bold; letter-spacing: 2px; border-left: 5px solid #111; padding-left: 9px; margin-bottom: 4px; }
+  .note { margin-top: 20px; border-top: 1px solid #999; padding-top: 7px; font-size: 14px; color: #555; display: flex; justify-content: space-between; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="hosp">示例人民医院</div>
+<div class="doctype">出院记录</div>
+<div class="rule"></div>
+
+<div class="meta">
+  <div class="row">
+    <div class="cell" style="width:300px;"><b>姓名</b> <span class="u">王某某</span></div>
+    <div class="cell" style="width:220px;"><b>性别</b> <span class="u w1">女</span></div>
+    <div class="cell" style="width:230px;"><b>年龄</b> <span class="u w1">72岁</span></div>
+    <div class="cell"><b>科室</b> <span class="u">心内科</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:300px;"><b>床号</b> <span class="u w1">XX</span></div>
+    <div class="cell" style="width:450px;"><b>住院号</b> <span class="u w3">XXXXXXXX</span></div>
+    <div class="cell"><b>住院天数</b> <span class="u w1">4天</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:520px;"><b>入院日期</b> <span class="u w3">2026-08-28</span></div>
+    <div class="cell"><b>出院日期</b> <span class="u w3">2026-09-01</span></div>
+  </div>
+</div>
+<div class="rule thin" style="margin-top:8px;"></div>
+
+<div class="sec">
+  <div class="h">入院情况</div>
+  <span class="ln">患者女，72岁，高血压病史5年，未规律服药，未监测血压。近3天头痛、头晕，无胸痛，无气促，无夜间阵发性呼吸困难。门诊测血压 178/98mmHg，收入我科。</span>
+  <span class="ln">查体：神志清，双肺呼吸音清，心律齐，各瓣膜听诊区未闻及杂音，双下肢无水肿。</span>
+</div>
+
+<div class="sec">
+  <div class="h">入院诊断</div>
+  <span class="ln">1. 高血压病3级（很高危）</span>
+  <span class="ln">2. 血糖升高待查</span>
+</div>
+
+<div class="sec">
+  <div class="h">诊疗经过</div>
+  <span class="ln">入院后完善检查：糖化血红蛋白 8.9%，空腹血糖 9.4mmol/L，低密度脂蛋白胆固醇 4.1mmol/L，甘油三酯 2.2mmol/L，肌酐 78μmol/L，血钾 4.1mmol/L，肾功能未见异常。心电图示窦性心律、左室高电压。胸片未见明显异常。眼底检查示轻度高血压视网膜病变。</span>
+  <span class="ln">予苯磺酸氨氯地平片降压，盐酸二甲双胍片控制血糖，阿托伐他汀钙片调脂，并请糖尿病专科护士指导血糖仪使用（女儿在场）。用药后血压降至 132/78mmHg，头痛头晕缓解，无恶心呕吐及腹泻。</span>
+</div>
+
+<div class="sec">
+  <div class="h">出院诊断</div>
+  <span class="ln">1. 高血压病3级（很高危）</span>
+  <span class="ln">2. 2型糖尿病</span>
+  <span class="ln">3. 高脂血症</span>
+</div>
+
+<div class="sec">
+  <div class="h">出院情况</div>
+  <span class="ln">患者一般情况良好，无头痛头晕，无胸痛、气促，双下肢无水肿，进食睡眠可，二便正常。血压 132/78mmHg，空腹血糖 7.2mmol/L。经上级医师查看，准予今日出院。</span>
+</div>
+
+<div class="sec orders">
+  <div class="h">出院医嘱</div>
+  <span class="ln">1. 低盐低脂饮食，戒烟限酒</span>
+  <span class="ln">2. 苯磺酸氨氯地平片 5mg 每日一次</span>
+  <span class="ln">3. 盐酸二甲双胍片 0.5g 每日两次 随餐</span>
+  <span class="ln">4. 阿托伐他汀钙片 20mg 每晚一次</span>
+  <span class="ln">5. 监测血压、血糖</span>
+  <span class="ln">6. 2周后心内科门诊复诊，复查空腹血糖</span>
+  <span class="ln">7. 如出现胸痛、气促、下肢水肿，立即急诊就诊</span>
+  <span class="ln">8. 适当活动，两周内避免提重物</span>
+</div>
+
+<div class="bottomrow">
+  <div class="contactblk">
+    <div class="h">联系方式</div>
+    <span class="ln">联系电话：0XXX-XXXXXXX（心内科病房）</span>
+    <div class="foot">
+      <div class="sigwrap">医师签名：<i>李××</i></div>
+      <div class="sigwrap">日期：2026-09-01</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <span>本页为合成演示样张，患者与医院均为虚构，非真实病历。</span>
+  <span>SYNTHETIC DEMO DOCUMENT — 第 1 页 / 共 1 页</span>
+</div>
+
+</body>
+</html>
