@@ -1,22 +1,34 @@
 "use client";
 
 /**
- * S4 — the stack, and the one place that owns speaking.
+ * The sheet, as the agent's first message in the one-screen conversation (`app/read/page.tsx`).
  *
- * Playback lives here rather than in each card for two reasons: "全部讀出" has to walk the cards
- * in order without overlapping voices, and a second tap anywhere has to stop whatever is
- * speaking. A run counter (not just an AbortSignal) guards the sequence, so a tap on card 3
- * mid-way through "play all" cleanly abandons the old walk.
+ * This renders ONE assistant message: the rule-generated cards in the fixed order from
+ * `lib/rules/card-order.ts` — red flags first, always — with a single "read it all" control at the
+ * top of the message. It is also the one place that owns speaking the sheet: "read it all" walks
+ * the cards in order without overlapping voices, and tapping one line plays just that line.
  *
- * Every spoken string is the card body plus the caution sentence the rulebook requires
- * (FR-008). It is appended here, at the call site, because `lib/speech/tts.ts` says exactly the
- * string it is given — which is what keeps its per-string audio cache honest.
+ * A run counter (not just an AbortSignal) guards the sequence, so a tap on card 3 mid-way through
+ * "read it all" cleanly abandons the old walk. `onSpeakStart` lets the page stop the *answer* voice
+ * before the sheet starts, and `stopRef` hands this walk's stop up so the answer's own play can stop
+ * the sheet — the two speakers never talk over each other.
  *
- * Nothing autoplays. iOS needs a user gesture before audio, and a phone that starts talking on
- * its own in a taxi is its own kind of failure, so the first card waits for the play cue.
+ * Every spoken string is the card body plus the caution sentence the rulebook requires (FR-008),
+ * appended here at the call site because `lib/speech/tts.ts` says exactly the string it is given —
+ * which is what keeps its per-string audio cache honest.
+ *
+ * Nothing autoplays. iOS needs a user gesture before audio, and a phone that starts talking on its
+ * own in a taxi is its own kind of failure, so the message waits for a tap.
  */
-import Link from "next/link";
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import CardView, { isGroupedType } from "@/components/Card";
 import { useLocale } from "@/components/LocaleProvider";
 import type { Card, CardType, Dialect } from "@/lib/domain/schemas";
@@ -87,7 +99,7 @@ const ARRIVAL_CSS = `
 }
 /* fill-mode "backwards", not "both": the card is hidden during its stagger delay, and once the
    animation ends nothing keeps filling a transform — a permanently filling transform promotes the
-   card to its own layer, which then paints over the sticky bar and becomes a containing block. */
+   card to its own layer, which then paints over neighbours and becomes a containing block. */
 .card-rise { animation: card-rise 320ms ease-out backwards; }
 @media (prefers-reduced-motion: reduce) {
   .card-rise { animation: none; opacity: 1; transform: none; }
@@ -118,21 +130,27 @@ function groupCards(cards: Card[]): Group[] {
 
 export interface CardStackProps {
   cards: Card[];
-  /** The big "play the first card" cue, shown until something has been spoken. */
-  showPlayCue?: boolean;
   /**
-   * The relationship label from the profile, e.g. 阿媽. "全部讀出" opens with it so the parent
+   * The relationship label from the profile, e.g. 阿媽. "read it all" opens with it so the parent
    * knows the phone is talking to her. Spoken by the device only — see `sayLocally`.
    */
   address?: string;
-  /** Extra content above the cue (the sample banner, say). */
+  /**
+   * Called the instant this message starts speaking, so the page can stop the answer voice first.
+   * The two speakers (sheet here, answer on the page) must never overlap.
+   */
+  onSpeakStart?: () => void;
+  /** Handed this walk's stop, so the answer's own play control can stop the sheet in turn. */
+  stopRef?: MutableRefObject<(() => void) | null>;
+  /** Extra content above the message (the sample banner, say). */
   children?: ReactNode;
 }
 
 export default function CardStack({
   cards,
-  showPlayCue = true,
   address = "",
+  onSpeakStart,
+  stopRef,
   children,
 }: CardStackProps) {
   const { dialect, script, t } = useLocale();
@@ -144,8 +162,8 @@ export default function CardStack({
   const abortRef = useRef<AbortController | null>(null);
 
   // Chrome and iOS Safari both return an empty voice list on the first synchronous call, so warm
-  // it before the first tap rather than failing one silently. On unmount (navigating to /ask,
-  // say) the run counter is bumped so any walk still in progress stops instead of talking on.
+  // it before the first tap rather than failing one silently. On unmount the run counter is bumped
+  // so any walk still in progress stops instead of talking on.
   useEffect(() => {
     void ensureVoicesLoaded();
     const run = runRef;
@@ -165,9 +183,20 @@ export default function CardStack({
     setSpeakingId(null);
   }, []);
 
+  // Hand this walk's stop up to the page, so playing an answer can silence the sheet.
+  useEffect(() => {
+    if (!stopRef) return;
+    stopRef.current = stop;
+    return () => {
+      if (stopRef.current === stop) stopRef.current = null;
+    };
+  }, [stop, stopRef]);
+
   /** Speak `count` cards starting at `from`, in order, abandoning the walk if anything else starts. */
   const play = useCallback(
     async (from: number, count: number, addressFirst = false) => {
+      // Silence the answer voice before the sheet starts (they share the one speaker).
+      onSpeakStart?.();
       runRef.current += 1;
       abortRef.current?.abort();
       stopSpeaking();
@@ -204,7 +233,7 @@ export default function CardStack({
         // A newer tap already took over; that run owns the UI now.
         if (runRef.current !== run) return;
         if (mode === "text-only") {
-          // No cloud voice and no device voice: switch the whole stack to the S10 read-it state.
+          // No cloud voice and no device voice: switch the whole message to the S10 read-it state.
           setUnavailable(true);
           setSpeakingId(null);
           return;
@@ -213,14 +242,13 @@ export default function CardStack({
 
       if (runRef.current === run) setSpeakingId(null);
     },
-    [address, cards, dialect],
+    [address, cards, dialect, onSpeakStart],
   );
 
   const playOne = useCallback((index: number) => void play(index, 1), [play]);
   const playAll = useCallback(() => void play(0, cards.length, true), [play, cards.length]);
 
   const speaking = speakingId !== null;
-  const cue = showPlayCue && !played && !unavailable && cards.length > 0;
   const groups = groupCards(cards);
 
   return (
@@ -229,17 +257,34 @@ export default function CardStack({
 
       {children}
 
-      {cue ? (
+      {/* The one "read it all" control for the whole message. Its states are the old play-all bar's:
+          idle, speaking, and — when the phone has no voice at all — the S10 read-it note, so the
+          words already on the cards are still the fallback. */}
+      {cards.length > 0 ? (
         <div className="mt-4">
-          <button
-            type="button"
-            onClick={() => playOne(0)}
-            className="tap h-[52px] w-full gap-2 rounded-full bg-accent px-5 text-body font-semibold text-accent-ink shadow-raised"
-          >
-            <SpeechGlyph />
-            {t("cards.play")}
-          </button>
-          <p className="mt-2 text-center text-meta text-muted">{t("progress.note")}</p>
+          {unavailable ? (
+            // Ink rather than muted grey: this line is the whole fallback, and muted on the panel
+            // is only 3.9:1.
+            <p className="tap h-[52px] w-full gap-2 rounded-full bg-panel px-4 text-meta text-ink">
+              <EyeGlyph />
+              <span className="min-w-0">{t("fallback.noVoiceNote")}</span>
+            </p>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={speaking ? stop : playAll}
+                aria-pressed={speaking}
+                className="tap h-[52px] w-full gap-2 rounded-full bg-accent px-5 text-body font-semibold text-accent-ink shadow-raised"
+              >
+                <SpeechGlyph />
+                {speaking ? t("cards.stop") : t("cards.playAll")}
+              </button>
+              {!played ? (
+                <p className="mt-2 text-center text-meta text-muted">{t("progress.note")}</p>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
 
@@ -251,10 +296,7 @@ export default function CardStack({
               {grouped ? (
                 // The small heading the grouped list hangs under. It repeats the heading each
                 // card still carries for screen readers, so it is hidden from them.
-                <p
-                  aria-hidden="true"
-                  className="mb-2 ml-1 text-fine font-semibold text-muted"
-                >
+                <p aria-hidden="true" className="mb-2 ml-1 text-fine font-semibold text-muted">
                   {cardTitle(group.type, script)}
                 </p>
               ) : null}
@@ -280,41 +322,6 @@ export default function CardStack({
             </div>
           );
         })}
-      </div>
-
-      {/* Sticky above the fixed disclaimer footer, never over it. The bar is ~84 px tall, so the
-          host page owns the bottom room for it — see `pb-28` on the read page's <main>.
-          It is dropped 8 px below --disclaimer-height and given that back as bottom padding: the
-          footer's real height rounds a pixel under the variable, and without the overlap a hairline
-          of scrolling card text shows between the two. The footer (z-40) paints over the overlap.
-          No rule along the top: the two capsules float on the ground, as on the canvas. */}
-      <div className="fixed inset-x-0 bottom-[calc(var(--disclaimer-height)-8px)] z-30 bg-ground/95 px-5 pt-3 pb-5 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-md items-center gap-2.5">
-          {unavailable ? (
-            // Ink rather than the canvas's muted grey: this line is the whole fallback, and
-            // muted on the panel is only 3.9:1.
-            <p className="tap h-[52px] flex-1 gap-2 rounded-full bg-panel px-4 text-meta text-ink">
-              <EyeGlyph />
-              <span className="min-w-0">{t("fallback.noVoiceNote")}</span>
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={speaking ? stop : playAll}
-              aria-pressed={speaking}
-              className="tap h-[52px] flex-1 gap-2 rounded-full bg-accent px-4 text-body font-semibold text-accent-ink shadow-raised"
-            >
-              <SpeechGlyph />
-              {speaking ? t("cards.stop") : t("cards.playAll")}
-            </button>
-          )}
-          <Link
-            href="/ask"
-            className="tap h-[52px] flex-1 rounded-full bg-card px-4 text-body font-semibold text-ink shadow-card"
-          >
-            {t("cards.ask")}
-          </Link>
-        </div>
       </div>
     </>
   );

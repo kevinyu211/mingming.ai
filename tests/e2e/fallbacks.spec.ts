@@ -33,7 +33,7 @@ const UNAVAILABLE_BODY = "而家連唔到讀紙嗰邊。示範紙照用得，成
 const TYPED_TITLE = "打字輸入仲未做得到";
 const TYPED_BODY = "呢個版本淨係讀得到相。影張相，或者用示範紙睇下點運作。";
 
-/** Copy that lives in `app/ask/page.tsx`. */
+/** Copy that lives in `components/VoiceBar.tsx`. */
 const MIC_UNAVAILABLE = "而家聽唔到你講嘢，打字問就得。";
 
 test.describe("The reading service is down or refuses (V7)", () => {
@@ -98,6 +98,11 @@ test.describe("Speech output is unavailable (V7)", () => {
     page,
   }) => {
     await seedConsent(page);
+    // The no-cloud-voice half of the fallback: `TTS_PROVIDER=browser` makes /api/tts answer 503 on
+    // its own, but when the suite reuses a dev server configured for a cloud provider this forces
+    // the same signal. Deleting speechSynthesis below removes the device voice; with neither, `speak`
+    // returns text-only — the state this test is about.
+    await page.route("**/api/tts", (route) => route.fulfill({ status: 503 }));
     await page.addInitScript(() => {
       // Window interface members are own properties of the global object, so this really removes
       // it: `lib/speech/tts.ts` then falls through the cloud path (503) to text-only.
@@ -111,11 +116,13 @@ test.describe("Speech output is unavailable (V7)", () => {
     const expected = expectedCards("hk_en");
     await expect(cards(page)).toHaveCount(expected.length);
 
-    const playCue = page.getByRole("button", { name: UI.hant["cards.play"], exact: true });
-    await expect(playCue).toBeVisible();
-    await playCue.click();
+    // The sheet message's one "read it all" control. On a phone with no voice it turns the whole
+    // message to the on-screen-text state, the same way the old play-all bar did.
+    const playAll = page.getByRole("button", { name: UI.hant["cards.playAll"], exact: true });
+    await expect(playAll).toBeVisible();
+    await playAll.click();
 
-    // S10: every card's play control becomes 睇字, and the bar says where the words are.
+    // S10: every card's play control becomes 睇字, and the read-it-all control says where the words are.
     await expect(page.getByText(UI.hant["fallback.noVoice"], { exact: true })).toHaveCount(
       expected.length,
     );
@@ -140,7 +147,8 @@ test.describe("Speech input is unavailable (V7, Story 1 scenario 11)", () => {
       delete globalWindow.MediaRecorder;
     });
 
-    await page.goto("/ask");
+    // The mic lives in the voice bar pinned to the one-screen conversation now.
+    await page.goto("/read");
 
     // `components/MicButton.tsx` renames itself to the typed-input label when there is no API.
     const mic = page.getByRole("button", { name: UI.hant["capture.type"], exact: true });

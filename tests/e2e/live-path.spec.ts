@@ -211,8 +211,20 @@ test.describe("The photo path (V1, V4)", () => {
 });
 
 test.describe("Ask the sheet (V5)", () => {
+  // Reading a sheet and asking about it is now one screen (`/read`): the questions append to the
+  // same thread the sheet lives in, and the voice bar is pinned there. `/ask` still redirects in.
   test.beforeEach(async ({ page }) => {
     await seedReading(page, "hk_en");
+  });
+
+  test("the old /ask link redirects into the one-screen conversation", async ({ page }) => {
+    await page.goto("/ask");
+
+    await expect(page).toHaveURL(/\/read$/);
+    // The way to ask is on the same screen as the sheet now, not a separate route.
+    await expect(
+      page.getByRole("textbox", { name: UI.hant["ask.placeholder"], exact: true }),
+    ).toBeVisible();
   });
 
   test("a question about changing a medicine is refused, and no request is made", async ({
@@ -220,7 +232,7 @@ test.describe("Ask the sheet (V5)", () => {
   }) => {
     // The mock is armed on purpose: the point is that the client gate answers first (FR-011).
     const log = await mockAsk(page, "answered");
-    await page.goto("/ask");
+    await page.goto("/read");
 
     await askQuestion(page, "可唔可以唔食？");
 
@@ -241,7 +253,7 @@ test.describe("Ask the sheet (V5)", () => {
     page,
   }) => {
     const log = await mockAsk(page, "answered");
-    await page.goto("/ask");
+    await page.goto("/read");
 
     await askQuestion(page, "我想自殺");
 
@@ -257,7 +269,7 @@ test.describe("Ask the sheet (V5)", () => {
     page,
   }) => {
     const log = await mockAsk(page, "answered");
-    await page.goto("/ask");
+    await page.goto("/read");
 
     await askQuestion(page, "白色嗰粒係朝早定夜晚食？");
 
@@ -270,7 +282,10 @@ test.describe("Ask the sheet (V5)", () => {
       page.getByText(`${UI.hant["ask.answeredFrom"]} · ${citedTitle}`, { exact: true }),
     ).toBeVisible();
     await expect(page.getByText(toScript(MOCK_ANSWER.yue, "hant"), { exact: true })).toBeVisible();
-    await expect(page.getByText(UI.hant.aiChip, { exact: true })).toBeVisible();
+    // The AI note rides on the answer. On this one screen the sheet's own cards each carry the same
+    // chip, so the assertion is scoped to the answer message (the "答案" region) rather than the page.
+    const answerMessage = page.getByRole("region", { name: UI.hant["ask.answered"], exact: true });
+    await expect(answerMessage.getByText(UI.hant.aiChip, { exact: true })).toBeVisible();
 
     await page
       .getByRole("button", {
@@ -290,7 +305,7 @@ test.describe("Ask the sheet (V5)", () => {
 
   test("a model outage shows the calm state, with the cards still correct", async ({ page }) => {
     await mockAsk(page, { status: 502 });
-    await page.goto("/ask");
+    await page.goto("/read");
 
     await askQuestion(page, "白色嗰粒係朝早定夜晚食？");
 

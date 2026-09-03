@@ -363,7 +363,8 @@ test.describe("Privacy with a profile on the phone (V9, SC-009)", () => {
     const log = await mockAsk(page, "answered");
     await seedProfile(page, "hk_en");
 
-    await page.goto("/ask");
+    // Asking happens in the one-screen conversation on /read now.
+    await page.goto("/read");
     await askQuestion(page, "白色嗰粒係朝早定夜晚食？");
     await expect(page.getByText(toScript(MOCK_ANSWER.yue, "hant"), { exact: true })).toBeVisible();
 
