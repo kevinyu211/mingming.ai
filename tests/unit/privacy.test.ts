@@ -103,7 +103,7 @@ function mockFetch(): typeof fetch {
     if (url.endsWith("/api/ask")) {
       return new Response(
         ndjson([
-          { event: "outcome", outcome: "answered", citedCardId: "medicine-0" },
+          { event: "outcome", outcome: "answered", citedCardIds: ["medicine-0"] },
           { event: "answer", answer: { yue: "每日一次。", cmn: "每天一次。" } },
           { event: "done" },
         ]),

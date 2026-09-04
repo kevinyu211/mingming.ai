@@ -231,9 +231,9 @@ describe("JSON schema export for structured outputs", () => {
 
   it("AskResult requires kind, citedCardId and answer", () => {
     const schema = askResultJsonSchema() as { required?: string[] };
-    expect(schema.required?.sort()).toEqual(["answer", "citedCardId", "kind"]);
+    expect(schema.required?.sort()).toEqual(["answer", "citedCardIds", "kind"]);
     expect(
-      AskResultSchema.safeParse({ kind: "none", citedCardId: null, answer: null }).success,
+      AskResultSchema.safeParse({ kind: "none", citedCardIds: [], answer: null }).success,
     ).toBe(true);
   });
 
@@ -244,12 +244,12 @@ describe("JSON schema export for structured outputs", () => {
   it("accepts the three answer kinds and nothing else", () => {
     for (const kind of ["sheet", "general", "none"]) {
       expect(
-        AskResultSchema.safeParse({ kind, citedCardId: null, answer: null }).success,
+        AskResultSchema.safeParse({ kind, citedCardIds: [], answer: null }).success,
         kind,
       ).toBe(true);
     }
     expect(
-      AskResultSchema.safeParse({ kind: "grounded", citedCardId: null, answer: null }).success,
+      AskResultSchema.safeParse({ kind: "grounded", citedCardIds: [], answer: null }).success,
     ).toBe(false);
   });
 });

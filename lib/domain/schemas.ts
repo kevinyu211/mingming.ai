@@ -169,10 +169,19 @@ export type AskKind = z.infer<typeof AskKindSchema>;
 
 export const AskResultSchema = z.strictObject({
   kind: AskKindSchema,
-  citedCardId: z
-    .string()
-    .nullable()
-    .describe('The card the answer came from. Non-null only when kind is "sheet".'),
+  /**
+   * Every card the answer draws on. Empty unless `kind` is "sheet".
+   *
+   * A LIST, because the single-card version made the most obvious question on the whole sheet
+   * unanswerable. "What medicines do I have to take?" spans three medicine cards, and a schema
+   * allowing exactly one citation gives the model no legal way to answer it — so it fell through
+   * to "the sheet doesn't say" on a sheet that plainly said it. The one-card rule existed to stop
+   * two cards being welded into a claim neither makes; that is still forbidden in the prompt, but
+   * citing three medicines in order to list three medicines is not that.
+   */
+  citedCardIds: z
+    .array(z.string())
+    .describe('Ids of every card the answer comes from. Empty unless kind is "sheet".'),
   answer: SpeakableSchema.nullable(),
 });
 export type AskResult = z.infer<typeof AskResultSchema>;

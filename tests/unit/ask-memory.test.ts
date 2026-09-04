@@ -139,7 +139,7 @@ describe("the gates are unchanged by memory", () => {
 describe("the brief reaches the model as background", () => {
   it("is passed to the answer call alongside the cards", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -156,7 +156,7 @@ describe("the brief reaches the model as background", () => {
 
   it("is left out entirely when the phone has nothing to say", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -172,7 +172,7 @@ describe("the brief reaches the model as background", () => {
     answer.mockResolvedValue({
       result: {
         kind: "sheet" as const,
-        citedCardId: "medicine-0",
+        citedCardIds: ["medicine-0"],
         // Trips the banned-term filter, so `phrase` runs.
         answer: { yue: "呢隻藥係用嚟治療高血壓。", cmn: "这个药是用来治疗高血压。", en: "It treats it." },
       },
@@ -215,7 +215,7 @@ describe("memory can never become the source of a medical fact", () => {
     // The honest model behaviour for "what about the Warfarin?": the brief mentions it, the
     // cards do not, so nothing on this sheet can be cited.
     answer.mockResolvedValue({
-      result: { kind: "none" as const, citedCardId: null, answer: null },
+      result: { kind: "none" as const, citedCardIds: [], answer: null },
       usage: USAGE,
     });
 
@@ -228,7 +228,7 @@ describe("memory can never become the source of a medical fact", () => {
     answer.mockResolvedValue({
       result: {
         kind: "sheet" as const,
-        citedCardId: "memory-0",
+        citedCardIds: ["memory-0"],
         answer: {
           yue: "上次張紙寫住 Warfarin 3mg。",
           cmn: "上次那张纸写着 Warfarin 3mg。",
@@ -243,13 +243,13 @@ describe("memory can never become the source of a medical fact", () => {
 
   it("still answers normally from the current sheet with a brief present", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
     const events = await collect(ask("白色嗰粒點食？", BRIEF));
 
-    expect(events[0]).toMatchObject({ outcome: "answered", citedCardId: "medicine-0" });
+    expect(events[0]).toMatchObject({ outcome: "answered", citedCardIds: ["medicine-0"] });
     expect(events[1]).toEqual({ event: "answer", answer: CLEAN_ANSWER });
   });
 });

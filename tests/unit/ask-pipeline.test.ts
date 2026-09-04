@@ -131,7 +131,7 @@ describe("rule gates run before any model call", () => {
 describe("grounded answers", () => {
   it("emits outcome, answer and done for a citation the server can verify", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -141,8 +141,8 @@ describe("grounded answers", () => {
       {
         event: "outcome",
         outcome: "answered",
-        citedCardId: "medicine-0",
-        source: medicine0?.source,
+        citedCardIds: ["medicine-0"],
+        sources: [medicine0?.source],
       },
       { event: "answer", answer: CLEAN_ANSWER },
       { event: "done" },
@@ -153,7 +153,7 @@ describe("grounded answers", () => {
 
   it("passes the built cards, the question and the dialect to the provider", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -180,7 +180,7 @@ describe("grounding is enforced server-side", () => {
 
   it("falls back to the template when the model does not ground the answer", async () => {
     answer.mockResolvedValue({
-      result: { kind: "none" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "none" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -189,7 +189,7 @@ describe("grounding is enforced server-side", () => {
 
   it("falls back to the template when the cited card id does not exist", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-99", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-99"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -198,7 +198,7 @@ describe("grounding is enforced server-side", () => {
 
   it("falls back to the template when the citation is null", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: null, answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: [], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 
@@ -207,7 +207,7 @@ describe("grounding is enforced server-side", () => {
 
   it("falls back to the template when the answer is null", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: null },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: null },
       usage: USAGE,
     });
 
@@ -232,7 +232,7 @@ describe("grounding is enforced server-side", () => {
 describe("the banned-term filter runs on the answer", () => {
   it("regenerates once with the matched terms, then falls back to the template", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: DIRTY_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: DIRTY_ANSWER },
       usage: USAGE,
     });
     // The rephrase is still dirty, so the fixed template is the floor.
@@ -250,7 +250,7 @@ describe("the banned-term filter runs on the answer", () => {
       dialect: "both",
     });
     expect(events).toEqual([
-      { event: "outcome", outcome: "answered", citedCardId: "medicine-0", source: medicine0?.source },
+      { event: "outcome", outcome: "answered", citedCardIds: ["medicine-0"], sources: [medicine0?.source] },
       { event: "answer", answer: template },
       { event: "done" },
     ]);
@@ -260,7 +260,7 @@ describe("the banned-term filter runs on the answer", () => {
 
   it("keeps a clean rephrase when the second attempt passes", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: DIRTY_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: DIRTY_ANSWER },
       usage: USAGE,
     });
     phrase.mockResolvedValue({ result: { spoken: CLEAN_ANSWER }, usage: USAGE });
@@ -272,7 +272,7 @@ describe("the banned-term filter runs on the answer", () => {
 
   it("falls back to the template when the rephrase call itself fails", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: DIRTY_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: DIRTY_ANSWER },
       usage: USAGE,
     });
     phrase.mockRejectedValue(new ModelUnavailableError(503));
@@ -287,7 +287,7 @@ describe("the banned-term filter runs on the answer", () => {
 
   it("never calls phrase when the first answer is clean", async () => {
     answer.mockResolvedValue({
-      result: { kind: "sheet" as const, citedCardId: "medicine-0", answer: CLEAN_ANSWER },
+      result: { kind: "sheet" as const, citedCardIds: ["medicine-0"], answer: CLEAN_ANSWER },
       usage: USAGE,
     });
 

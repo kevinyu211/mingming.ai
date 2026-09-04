@@ -123,6 +123,27 @@ const LOCAL: Record<"askUnavailable", Record<UiLocale, string>> = {
 /** Long edge for the one retry after a 413 (contracts/api-read.md). 1200 px keeps 9 pt print legible. */
 const RETRY_LONG_EDGE = 1200;
 
+/**
+ * Drops the turns that were never allowed off this phone, and the questions that provoked them.
+ *
+ * A refused medicine-change question and anything crisis-related are answered by the rules alone —
+ * the model is never called, and `lib/memory/context.ts` states plainly that their text does not
+ * reach it. Sending the conversation would have quietly broken that promise a turn later, so the
+ * pair goes out together: the refusal, and the question above it that is the sensitive half.
+ */
+const WITHHELD: ReadonlySet<string> = new Set(["refused_medicine_change", "crisis_referral"]);
+
+function withheldTurnsRemoved(thread: readonly ThreadMessage[]): ThreadMessage[] {
+  const drop = new Set<number>();
+  thread.forEach((message, index) => {
+    if (message.outcome && WITHHELD.has(message.outcome)) {
+      drop.add(index);
+      if (thread[index - 1]?.role === "user") drop.add(index - 1);
+    }
+  });
+  return thread.filter((_, index) => !drop.has(index));
+}
+
 export default function ChatPage() {
   return (
     <Suspense fallback={<Booting />}>
@@ -613,8 +634,29 @@ function ChatScreen() {
       const controller = new AbortController();
       request.current = controller;
 
+      /**
+       * The last few turns travel with the question.
+       *
+       * Without them a follow-up is unanswerable: 「有冇其他藥？」 has no referent on its own, and
+       * came back as "the sheet doesn't say" on a sheet listing three medicines — the reader had
+       * just been told about one and the app had already forgotten. Six turns, the reader's own
+       * words and 明明's own replies, both already on this device.
+       */
+      const context = withheldTurnsRemoved(loadSheets().active?.thread ?? [])
+        .slice(-6)
+        .map((message) => ({
+          role: message.role === "user" ? ("user" as const) : ("agent" as const),
+          text: message.text.slice(0, 600),
+        }));
+
       const result = await ask(
-        { reading, question: { text, inputLanguage: dialect }, dialect, memory: memoryBrief() },
+        {
+          reading,
+          question: { text, inputLanguage: dialect },
+          dialect,
+          memory: memoryBrief(),
+          ...(context.length > 0 ? { context } : {}),
+        },
         { signal: controller.signal },
       );
       request.current = null;
@@ -630,9 +672,11 @@ function ChatScreen() {
         return;
       }
 
-      const citedCard = result.citedCardId
-        ? (cards.find((c) => c.id === result.citedCardId) ?? null)
-        : null;
+      // Every card the answer stands on. A question about all three medicines cites all three.
+      const citedCards = (result.citedCardIds ?? [])
+        .map((id) => cards.find((c) => c.id === id) ?? null)
+        .filter((card): card is Card => card !== null);
+      const citedCard = citedCards[0] ?? null;
 
       setSpeakingId("answer");
       say(answerText, () => {
@@ -640,11 +684,12 @@ function ChatScreen() {
           role: "agent",
           text: answerText,
           origin: failed ? "rule" : "model",
-          // One cited line for an answer, but the field is plural because a briefing bubble
-          // quotes a whole section. `filter` keeps it empty rather than [null] when nothing cited.
-          sources: [result.source ?? citedCard?.source].filter(
-            (source): source is SourceReference => !!source,
-          ),
+          // Every printed line behind the answer — the server's list first, falling back to the
+          // cited cards' own sources when the stream carried none.
+          sources: (result.sources?.length
+            ? result.sources
+            : citedCards.map((card) => card.source)
+          ).filter((source): source is SourceReference => !!source),
           outcome: failed ? null : (result.outcome as ThreadMessage["outcome"]),
           unverified: citedCard?.unverified === true,
         });
@@ -656,7 +701,7 @@ function ChatScreen() {
         rememberExchange({
           question: text,
           outcome: result.outcome as "answered" | "not_on_sheet" | "refused_medicine_change",
-          citedCardId: result.citedCardId ?? null,
+          citedCardId: result.citedCardIds?.[0] ?? null,
         });
       }
     },

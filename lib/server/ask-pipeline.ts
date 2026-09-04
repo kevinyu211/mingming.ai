@@ -89,12 +89,33 @@ export const AskQuestionSchema = z.strictObject({
  * bound is the server's own, not a courtesy: a client that sent a longer one is not sending a
  * brief.
  */
+/** How much of the conversation travels. Six turns is enough to resolve "are there any more?". */
+const MAX_TURNS = 6;
+/** One turn's ceiling. A briefing bubble is the longest thing either side says. */
+const MAX_TURN_CHARS = 600;
+
 export const AskRequestSchema = z.strictObject({
   reading: AskReadingSchema,
   question: AskQuestionSchema,
   // The three spoken forms of `Speakable`: which one the answer leads with. Not an identifier.
   dialect: z.enum(["yue", "cmn", "en"]),
   memory: z.string().max(MAX_BRIEF_CHARS).optional(),
+  /**
+   * The last few turns of this conversation, for resolving what a follow-up refers back to.
+   *
+   * Bounded on both axes on purpose. It is the reader's own words and 明明's own replies, both
+   * already on the device, and it may never become a channel for anything else: a role that is
+   * not one of two values, or a turn over the cap, is rejected outright rather than trimmed.
+   */
+  context: z
+    .array(
+      z.strictObject({
+        role: z.enum(["user", "agent"]),
+        text: z.string().max(MAX_TURN_CHARS),
+      }),
+    )
+    .max(MAX_TURNS)
+    .optional(),
 });
 export type AskRequest = z.infer<typeof AskRequestSchema>;
 
@@ -128,8 +149,9 @@ export type AskEvent =
   | {
       event: "outcome";
       outcome: "answered";
-      citedCardId: string;
-      source: SourceReference | null;
+      /** Every card the answer stands on, in the order the model named them. */
+      citedCardIds: string[];
+      sources: SourceReference[];
     }
   | { event: "answer"; answer: Speakable }
   | { event: "done" }
@@ -170,9 +192,18 @@ function* notOnSheetEvents(): Generator<AskEvent> {
  * the server itself produced for this reading — the client never has to trust the model's claim,
  * and neither does the route (contracts/api-ask.md).
  */
-function citedCard(cards: readonly Card[], citedCardId: string | null): Card | null {
-  if (citedCardId === null) return null;
-  return cards.find((card) => card.id === citedCardId) ?? null;
+function citedCards(cards: readonly Card[], ids: readonly string[]): Card[] {
+  const byId = new Map(cards.map((card) => [card.id, card]));
+  const seen = new Set<string>();
+  const out: Card[] = [];
+  for (const id of ids) {
+    const card = byId.get(id);
+    if (card && !seen.has(id)) {
+      seen.add(id);
+      out.push(card);
+    }
+  }
+  return out;
 }
 
 /**
@@ -222,6 +253,12 @@ export async function* runAsk(
   // citation must still be a card id this server built from the CURRENT sheet, so a question the
   // brief could answer but the sheet cannot still comes back `not_on_sheet`.
   const memory = input.memory?.trim();
+  // Same discipline as the brief: empty turns are dropped so a first question is byte-for-byte the
+  // request it was before context existed. The client is what excludes refused and crisis turns
+  // (`components/chat/thread.ts`) — those never reached the model and must not start now.
+  const context = (input.context ?? [])
+    .map((turn) => ({ role: turn.role, text: turn.text.trim() }))
+    .filter((turn) => turn.text.length > 0);
 
   let result: AskResult | null;
   try {
@@ -231,6 +268,7 @@ export async function* runAsk(
       inputLanguage: question.inputLanguage,
       dialect,
       ...(memory ? { memory } : {}),
+      ...(context.length > 0 ? { context } : {}),
     }));
   } catch (error) {
     // Invalid JSON, a truncated reply or a schema failure is not a transient outage: there is
@@ -263,11 +301,14 @@ export async function* runAsk(
     return;
   }
 
-  const cited = citedCard(cards, result.citedCardId);
-  if (cited === null) {
+  const citations = citedCards(cards, result.citedCardIds);
+  if (citations.length === 0) {
     yield* notOnSheetEvents();
     return;
   }
+  // The repair path below rewrites ONE card's answer from its typed facts, so it needs a single
+  // card to work from. The first cited card is the one the answer leads with.
+  const cited = citations[0];
 
   let answer: Speakable = result.answer;
   const check = checkSpeakable(answer);
@@ -309,8 +350,10 @@ export async function* runAsk(
   yield {
     event: "outcome",
     outcome: "answered",
-    citedCardId: cited.id,
-    source: cited.source,
+    citedCardIds: citations.map((card) => card.id),
+    sources: citations
+      .map((card) => card.source)
+      .filter((source): source is SourceReference => source !== null),
   };
   yield { event: "answer", answer };
   yield { event: "done" };

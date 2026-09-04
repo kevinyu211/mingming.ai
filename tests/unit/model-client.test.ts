@@ -332,7 +332,7 @@ describe("no profile-like data ever leaves the server", () => {
             type: "text",
             text: JSON.stringify({
               kind: "sheet" as const,
-              citedCardId: "medicine-1",
+              citedCardIds: ["medicine-1"],
               answer: SPEAKABLE,
             }),
           },
@@ -361,7 +361,7 @@ describe("AnthropicProvider.answer and .phrase", () => {
         content: [
           {
             type: "text",
-            text: JSON.stringify({ kind: "none" as const, citedCardId: null, answer: null }),
+            text: JSON.stringify({ kind: "none" as const, citedCardIds: [], answer: null }),
           },
         ],
       }),
@@ -381,7 +381,7 @@ describe("AnthropicProvider.answer and .phrase", () => {
     expect(request.output_config.effort).toBe("medium");
     expect(request.output_config.format.schema).toEqual(ASK_OUTPUT_FORMAT.schema);
     expect(Object.keys((askResultJsonSchema() as { properties: object }).properties).sort()).toEqual(
-      ["answer", "citedCardId", "kind"],
+      ["answer", "citedCardIds", "kind"],
     );
     expect(request.system[0].text).toBe(ASK_SYSTEM);
     expect(request.system[0].cache_control).toEqual({ type: "ephemeral" });

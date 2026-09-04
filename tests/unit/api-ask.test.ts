@@ -91,7 +91,7 @@ afterEach(() => {
 describe("POST /api/ask", () => {
   it("streams outcome, answer and done as newline-delimited JSON", async () => {
     answerMock.mockResolvedValue({
-      result: { grounded: true, citedCardId: "medicine-0", answer: ANSWER },
+      result: { grounded: true, citedCardIds: ["medicine-0"], answer: ANSWER },
       usage: USAGE,
     });
 
@@ -104,8 +104,8 @@ describe("POST /api/ask", () => {
       {
         event: "outcome",
         outcome: "answered",
-        citedCardId: "medicine-0",
-        source: medicine0?.source,
+        citedCardIds: ["medicine-0"],
+        sources: [medicine0?.source],
       },
       { event: "answer", answer: ANSWER },
       { event: "done" },
@@ -114,7 +114,7 @@ describe("POST /api/ask", () => {
 
   it("logs one line carrying the outcome and a duration, and nothing from the body", async () => {
     answerMock.mockResolvedValue({
-      result: { grounded: true, citedCardId: "medicine-0", answer: ANSWER },
+      result: { grounded: true, citedCardIds: ["medicine-0"], answer: ANSWER },
       usage: USAGE,
     });
 
@@ -160,7 +160,7 @@ describe("POST /api/ask", () => {
 
   it("streams not_on_sheet when the model's citation cannot be verified", async () => {
     answerMock.mockResolvedValue({
-      result: { grounded: true, citedCardId: "medicine-99", answer: ANSWER },
+      result: { grounded: true, citedCardIds: ["medicine-99"], answer: ANSWER },
       usage: USAGE,
     });
 

@@ -142,6 +142,12 @@ export interface AnswerInput {
    * accepts only a card id built from the current reading.
    */
   memory?: string;
+  /**
+   * The last few turns of this conversation, for resolving what a follow-up refers back to
+   * ("是唔是仲有？" means nothing without the turn before it). Same discipline as `memory`: the ask
+   * call only, and never a source of facts — grounding still accepts only ids from this reading.
+   */
+  context?: readonly { role: "user" | "agent"; text: string }[];
 }
 
 export interface ModelProvider {
@@ -280,6 +286,7 @@ export class AnthropicProvider implements ModelProvider {
         input.inputLanguage,
         input.dialect,
         input.memory,
+        input.context,
       ),
       effort: ASK_EFFORT,
       format: ASK_OUTPUT_FORMAT,

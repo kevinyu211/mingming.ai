@@ -168,7 +168,7 @@ describe("the request", () => {
     );
     fetchMock.mockResolvedValue(
       ok([
-        '{"event":"outcome","outcome":"answered","citedCardId":"medicine-0"}\n',
+        '{"event":"outcome","outcome":"answered","citedCardIds":"medicine-0"}\n',
         `{"event":"answer","answer":${JSON.stringify(ANSWER)}}\n`,
         '{"event":"done"}\n',
       ]),
@@ -189,8 +189,8 @@ describe("the NDJSON stream", () => {
     fetchMock.mockResolvedValue(
       ok([
         '{"event":"outcome","outcome":"answ',
-        'ered","citedCardId":"medicine-0","source":',
-        `${JSON.stringify(SOURCE)}}\n{"event":"ans`,
+        'ered","citedCardIds":["medicine-0"],"sources":[',
+        `${JSON.stringify(SOURCE)}]}\n{"event":"ans`,
         `wer","answer":${JSON.stringify(ANSWER).slice(0, 20)}`,
         `${JSON.stringify(ANSWER).slice(20)}}\n`,
         '{"event":"done"}\n',
@@ -206,8 +206,8 @@ describe("the NDJSON stream", () => {
 
     expect(result).toEqual({
       outcome: "answered",
-      citedCardId: "medicine-0",
-      source: SOURCE,
+      citedCardIds: ["medicine-0"],
+      sources: [SOURCE],
       answer: ANSWER,
     });
     expect(outcomes).toEqual(["answered"]);
@@ -221,7 +221,7 @@ describe("the NDJSON stream", () => {
     const cut = 40;
     fetchMock.mockResolvedValue(
       ok([
-        '{"event":"outcome","outcome":"answered","citedCardId":"medicine-0"}\n',
+        '{"event":"outcome","outcome":"answered","citedCardIds":"medicine-0"}\n',
         bytes.slice(0, cut),
         bytes.slice(cut),
       ]),
@@ -235,7 +235,7 @@ describe("the NDJSON stream", () => {
   it("reads several events out of one chunk, and a last line with no newline", async () => {
     fetchMock.mockResolvedValue(
       ok([
-        '{"event":"outcome","outcome":"answered","citedCardId":"medicine-0"}\n' +
+        '{"event":"outcome","outcome":"answered","citedCardIds":"medicine-0"}\n' +
           `{"event":"answer","answer":${JSON.stringify(ANSWER)}}\n` +
           '{"event":"done"}',
       ]),
@@ -252,7 +252,7 @@ describe("the NDJSON stream", () => {
       ok([
         "\n",
         "not json at all\n",
-        '{"event":"outcome","outcome":"answered","citedCardId":"medicine-0"}\n',
+        '{"event":"outcome","outcome":"answered","citedCardIds":"medicine-0"}\n',
         "\n",
         `{"event":"answer","answer":${JSON.stringify(ANSWER)}}\n`,
       ]),
@@ -353,7 +353,7 @@ describe("failures", () => {
   it("maps an error event in the stream to its outcome", async () => {
     fetchMock.mockResolvedValue(
       ok([
-        '{"event":"outcome","outcome":"answered","citedCardId":"medicine-0"}\n',
+        '{"event":"outcome","outcome":"answered","citedCardIds":"medicine-0"}\n',
         '{"event":"error","error":"model_unavailable"}\n',
       ]),
     );

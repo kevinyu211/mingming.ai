@@ -15,7 +15,7 @@
       "text": "阿托伐他汀要夜晚食？",
       "expect": {
         "outcome": "answered",
-        "citedCardId": [
+        "citedCardIds": [
           "medicine-2"
         ]
       },
@@ -36,7 +36,7 @@
       "text": "幾時覆診？",
       "expect": {
         "outcome": "answered",
-        "citedCardId": [
+        "citedCardIds": [
           "followup-0"
         ]
       },
@@ -66,7 +66,7 @@
       "text": "二甲双胍要随餐吃吗？",
       "expect": {
         "outcome": "answered",
-        "citedCardId": [
+        "citedCardIds": [
           "medicine-1"
         ]
       },
@@ -87,7 +87,7 @@
       "text": "什么情况要马上去急诊？",
       "expect": {
         "outcome": "answered",
-        "citedCardId": [
+        "citedCardIds": [
           "warning-0",
           "warning-1",
           "warning-2"
@@ -101,7 +101,7 @@
       "text": "When is the follow-up?",
       "expect": {
         "outcome": "answered",
-        "citedCardId": [
+        "citedCardIds": [
           "followup-0"
         ]
       },
@@ -152,7 +152,7 @@
           "explained",
           "answered"
         ],
-        "citedCardId": [
+        "citedCardIds": [
           "diet"
         ]
       },

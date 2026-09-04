@@ -56,7 +56,7 @@ interface QuestionSpec {
    * are correct; `explained` is the failure, and pinning a single value would have failed a
    * perfectly good run for citing the page.
    */
-  expect: { outcome: Outcome | Outcome[]; citedCardId?: string[] };
+  expect: { outcome: Outcome | Outcome[]; citedCardIds?: string[] };
   why?: string;
 }
 
@@ -69,7 +69,7 @@ interface QuestionsFile {
 interface AskEventShape {
   event?: string;
   outcome?: string;
-  citedCardId?: string;
+  citedCardIds?: string[];
   answer?: Speakable;
   error?: string;
 }
@@ -78,7 +78,7 @@ interface Result {
   spec: QuestionSpec;
   group: "ten" | "crisis";
   outcome: string | null;
-  citedCardId: string | null;
+  citedCardIds: string[] | null;
   /** True when an answer event arrived; the crisis outcome deliberately has none. */
   answered: boolean;
   bannedHits: number;
@@ -157,7 +157,7 @@ async function askOnce(
     spec,
     group,
     outcome: null,
-    citedCardId: null,
+    citedCardIds: [],
     answered: false,
     bannedHits: 0,
     bannedTerms: [],
@@ -215,7 +215,7 @@ async function askOnce(
     switch (event.event) {
       case "outcome":
         result.outcome = event.outcome ?? null;
-        result.citedCardId = event.citedCardId ?? null;
+        result.citedCardIds = event.citedCardIds ?? null;
         break;
       case "answer": {
         result.answered = true;
@@ -261,11 +261,15 @@ async function askOnce(
 function finish(result: Result): Result {
   const wanted = expectedOutcomes(result.spec);
   result.outcomeOk = result.outcome !== null && wanted.includes(result.outcome as Outcome);
-  const allowed = result.spec.expect.citedCardId;
+  const allowed = result.spec.expect.citedCardIds;
   result.citationOk =
     result.outcome !== "answered" || !allowed
       ? true
-      : result.citedCardId !== null && allowed.includes(result.citedCardId);
+      : result.citedCardIds !== null &&
+        result.citedCardIds.length > 0 &&
+        // Every card it leaned on has to be one the question allows. A list answer cites several;
+        // one of them being off-sheet is still a wrong answer.
+        result.citedCardIds.every((id) => allowed.includes(id));
   return result;
 }
 
@@ -291,7 +295,7 @@ function cells(result: Result): string[] {
     result.spec.language,
     expectedOutcomes(result.spec).join(" | "),
     result.error ?? result.outcome ?? "-",
-    result.citedCardId ?? "-",
+    result.citedCardIds?.join(",") ?? "-",
     result.outcomeOk && result.citationOk && !result.error ? "yes" : "NO",
     String(result.bannedHits),
     ms(result.msToAnswer ?? result.msToDone),
@@ -366,7 +370,7 @@ async function main(): Promise<void> {
       // Ids and outcomes only: the question text is never printed beside its answer.
       console.log(
         `  ${spec.id.padEnd(18)} ${(result.error ?? result.outcome ?? "-").padEnd(24)} ` +
-          `${(result.citedCardId ?? "-").padEnd(12)} ${ms(result.msToAnswer ?? result.msToDone)} ` +
+          `${(result.citedCardIds?.join(",") ?? "-").padEnd(12)} ${ms(result.msToAnswer ?? result.msToDone)} ` +
           `${result.outcomeOk && result.citationOk && !result.error ? "ok" : "MISMATCH"}`,
       );
     }
@@ -414,9 +418,9 @@ async function main(): Promise<void> {
       : mismatches.map(
           (r) =>
             `- ${r.spec.id}: expected ${expectedOutcomes(r.spec).join(" | ")}` +
-            (r.spec.expect.citedCardId ? ` citing one of ${r.spec.expect.citedCardId.join(" / ")}` : "") +
+            (r.spec.expect.citedCardIds ? ` citing one of ${r.spec.expect.citedCardIds.join(" / ")}` : "") +
             `, got ${r.error ?? r.outcome ?? "nothing"}` +
-            (r.citedCardId ? ` citing ${r.citedCardId}` : ""),
+            (r.citedCardIds?.length ? ` citing ${r.citedCardIds.join(", ")}` : ""),
         )),
     "",
     `**SC-006 ${pass006 ? "PASS" : "FAIL"}** — ${tenResults.filter((r) => r.outcomeOk && r.citationOk && !r.error).length}/${tenResults.length} outcomes matched, p95 time to answer ${ms(p95)} (ceiling 10.0s).`,

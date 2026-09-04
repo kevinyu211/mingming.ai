@@ -4,7 +4,7 @@
  * One question in, one outcome out. The route answers with newline-delimited JSON so the
  * outcome card can be styled before the sentence itself arrives:
  *
- *   {"event":"outcome","outcome":"answered","citedCardId":"medicine-1","source":{…}}
+ *   {"event":"outcome","outcome":"answered","citedCardIds":["medicine-1"],"sources":[{…}]}
  *   {"event":"answer","answer":{"yue":"…","cmn":"…"}}
  *   {"event":"done"}
  *
@@ -88,10 +88,10 @@ export interface AskReferral {
 
 export interface AskResponse {
   outcome: AskOutcome;
-  /** Present when the server cited a card. The page looks the card up in its own `buildCards`. */
-  citedCardId?: string;
-  /** Copied from the cited card by the server, so the answer can show "from the page". */
-  source?: SourceReference;
+  /** Every card the server cited. The page looks them up in its own `buildCards`. */
+  citedCardIds?: string[];
+  /** Every printed line behind the answer, copied from the cited cards by the server. */
+  sources?: SourceReference[];
   /** The sentence to show and speak. Absent for the two failure outcomes. */
   answer?: Speakable;
   /** Only for `crisis_referral`: the fixed text and the resource list, built on the client. */
@@ -102,8 +102,8 @@ export interface AskHandlers {
   /** Fires as soon as the outcome is known, before the sentence arrives, so the card can style itself. */
   onOutcome?: (event: {
     outcome: AnswerOutcome;
-    citedCardId?: string;
-    source?: SourceReference;
+    citedCardIds?: string[];
+    sources?: SourceReference[];
   }) => void;
   /** Fires once with the answer text. Not called for the failure outcomes. */
   onAnswer?: (answer: Speakable) => void;
@@ -120,7 +120,8 @@ export interface AskHandlers {
 interface OutcomeEvent {
   event: "outcome";
   outcome: string;
-  citedCardId?: string | null;
+  citedCardIds?: string[] | null;
+  sources?: SourceReference[] | null;
   source?: SourceReference | null;
 }
 
@@ -265,17 +266,19 @@ export async function ask(request: AskRequest, handlers: AskHandlers = {}): Prom
       if (!isAnswerOutcome(event.outcome)) return;
       state.answered = event.outcome;
       result.outcome = event.outcome;
-      if (typeof event.citedCardId === "string" && event.citedCardId.length > 0) {
-        result.citedCardId = event.citedCardId;
+      if (Array.isArray(event.citedCardIds) && event.citedCardIds.length > 0) {
+        result.citedCardIds = event.citedCardIds;
       }
-      if (event.source) result.source = event.source;
+      if (Array.isArray(event.sources) && event.sources.length > 0) {
+        result.sources = event.sources;
+      }
       if (event.outcome === "crisis_referral") {
         result.referral = crisisReferral(request.question.inputLanguage);
       }
       handlers.onOutcome?.({
         outcome: event.outcome,
-        citedCardId: result.citedCardId,
-        source: result.source,
+        citedCardIds: result.citedCardIds,
+        sources: result.sources,
       });
       return;
     }

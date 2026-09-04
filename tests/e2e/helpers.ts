@@ -281,7 +281,7 @@ export async function mockAsk(page: Page, outcome: AskMock): Promise<RouteLog> {
         {
           event: "outcome",
           outcome: "answered",
-          citedCardId: MOCK_CITED_CARD_ID,
+          citedCardIds: [MOCK_CITED_CARD_ID],
           source: expectedSource("hk_en", MOCK_CITED_CARD_ID),
         },
         { event: "answer", answer: MOCK_ANSWER },
