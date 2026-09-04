@@ -803,25 +803,98 @@ describe("a released hold sends what was heard, final or not", () => {
 });
 
 /**
- * The hybrid, which is the other half of the same bug.
+ * One engine per hold, and a hold that never ends in silence.
  *
- * Keeping the last interim stopped the transcript vanishing, but the browser engine itself is the
- * weak link: it fails silently, it differs on every iOS point release, it is poor at Cantonese,
- * and on Chrome it uploads the audio to Google anyway. So `listen` now runs BOTH — the engine for
- * what the reader watches appear, `MediaRecorder` for what is actually sent — and the rule that
- * matters at a conference is that a bad network degrades to yesterday's behaviour, never to
- * silence. Every one of these cases must end with the reader's words going somewhere.
+ * The build before this one ran the browser recogniser and `MediaRecorder` AT THE SAME TIME, for
+ * instant on-screen words plus an accurate upload. On a laptop that is free; on Kevin's iPhone it
+ * was two claims on one microphone and it worked about two holds in three. The report was exactly
+ * what that produces: *"the transcription is still not working sometimes… I don't really
+ * understand why."*
+ *
+ * So the rule under test here is a rule about determinism, not about accuracy:
+ *
+ *   · in cloud mode with a recorder, `listen` records and uploads and NEVER starts the recogniser;
+ *   · a hold that captured audio ends in text or in a thrown error the bar can say out loud;
+ *   · a hold that captured nothing resolves `{ text: "" }`, which is "say it again", not a lie;
+ *   · the microphone track is stopped on every path out, including cancels, errors and timeouts;
+ *   · nothing in here can wait forever, because one unbounded await latched the bar's own guard
+ *     and killed every hold after it.
+ *
+ * The three-holds-in-a-row test is the one that matters most: "sometimes" almost always means
+ * "not the second one".
  */
-describe("the hybrid: instant on screen, accurate on the wire", () => {
-  /** A non-empty clip is all `transcribeClip` asks for before it will upload. */
+describe("cloud speech: one engine per hold, and never silence", () => {
+  /** What the recorder produces. Non-empty is all `listen` asks for before it will upload. */
   const CLIP = Uint8Array.from([1, 2, 3]);
-  /** What OpenAI would return: the engine's guess, corrected. */
+  /** What `/api/stt` returns. */
   const ACCURATE = "呢隻藥要唔要隨餐食？";
-  /** What the browser engine put on the screen while the reader was still speaking. */
-  const HEARD = "呢隻藥要唔要隨參食";
 
-  function fakeRecognition(said: string) {
-    return class {
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  interface FakeTrack {
+    stopped: number;
+  }
+
+  interface Recorders {
+    /** Every recorder built in this session, in order. */
+    readonly made: FakeRecorderLike[];
+  }
+
+  interface FakeRecorderLike {
+    state: string;
+    mimeType: string;
+    timeslice: number | undefined;
+    ondataavailable: ((event: { data: Blob }) => void) | null;
+    onstop: (() => void) | null;
+    onerror: (() => void) | null;
+    start(timeslice?: number): void;
+    requestData(): void;
+    stop(): void;
+  }
+
+  interface WorldOptions {
+    /** Take the recogniser away (Firefox, and some locked-down WebViews). */
+    noRecognition?: boolean;
+    /** Take the recorder away — the bar must be exactly the browser path it always was. */
+    noRecorder?: boolean;
+    /** What `getUserMedia` does. Defaults to handing over a working stream. */
+    openMic?: () => Promise<unknown>;
+    /** A recorder that goes quiet and never fires `onstop`, the way iOS Safari can. */
+    deadOnStop?: boolean;
+    /** A recorder that captures nothing at all: a flick of the thumb, or a broken capture. */
+    silent?: boolean;
+    /** What `/api/stt` does. Defaults to answering with `ACCURATE`. */
+    upload?: (init: RequestInit, attempt: number) => Promise<Response>;
+    /** Pretend this is an iPhone with the Safari 16.4 audio session API. */
+    audioSession?: { type: string };
+  }
+
+  interface World {
+    listen: typeof import("@/lib/speech/stt").listen;
+    uploads: { url: string; init: RequestInit }[];
+    interims: string[];
+    tracks: FakeTrack[];
+    recorders: Recorders;
+    /** How many times a recogniser was constructed. Must be 0 on the recorded path. */
+    recognitions: () => number;
+  }
+
+  /**
+   * One page load: the globals a phone would have, and the module that reads them.
+   *
+   * Deliberately built ONCE per test rather than once per hold, because what this file is really
+   * checking is what the second and third holds do — and `lib/speech/stt.ts` remembers, for the
+   * life of the page, whether the recorder proved usable.
+   */
+  async function world(options: WorldOptions = {}): Promise<World> {
+    vi.resetModules();
+    const uploads: { url: string; init: RequestInit }[] = [];
+    const interims: string[] = [];
+    const tracks: FakeTrack[] = [];
+    const made: FakeRecorderLike[] = [];
+    let recognitions = 0;
+
+    class FakeRecognition {
       lang = "";
       continuous = false;
       interimResults = false;
@@ -829,11 +902,13 @@ describe("the hybrid: instant on screen, accurate on the wire", () => {
       onresult: ((event: unknown) => void) | null = null;
       onerror: ((event: unknown) => void) | null = null;
       onend: (() => void) | null = null;
+      constructor() {
+        recognitions += 1;
+      }
       start(): void {
-        if (said.length === 0) return;
         this.onresult?.({
           resultIndex: 0,
-          results: [{ isFinal: false, 0: { transcript: said } }],
+          results: [{ isFinal: false, 0: { transcript: "呢隻藥要唔要隨參食" } }],
         });
       }
       stop(): void {
@@ -842,124 +917,202 @@ describe("the hybrid: instant on screen, accurate on the wire", () => {
       abort(): void {
         this.onend?.();
       }
-    };
-  }
+    }
 
-  function fakeRecorder() {
-    return class {
+    class FakeRecorder implements FakeRecorderLike {
       static isTypeSupported = () => true;
       state = "inactive";
       mimeType = "audio/webm;codecs=opus";
+      timeslice: number | undefined = undefined;
       ondataavailable: ((event: { data: Blob }) => void) | null = null;
       onstop: (() => void) | null = null;
       onerror: (() => void) | null = null;
-      start(): void {
+      constructor() {
+        made.push(this);
+      }
+      start(timeslice?: number): void {
+        this.timeslice = timeslice;
         this.state = "recording";
+      }
+      requestData(): void {
+        // A real recorder flushes the tail of the utterance here. This is what makes the clip
+        // survive a recorder that then refuses to end cleanly.
+        if (this.state !== "recording" || options.silent) return;
+        this.ondataavailable?.({ data: new Blob([CLIP], { type: "audio/webm" }) });
       }
       stop(): void {
         this.state = "inactive";
-        this.ondataavailable?.({ data: new Blob([CLIP], { type: "audio/webm" }) });
+        if (options.deadOnStop) return;
         this.onstop?.();
       }
-    };
-  }
-
-  interface HoldOptions {
-    /** What the engine hears. "" is the iOS case where it silently produces nothing. */
-    heard?: string;
-    /** Take the engine away entirely (Firefox, and some locked-down WebViews). */
-    noRecognition?: boolean;
-    /** Take the recorder away entirely — the bar must be exactly what it was before. */
-    noRecorder?: boolean;
-    /** What `/api/stt` does. Defaults to answering with `ACCURATE`. */
-    upload?: (init: RequestInit) => Promise<Response>;
-    cloudTimeoutMs?: number;
-    cancel?: boolean;
-  }
-
-  interface Hold {
-    result: Promise<{ text: string }>;
-    uploads: { url: string; init: RequestInit }[];
-    interims: string[];
-  }
-
-  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-  /** Press the bar, speak, release it — with the world the options describe. */
-  async function hold(options: HoldOptions = {}): Promise<Hold> {
-    vi.resetModules();
-    const uploads: { url: string; init: RequestInit }[] = [];
-    const interims: string[] = [];
+    }
 
     const win: Record<string, unknown> = {};
-    if (!options.noRecognition) {
-      win.webkitSpeechRecognition = fakeRecognition(options.heard ?? HEARD);
-    }
+    if (!options.noRecognition) win.webkitSpeechRecognition = FakeRecognition;
     vi.stubGlobal("window", win);
 
+    const navigatorStub: Record<string, unknown> = {};
+    if (options.audioSession) navigatorStub.audioSession = options.audioSession;
     if (options.noRecorder) {
       vi.stubGlobal("MediaRecorder", undefined);
-      vi.stubGlobal("navigator", {});
     } else {
-      vi.stubGlobal("MediaRecorder", fakeRecorder());
-      vi.stubGlobal("navigator", {
-        mediaDevices: { getUserMedia: async () => ({ getTracks: () => [] }) },
-      });
+      vi.stubGlobal("MediaRecorder", FakeRecorder);
+      navigatorStub.mediaDevices = {
+        getUserMedia:
+          options.openMic ??
+          (async () => {
+            const track: FakeTrack = { stopped: 0 };
+            tracks.push(track);
+            return { getTracks: () => [{ stop: () => (track.stopped += 1) }] };
+          }),
+      };
     }
+    vi.stubGlobal("navigator", navigatorStub);
 
+    let attempt = 0;
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string, init: RequestInit) => {
         uploads.push({ url, init });
-        return options.upload ? options.upload(init) : jsonResponse({ text: ACCURATE });
+        attempt += 1;
+        return options.upload
+          ? options.upload(init, attempt)
+          : jsonResponse({ text: ACCURATE });
       }),
     );
 
     process.env.NEXT_PUBLIC_STT_MODE = "cloud";
     const { listen } = await import("@/lib/speech/stt");
 
+    return {
+      listen,
+      uploads,
+      interims,
+      tracks,
+      recorders: { made },
+      recognitions: () => recognitions,
+    };
+  }
+
+  /**
+   * Press the bar, speak, let go.
+   *
+   * The promise comes back wrapped in an object rather than returned directly: an `async` function
+   * that returns a promise adopts it, so `await hold(...)` would await the hold ITSELF and a
+   * rejection would escape before the assertion could catch it.
+   */
+  interface Held {
+    result: Promise<{ text: string }>;
+  }
+
+  async function hold(
+    w: World,
+    options: { cancel?: boolean; heldMs?: number; cloudTimeoutMs?: number } = {},
+  ): Promise<Held> {
     const stop = new AbortController();
     const cancel = new AbortController();
-    const result = listen("yue", {
+    const result = w.listen("yue", {
       stop: stop.signal,
       cancel: cancel.signal,
       cloudTimeoutMs: options.cloudTimeoutMs,
-      onInterim: (text) => interims.push(text),
+      onInterim: (text) => w.interims.push(text),
     });
     // `ChatBar` awaits `listen` inside a try/catch, so its handler is attached synchronously.
-    // Here the tick below comes first, so a rejection would land unhandled and Vitest would
-    // report it as an error even though the test goes on to assert it.
+    // Here the wait below comes first, so a rejection would land unhandled and Vitest would report
+    // it as an error even though the test goes on to assert it.
     result.catch(() => {});
     // The microphone opens behind an async permission prompt; a real hold outlives it.
     await tick();
+    if (options.heldMs) await new Promise((resolve) => setTimeout(resolve, options.heldMs));
     if (options.cancel) cancel.abort();
     else stop.abort();
-
-    return { result, uploads, interims };
+    return { result };
   }
 
-  it("shows the browser's guess while speaking and sends the upload's transcript", async () => {
-    const { result, uploads, interims } = await hold();
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /* ------------------------------------------------------------------ the rule */
+
+  it("records and uploads, and never starts the browser engine beside it", async () => {
+    const w = await world();
+    const { result } = await hold(w);
 
     await expect(result).resolves.toEqual({ text: ACCURATE });
-    // The instant feedback is the point of keeping the browser engine at all.
-    expect(interims).toContain(HEARD);
-    expect(uploads).toHaveLength(1);
-    expect(uploads[0].url).toBe("/api/stt?language=yue");
-    expect(uploads[0].init.method).toBe("POST");
+    expect(w.uploads).toHaveLength(1);
+    expect(w.uploads[0].url).toBe("/api/stt?language=yue");
+    expect(w.uploads[0].init.method).toBe("POST");
+    // The whole diagnosis, as one assertion: two engines never share the microphone again.
+    expect(w.recognitions()).toBe(0);
+    expect(w.interims).toEqual([]);
   });
 
-  it("sends what was heard when the upload cannot go through at all", async () => {
-    const { result } = await hold({
-      upload: () => Promise.reject(new Error("network down")),
+  it("records in chunks, so a recorder that goes quiet has still handed most of it over", async () => {
+    const w = await world();
+    await (await hold(w)).result;
+
+    expect(w.recorders.made).toHaveLength(1);
+    expect(w.recorders.made[0].timeslice).toBeGreaterThan(0);
+  });
+
+  /* --------------------------------------------------------- "not the second one" */
+
+  it("sends all three of three holds in a row, and releases the microphone each time", async () => {
+    // "Sometimes" almost always means "not the second one": a leaked track, a latched guard, a
+    // recorder that was never released. Three holds on one page load is the shape of the bug.
+    const w = await world();
+
+    for (const attempt of [1, 2, 3]) {
+      await expect((await hold(w)).result).resolves.toEqual({ text: ACCURATE });
+      expect(w.uploads, `upload ${attempt}`).toHaveLength(attempt);
+      expect(w.tracks, `track ${attempt}`).toHaveLength(attempt);
+    }
+
+    // Every microphone track opened is a microphone track stopped. A leaked one is the best
+    // explanation there is for a second hold that does nothing.
+    expect(w.tracks.map((track) => track.stopped)).toEqual([1, 1, 1]);
+    expect(w.recognitions()).toBe(0);
+  });
+
+  /* ------------------------------------------------------ audio captured, no words */
+
+  it("says so out loud when the recording could not be sent at all", async () => {
+    // The bug, in one test. Audio was captured; the network ate it. Before this, the reader got
+    // nothing on screen and no reason — which is indistinguishable from the app ignoring them.
+    const w = await world({ upload: () => Promise.reject(new Error("network down")) });
+
+    await expect((await hold(w)).result).rejects.toMatchObject({
+      code: "speech_unavailable",
+      reason: "network",
+    });
+  });
+
+  it("tries the upload twice before giving up on it", async () => {
+    const w = await world({
+      upload: (_init, attempt) =>
+        attempt === 1
+          ? Promise.reject(new Error("network blip"))
+          : Promise.resolve(jsonResponse({ text: ACCURATE })),
     });
 
-    await expect(result).resolves.toEqual({ text: HEARD });
+    await expect((await hold(w)).result).resolves.toEqual({ text: ACCURATE });
+    expect(w.uploads).toHaveLength(2);
   });
 
-  it("sends what was heard when the upload times out", async () => {
-    const { result } = await hold({
-      cloudTimeoutMs: 20,
+  it("does not retry a 502, and still says so rather than going quiet", async () => {
+    const w = await world({
+      upload: () => Promise.resolve(jsonResponse({ error: "stt_failed" }, 502)),
+    });
+
+    await expect((await hold(w)).result).rejects.toMatchObject({ reason: "network" });
+    // A 502 is the provider answering; a second identical clip gets the same answer. One retry is
+    // for a dropped connection, not for a route that already made up its mind.
+    expect(w.uploads).toHaveLength(2);
+  });
+
+  it("says so when the upload times out rather than resolving with nothing", async () => {
+    const w = await world({
       upload: (init) =>
         new Promise((_resolve, reject) => {
           init.signal?.addEventListener("abort", () => reject(new Error("aborted")), {
@@ -968,60 +1121,129 @@ describe("the hybrid: instant on screen, accurate on the wire", () => {
         }),
     });
 
-    await expect(result).resolves.toEqual({ text: HEARD });
+    await expect((await hold(w, { cloudTimeoutMs: 20 })).result).rejects.toMatchObject({
+      reason: "network",
+    });
   });
 
-  it("sends what was heard when the route answers 503, 502 or nothing usable", async () => {
-    for (const upload of [
-      () => Promise.resolve(jsonResponse({ error: "browser_fallback" }, 503)),
-      () => Promise.resolve(jsonResponse({ error: "stt_failed" }, 502)),
-      () => Promise.resolve(jsonResponse({ text: "   " })),
-    ]) {
-      const { result } = await hold({ upload });
-      await expect(result).resolves.toEqual({ text: HEARD });
-    }
+  /* --------------------------------------------------------------- nothing captured */
+
+  it("resolves empty when the hold captured nothing, so the bar can ask for it again", async () => {
+    const w = await world({ silent: true });
+
+    await expect((await hold(w)).result).resolves.toEqual({ text: "" });
+    // Nothing was captured, so nothing may leave the phone.
+    expect(w.uploads).toHaveLength(0);
   });
 
-  it("sends the upload's transcript when the engine silently heard nothing", async () => {
-    // The iOS case Kevin hit: he said it, he let go, and the engine produced no result at all.
-    const { result } = await hold({ heard: "" });
+  it("answers empty when the route heard the clip and found no words in it", async () => {
+    const w = await world({ upload: () => Promise.resolve(jsonResponse({ text: "   " })) });
 
-    await expect(result).resolves.toEqual({ text: ACCURATE });
+    await expect((await hold(w)).result).resolves.toEqual({ text: "" });
   });
+
+  /* ------------------------------------------------------------- nothing may hang */
+
+  it("still delivers when the recorder never fires onstop", async () => {
+    // iOS Safari can leave a recorder whose audio session was taken away sitting in `recording`
+    // with no `onstop` ever. `await recording.clip` had no ceiling, so `listen` never resolved,
+    // `ChatBar`'s `finally` never ran, and its listening guard stayed latched — every hold after
+    // that returned at its first line. This is that phone.
+    const w = await world({ deadOnStop: true });
+
+    await expect((await hold(w)).result).resolves.toEqual({ text: ACCURATE });
+    expect(w.tracks[0].stopped).toBeGreaterThan(0);
+  }, 10_000);
+
+  /* -------------------------------------------------------------------- the cancel */
+
+  it("uploads nothing when the hold is cancelled, and still lets the microphone go", async () => {
+    const w = await world();
+
+    await expect((await hold(w, { cancel: true })).result).resolves.toEqual({ text: "" });
+    expect(w.uploads).toHaveLength(0);
+    expect(w.tracks[0].stopped).toBeGreaterThan(0);
+  });
+
+  /* ------------------------------------------------------------------ the fallback */
 
   it("is exactly the old browser path when the device cannot record", async () => {
-    const { result, uploads, interims } = await hold({ noRecorder: true });
+    const w = await world({ noRecorder: true });
 
-    await expect(result).resolves.toEqual({ text: HEARD });
-    expect(uploads).toHaveLength(0);
-    expect(interims).toContain(HEARD);
+    await expect((await hold(w)).result).resolves.toEqual({ text: "呢隻藥要唔要隨參食" });
+    expect(w.uploads).toHaveLength(0);
+    // With no upload to wait for, the words on screen are all there is — so they still appear.
+    expect(w.interims).toContain("呢隻藥要唔要隨參食");
   });
 
-  it("does not confuse a missing recorder with a missing microphone", async () => {
-    // The bar switches to the keyboard FOR GOOD on a fatal error, so "this browser cannot record
-    // audio" must never be raised on a device whose engine is working and simply heard silence.
-    const { result } = await hold({ noRecorder: true, heard: "" });
+  it("switches to the browser engine for good once the microphone will not open", async () => {
+    // NotReadableError: the microphone is busy — a call, another tab, iOS still holding it from
+    // the last session. Not a refusal, so the bar must not move to the keyboard for the day; and
+    // not a coin flip either, so the session stops trying the recorder at all.
+    const w = await world({
+      openMic: () => Promise.reject(Object.assign(new Error("busy"), { name: "NotReadableError" })),
+    });
 
-    await expect(result).resolves.toEqual({ text: "" });
+    await expect((await hold(w)).result).resolves.toEqual({ text: "呢隻藥要唔要隨參食" });
+    await expect((await hold(w)).result).resolves.toEqual({ text: "呢隻藥要唔要隨參食" });
+    // Two holds, and the microphone was asked for exactly once. That is what "deterministic"
+    // means here: the answer stops changing.
+    expect(w.recorders.made).toHaveLength(0);
+    expect(w.recognitions()).toBe(2);
   });
 
-  it("still works, silently, when the device has no recognition engine", async () => {
-    const { result, interims } = await hold({ noRecognition: true });
+  it("switches to the browser engine when the route says speech is recognised on the device", async () => {
+    const w = await world({
+      upload: () => Promise.resolve(jsonResponse({ error: "browser_fallback" }, 503)),
+    });
 
-    await expect(result).resolves.toEqual({ text: ACCURATE });
-    expect(interims).toEqual([]);
+    // The clip that hit the 503 is gone, so this hold is an honest failure…
+    await expect((await hold(w)).result).rejects.toMatchObject({ reason: "network" });
+    // …and the next one does not repeat the mistake.
+    await expect((await hold(w)).result).resolves.toEqual({ text: "呢隻藥要唔要隨參食" });
+    expect(w.uploads).toHaveLength(1);
+  });
+
+  it("keeps a refusal permanent, and does not fall through to a second prompt", async () => {
+    const w = await world({
+      openMic: () => Promise.reject(Object.assign(new Error("no"), { name: "NotAllowedError" })),
+    });
+
+    // `ChatBar` turns this into the keyboard for the rest of the session. Falling back to the
+    // recogniser here would put a SECOND permission prompt in front of somebody who just said no.
+    await expect((await hold(w)).result).rejects.toMatchObject({ reason: "denied" });
+    expect(w.recognitions()).toBe(0);
   });
 
   it("asks for the keyboard only when neither engine exists", async () => {
-    const { result } = await hold({ noRecognition: true, noRecorder: true });
+    const w = await world({ noRecognition: true, noRecorder: true });
 
-    await expect(result).rejects.toMatchObject({ code: "speech_unavailable" });
+    await expect((await hold(w)).result).rejects.toMatchObject({
+      code: "speech_unavailable",
+      reason: "no_api",
+    });
   });
 
-  it("uploads nothing when the hold is cancelled", async () => {
-    const { result, uploads } = await hold({ cancel: true });
+  /* --------------------------------------------------------------- the iOS session */
 
-    await expect(result).resolves.toEqual({ text: "" });
-    expect(uploads).toHaveLength(0);
+  it("claims the recording audio session for the hold and hands it straight back", async () => {
+    // `lib/speech/unlock.ts` sets the session to "playback" so the ring/silent switch cannot mute
+    // 明明. That is the type for a page that does NOT record, and it was still set when the
+    // microphone opened. Safari 16.4+ only; everywhere else there is no such object.
+    const session = { type: "playback" };
+    const seen: string[] = [];
+    const w = await world({
+      audioSession: session,
+      openMic: async () => {
+        seen.push(session.type);
+        return { getTracks: () => [{ stop: () => {} }] };
+      },
+    });
+
+    await (await hold(w)).result;
+
+    expect(seen).toEqual(["play-and-record"]);
+    // And back, so the answer 明明 speaks next is not at the mercy of the mute switch.
+    expect(session.type).toBe("playback");
   });
 });

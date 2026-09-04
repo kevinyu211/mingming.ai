@@ -61,6 +61,21 @@
  * so in one plain sentence rather than offering a microphone that cannot work. `lib/speech/stt.ts`
  * distinguishes "this browser has none" and "permission refused" (permanent — stay typing) from
  * "nothing was heard" (transient — the bar resets and the page says so in the thread).
+ *
+ * ## The third state, and the second hold that did nothing
+ *
+ * A hold has THREE phases, not two, and the missing one is why the bar felt unreliable on a real
+ * iPhone. Between letting go and the transcript arriving there is a second or two of upload. The
+ * bar used to spend it still painted jade and still saying 「聽住你講…」 — so the reader let go,
+ * watched it claim to be listening to nothing, and pressed again. That second press hit
+ * `listening.current` and was dropped on the floor without a mark on the screen.
+ *
+ * Now `phase` moves 閒 → 聽 → 送, the release hands the floor back at the release (not when the
+ * upload lands), and the bar says 「送緊…」 and is genuinely disabled while it is. A control that
+ * plainly is not ready beats a control that looks ready and ignores you.
+ *
+ * And a hold that captured the reader's voice and could not turn it into words now SAYS SO, in
+ * the same slot the no-microphone sentence uses. Silence with nothing sent was the bug.
  */
 import {
   useCallback,
@@ -74,7 +89,12 @@ import {
 import { useT } from "@/components/LocaleProvider";
 import type { UiLocale } from "@/lib/i18n/ui";
 import type { InputLanguage } from "@/lib/domain/schemas";
-import { isSttAvailable, listen, SpeechUnavailableError } from "@/lib/speech/stt";
+import {
+  isSttAvailable,
+  listen,
+  SpeechUnavailableError,
+  type SpeechUnavailableReason,
+} from "@/lib/speech/stt";
 
 /**
  * Copy with no key in `lib/i18n/ui.ts`. Word for word the sentence `components/VoiceBar.tsx`
@@ -87,6 +107,48 @@ const NO_MIC: Record<UiLocale, string> = {
   hans: "现在听不到你说话，打字问就行。",
   en: "Speech input isn't working right now. Type the question instead.",
 };
+
+/**
+ * The hold worked and the words did not come back.
+ *
+ * `lib/speech/stt.ts` throws `network` only when audio was actually captured, so this sentence is
+ * never a guess: the phone heard the reader, and the transcript is what failed. It matters that
+ * this is a different sentence from 「我冇聽到」 — telling somebody you did not hear them when you
+ * did is how they conclude they have to say it louder, twice, and then give up.
+ */
+const NOT_SENT: Record<UiLocale, string> = {
+  hant: "聽到你講嘢，但係送唔到出去。撳住再講多次，或者打字問。",
+  hans: "听到你说话，但是发不出去。按住再说一次，或者打字问。",
+  en: "I heard you, but it couldn't go through. Hold and say it again, or type it.",
+};
+
+/** The microphone would not open this time — busy, or taken by something else on the phone. */
+const NO_MIC_NOW: Record<UiLocale, string> = {
+  hant: "而家開唔到麥克風。試多次，或者打字問。",
+  hans: "现在开不了麦克风。再试一次，或者打字问。",
+  en: "The microphone wouldn't open just now. Try again, or type it.",
+};
+
+/**
+ * Which honest sentence a failed hold earns, or null for "the page says it in the thread".
+ *
+ * `no_api` and `denied` never reach here: they are permanent for the session and move the bar to
+ * the keyboard for good. Everything else is this hold only.
+ */
+function noteFor(reason: SpeechUnavailableReason): Record<UiLocale, string> | null {
+  if (reason === "network") return NOT_SENT;
+  if (reason === "provider") return NO_MIC_NOW;
+  // "no_speech" is the engine saying it heard nothing, which is the thread's line, not the bar's.
+  return null;
+}
+
+/**
+ * Where a hold is between the press and the transcript.
+ *
+ * `sending` is the one that did not exist. See the header: without it the bar claimed to be
+ * listening through the whole upload and silently swallowed the next press.
+ */
+type Phase = "idle" | "listening" | "sending";
 
 /** Past this, the press is a hold and the microphone opens. Under it, it is a tap. */
 const HOLD_MS = 220;
@@ -142,9 +204,13 @@ export default function ChatBar({
 
   const [chosen, setChosen] = useState<"voice" | "text" | null>(null);
   const [denied, setDenied] = useState(false);
-  const [holding, setHolding] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
+  /** The last hold's honest failure, if it had one. Cleared the moment anything else happens. */
+  const [failure, setFailure] = useState<Record<UiLocale, string> | null>(null);
   const [draft, setDraft] = useState("");
 
+  const holding = phase === "listening";
+  const sending = phase === "sending";
   const noMic = !sttAvailable || denied;
   const mode: "voice" | "text" = noMic ? "text" : (chosen ?? "voice");
 
@@ -166,6 +232,21 @@ export default function ChatBar({
     [],
   );
 
+  /**
+   * Hand the floor back and start the upload.
+   *
+   * Called on release rather than when `listen` resolves, because those are a second or two apart
+   * and the reader is entitled to know which of the two they are in. The listening bubble in the
+   * thread closes here; the bar takes over with 「送緊…」.
+   */
+  const stopListening = useCallback(() => {
+    if (!listening.current) return;
+    setPhase("sending");
+    onInterim?.("");
+    onListening?.(false);
+    stopSignal.current?.abort();
+  }, [onInterim, onListening]);
+
   const beginListening = useCallback(async () => {
     if (listening.current) return;
     listening.current = true;
@@ -173,7 +254,8 @@ export default function ChatBar({
     const cancel = new AbortController();
     stopSignal.current = stop;
     cancelSignal.current = cancel;
-    setHolding(true);
+    setFailure(null);
+    setPhase("listening");
     onInterim?.("");
     onListening?.(true);
 
@@ -188,21 +270,23 @@ export default function ChatBar({
       else onNothingHeard?.();
     } catch (error) {
       // "No API" and "permission refused" are permanent for this session, so the bar moves to
-      // typing and says so. Anything else — nothing heard, a network blip — is not a failure of
-      // the product: the bar resets and the page says one sentence in the thread.
-      if (
-        error instanceof SpeechUnavailableError &&
-        (error.reason === "no_api" || error.reason === "denied")
-      ) {
+      // typing and says so. Everything else is this hold only — but it is still SAID: a hold that
+      // captured the reader's voice and could not turn it into words gets its own sentence on the
+      // bar rather than the thread's "I didn't catch that", which would be a lie.
+      const reason =
+        error instanceof SpeechUnavailableError ? error.reason : ("provider" as const);
+      if (reason === "no_api" || reason === "denied") {
         setDenied(true);
       } else {
-        onNothingHeard?.();
+        const note = noteFor(reason);
+        if (note) setFailure(note);
+        else onNothingHeard?.();
       }
     } finally {
       listening.current = false;
       stopSignal.current = null;
       cancelSignal.current = null;
-      setHolding(false);
+      setPhase("idle");
       onInterim?.("");
       onListening?.(false);
     }
@@ -211,6 +295,8 @@ export default function ChatBar({
   const onDown = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, means: TapMeans) => {
       if (listening.current) return;
+      // Any new press means the last hold's complaint has been read.
+      setFailure(null);
       // See the header: without capture the hold ends by itself as soon as the button reflows.
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
@@ -229,43 +315,52 @@ export default function ChatBar({
   );
 
   /** Release — and only release. A pointer that wanders off the control is still holding it. */
-  const onRelease = useCallback((event?: ReactPointerEvent<HTMLButtonElement>) => {
-    if (event) {
-      try {
-        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-          event.currentTarget.releasePointerCapture(event.pointerId);
+  const onRelease = useCallback(
+    (event?: ReactPointerEvent<HTMLButtonElement>) => {
+      if (event) {
+        try {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+        } catch {
+          // Nothing to release.
         }
-      } catch {
-        // Nothing to release.
       }
-    }
-    if (holdTimer.current) {
-      clearTimeout(holdTimer.current);
-      holdTimer.current = null;
-    }
-    if (tapCandidate.current) {
-      tapCandidate.current = false;
-      if (tapMeans.current === "voice") {
-        setChosen("voice");
+      if (holdTimer.current) {
+        clearTimeout(holdTimer.current);
+        holdTimer.current = null;
+      }
+      if (tapCandidate.current) {
+        tapCandidate.current = false;
+        if (tapMeans.current === "voice") {
+          setChosen("voice");
+          return;
+        }
+        setChosen("text");
+        // The field is mounted by this same state change, so focus waits a frame for it.
+        requestAnimationFrame(() => fieldRef.current?.focus());
         return;
       }
-      setChosen("text");
-      // The field is mounted by this same state change, so focus waits a frame for it.
-      requestAnimationFrame(() => fieldRef.current?.focus());
-      return;
-    }
-    stopSignal.current?.abort();
-  }, []);
+      stopListening();
+    },
+    [stopListening],
+  );
 
   const send = useCallback(() => {
     const text = draft.trim();
     if (text.length === 0) return;
     setDraft("");
+    setFailure(null);
     onSend(text);
   }, [draft, onSend]);
 
-  const note = noMic ? (
-    <p className="mb-1.5 text-[12px] leading-[1.35] text-muted">{NO_MIC[locale]}</p>
+  // At most one sentence above the bar, and the permanent one wins: on a phone with no microphone
+  // at all, "try again" is advice that cannot be taken.
+  const noteText = noMic ? NO_MIC[locale] : (failure?.[locale] ?? null);
+  const note = noteText ? (
+    <p role="status" className="mb-1.5 text-[12px] leading-[1.35] text-muted">
+      {noteText}
+    </p>
   ) : null;
 
   return (
@@ -278,7 +373,7 @@ export default function ChatBar({
       {mode === "voice" ? (
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || sending}
           onPointerDown={(event) => onDown(event, "keyboard")}
           onPointerUp={onRelease}
           onPointerCancel={onRelease}
@@ -288,22 +383,27 @@ export default function ChatBar({
           aria-pressed={holding}
           className={`flex min-h-[52px] w-full touch-none items-center justify-center gap-2 rounded-full px-4 py-2 select-none ${
             holding ? "bg-jade shadow-raised" : "surface"
-          } ${busy ? "opacity-60" : ""}`}
+          } ${busy || sending ? "opacity-60" : ""}`}
         >
           {holding ? <HoldingWave /> : <MicMark />}
           {/*
             Three states, not two. Between letting go and the question appearing there is a second
-            or two while the recording is transcribed — without a state of its own the bar dropped
-            straight back to 「按住講嘢」 and looked idle while it was in fact working, which reads
-            as "it didn't hear me" and invites a second hold on top of the first.
+            or two while the recording is uploaded and transcribed — and the bar used to spend it
+            still painted jade and still claiming to be listening, which reads as "it didn't hear
+            me" and invites a second hold that the listening guard then throws away in silence.
+            `sending` is that second or two, said out loud, with the control genuinely disabled.
           */}
           <span className={`text-[17px] font-bold ${holding ? "text-white" : "text-ink"}`}>
-            {holding ? t("bar.listening") : busy ? t("bar.sending") : t("bar.hold")}
+            {holding ? t("bar.listening") : busy || sending ? t("bar.sending") : t("bar.hold")}
           </span>
           <span
             className={`text-[13px] whitespace-nowrap ${holding ? "text-white/80" : "text-muted"}`}
           >
-            {holding ? t("bar.listeningSub") : busy ? t("bar.sendingSub") : t("bar.holdSub")}
+            {holding
+              ? t("bar.listeningSub")
+              : busy || sending
+                ? t("bar.sendingSub")
+                : t("bar.holdSub")}
           </span>
         </button>
       ) : (
@@ -311,6 +411,7 @@ export default function ChatBar({
           {!noMic ? (
             <button
               type="button"
+              disabled={sending}
               onPointerDown={(event) => onDown(event, "voice")}
               onPointerUp={onRelease}
               onPointerCancel={onRelease}
@@ -319,7 +420,7 @@ export default function ChatBar({
               aria-pressed={holding}
               className={`grid h-12 w-16 shrink-0 touch-none place-items-center rounded-full select-none ${
                 holding ? "bg-jade shadow-raised" : "bg-neutral text-muted"
-              }`}
+              } ${sending ? "opacity-60" : ""}`}
             >
               {/*
                 The control the reader pressed stays mounted through the whole hold — it only

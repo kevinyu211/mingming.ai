@@ -68,12 +68,19 @@ function hasWindow(): boolean {
  * Without it the ring/silent switch on the side of the phone silences the reading, and the app
  * looks broken to a reader who has no idea the switch is even involved. Safari 16.4+ only;
  * everywhere else the property is absent and this does nothing.
+ *
+ * It steps aside for `play-and-record`, which `lib/speech/stt.ts` claims for the length of a hold
+ * and hands straight back. `unlockAudio()` runs from a capture-phase listener on every pointer
+ * event until the element is unlocked, and pressing the bar IS a pointer event — so without this
+ * guard the act of starting to talk reset the session to "this page does not record" underneath
+ * the microphone that had just opened.
  */
 function claimPlaybackSession(): void {
   if (typeof navigator === "undefined") return;
   const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
   if (!session) return;
   try {
+    if (session.type === "play-and-record") return;
     if (session.type !== "playback") session.type = "playback";
   } catch {
     // Not settable on this build. The reading still plays with the switch off.

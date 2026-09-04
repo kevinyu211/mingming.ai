@@ -3,25 +3,56 @@
 /**
  * Hearing the question, on the phone.
  *
- * Push-to-talk. On the cloud path both engines run AT THE SAME TIME (research.md R6):
+ * Push-to-talk. **One engine per hold, chosen before the microphone opens.** In cloud mode that
+ * is `getUserMedia` + `MediaRecorder` + `/api/stt`; everywhere else it is the browser's own
+ * `SpeechRecognition`. The two never run at the same time any more, and this file is mostly the
+ * story of why.
  *
- *   1. The browser's `SpeechRecognition` starts first and reports interim text through
- *      `onInterim`, so the reader's words appear on screen while they are still speaking. That
- *      is what makes the bar feel instant, and it is the only thing that can — an upload cannot.
- *   2. `MediaRecorder` captures the same utterance alongside it.
- *   3. On release the clip is posted to `/api/stt`, and THAT transcript is the question. It is
- *      the accurate one, and it is far better at Cantonese than any browser engine.
- *   4. If the upload fails, times out, or comes back empty, the browser's own text is sent
- *      instead. A bad venue network degrades to yesterday's behaviour, never to silence.
+ * ── What the phone actually did, and why "sometimes" was the symptom ─────────────────────────
  *
- * Why not the browser alone: it fails silently, it behaves differently on every iOS point
- * release, it is weak on Cantonese, and on Chrome it uploads the audio to Google anyway — so
- * "on device" was never true. Why not the cloud alone: nothing appears on screen until the
- * upload comes back, and the reader has no idea whether the phone heard them.
+ * The previous build ran BOTH at once: recognition for instant on-screen words, a recorder for
+ * the accurate upload. On a laptop that is free. On an iPhone it is two claims on one microphone,
+ * and it produced a bar that worked, then did not, then did:
  *
- * When `NEXT_PUBLIC_STT_MODE` is not "cloud", or the device has no recorder, only step 1 runs.
- * With neither engine, `listen` throws `SpeechUnavailableError`, which is the UI's signal to
- * show the typed box. The typed box is visible at all times anyway; this just moves focus to it.
+ *   1. **Two permission prompts, racing.** iOS asks separately for the microphone and for speech
+ *      recognition. Whichever the reader dismissed first killed the other, and the hold was over
+ *      before either had answered. One capture path means one prompt.
+ *   2. **The hold outlived by the prompt.** `getUserMedia` sat behind that prompt while the
+ *      reader spoke and let go; the recorder started and stopped in the same tick and produced an
+ *      empty clip, and the engine beside it had been listening to a muted session. Nothing was
+ *      sent and nothing was said about it.
+ *   3. **An unbounded wait.** `await recording.clip` had no ceiling. iOS Safari can leave a
+ *      recorder whose audio session was taken away in `recording` with `onstop` never firing — so
+ *      `listen()` never resolved, `ChatBar`'s `finally` never ran, and its `listening` guard
+ *      stayed latched. Every hold after that returned at its first line. That is the failure that
+ *      does not recover, and it matches "it works, then it doesn't" exactly.
+ *   4. **The audio session was still set to playback.** `lib/speech/unlock.ts` sets
+ *      `navigator.audioSession.type = "playback"` so the ring/silent switch cannot mute 明明.
+ *      That is the right type for speaking and the wrong one for listening, so capture now claims
+ *      `play-and-record` for the length of the hold and hands it straight back.
+ *
+ * ── What is guaranteed now ───────────────────────────────────────────────────────────────────
+ *
+ * A hold that captured audio ends in TEXT or in a visible failure — never in silence. A hold that
+ * captured nothing resolves `{ text: "" }`, which is the caller's cue to say so. Every path out,
+ * including errors, cancels and timeouts, stops the microphone track: a leaked track is the other
+ * good explanation for "the second one doesn't work", so releasing is idempotent and is done from
+ * a `finally` as well as from the recorder's own events. And NOTHING in here awaits without a
+ * ceiling, on either path — one unbounded await is all it takes to latch the bar for good.
+ *
+ * The price is the upload's second or two, during which the reader sees 「送緊…」 rather than
+ * their own words appearing live. That is the trade, taken deliberately: a two-second path that
+ * always works beats an instant one that fails one hold in three.
+ *
+ * ── When it falls back ───────────────────────────────────────────────────────────────────────
+ *
+ * Recording is not offered as a coin flip. If the recorder cannot be built, cannot start, hands
+ * back nothing from a hold long enough to have contained words, or the route says this deployment
+ * wants device speech (503), the session switches to `SpeechRecognition` for good — see
+ * `forcedEngine`. Still one engine at a time; just a different one from the next hold on.
+ *
+ * With neither engine, `listen` throws `SpeechUnavailableError`, which is the UI's signal to show
+ * the typed box. The typed box is visible at all times anyway; this just moves focus to it.
  *
  * Only the recorded question leaves the phone (constitution principle V): never the profile,
  * never the image, never an identifier.
@@ -54,8 +85,8 @@ export class SpeechUnavailableError extends Error {
 
 export interface ListenOptions {
   /**
-   * Partial transcript as the user speaks, from the browser engine. On the hybrid path this
-   * keeps firing even though the sent question will usually come from the upload instead.
+   * Partial transcript as the user speaks. Fires on the browser-engine path only — an upload has
+   * nothing to report until it comes back, which is what the bar's 「送緊…」 state is for.
    */
   onInterim?: (text: string) => void;
   /** Release-to-send. Abort this to stop capture and transcribe what was recorded. */
@@ -64,27 +95,47 @@ export interface ListenOptions {
   cancel?: AbortSignal;
   /** Safety stop. Default 15 s: a question about a discharge sheet is short. */
   maxMs?: number;
-  /** How long the upload gets before the browser's text is sent instead. Default 6 s. */
+  /** How long ONE upload attempt gets. Default 6 s, and there are at most two attempts. */
   cloudTimeoutMs?: number;
 }
 
 const DEFAULT_MAX_MS = 15_000;
 
 /**
- * How long `/api/stt` gets before the browser's own text is sent instead.
+ * How long one `/api/stt` attempt gets.
  *
  * Measured against gpt-4o-mini-transcribe on 2026-09-04: a 3.05 s Cantonese clip came back in a
- * median of 913 ms, worst of eight 1433 ms. Six seconds is room for a bad venue network and
- * still short enough that a reader who let go does not think the app died.
+ * median of 913 ms, worst of eight 1433 ms. Six seconds is room for a bad venue network, and a
+ * failed attempt is retried once rather than given up on — there is no browser transcript behind
+ * it any more, so this is the only thing standing between the reader and typing it out.
  */
 const DEFAULT_CLOUD_TIMEOUT_MS = 6_000;
 
 /**
- * How long the browser engine gets to deliver its last words after `stop()`, and only when the
- * upload gave us nothing so that text is all we have. iOS Safari can take a few hundred
- * milliseconds to end a session, and sometimes never ends it at all — hence a race, not an await.
+ * How long the browser engine gets to deliver its last words after the hold ends. iOS Safari can
+ * take a few hundred milliseconds to end a session, and sometimes never ends it at all — hence a
+ * race, not an await.
  */
 const RECOGNITION_SETTLE_MS = 700;
+
+/**
+ * How long the recorder gets to hand back its clip after `stop()` before the track is pulled out
+ * from under it and the chunks already collected are used instead.
+ *
+ * This is the ceiling that did not exist before. A `MediaRecorder` whose audio session was taken
+ * away can sit in `recording` forever with no `onstop`, and one unbounded `await` in here latched
+ * the bar's own guard for the rest of the session.
+ */
+const CLIP_SETTLE_MS = 1_500;
+
+/**
+ * Chunk interval passed to `recorder.start()`.
+ *
+ * Without a timeslice a recorder delivers everything in one `dataavailable` at `stop()` — so a
+ * recorder that never stops cleanly delivers nothing at all. With one, the clip is already on
+ * hand and the settle timeout above has something to fall back to.
+ */
+const RECORDER_TIMESLICE_MS = 250;
 
 /** Recording formats to try, in order of what the `/api/stt` providers handle best. */
 const RECORDER_MIME_TYPES = [
@@ -93,6 +144,13 @@ const RECORDER_MIME_TYPES = [
   "audio/ogg;codecs=opus",
   "audio/mp4",
 ];
+
+/**
+ * A hold shorter than this cannot have contained a question, so an empty clip from one is a slip
+ * of the thumb rather than a broken recorder — and must not switch the session off the cloud
+ * path. `ChatBar`'s own 220 ms threshold means every hold that gets here is at least that long.
+ */
+const MEANINGFUL_HOLD_MS = 700;
 
 /** Recognition locale per input language. Hong Kong English is `en-HK`. */
 function recognitionLocale(language: InputLanguage): string {
@@ -112,6 +170,10 @@ function isBrowser(): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function now(): number {
+  return Date.now();
 }
 
 /**
@@ -166,9 +228,8 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 /**
  * A running recognition session, held as a handle rather than a promise.
  *
- * The hybrid needs to read what has been heard SO FAR without waiting for the engine to end its
- * session, because on the good path the upload has already answered and the engine's tail is
- * pure latency. `heard()` is therefore synchronous and always safe to call.
+ * `heard()` is synchronous and always safe to call: it reads what has been heard SO FAR without
+ * waiting for the engine to end its session, because iOS Safari does not reliably end one.
  */
 interface Recognition {
   /** Resolves when the engine's session has ended. May never resolve; always race it. */
@@ -282,7 +343,7 @@ function startRecognition(
   };
 }
 
-/** The browser engine on its own: what this app did before the hybrid, and its fallback. */
+/** The browser engine on its own: what this app does wherever it cannot record. */
 async function listenWithBrowser(
   language: InputLanguage,
   opts: ListenOptions,
@@ -293,18 +354,51 @@ async function listenWithBrowser(
   }
 
   let cancelled = false;
-  const timer = setTimeout(() => recognition.stop(), opts.maxMs ?? DEFAULT_MAX_MS);
-  opts.stop?.addEventListener("abort", () => recognition.stop(), { once: true });
+  let releaseHold: () => void = () => {};
+  const heldUntilReleased = new Promise<void>((resolve) => {
+    releaseHold = resolve;
+  });
+
+  const endHold = () => {
+    recognition.stop();
+    releaseHold();
+  };
+  const timer = setTimeout(endHold, opts.maxMs ?? DEFAULT_MAX_MS);
+  opts.stop?.addEventListener("abort", endHold, { once: true });
   opts.cancel?.addEventListener(
     "abort",
     () => {
       cancelled = true;
       recognition.abort();
+      releaseHold();
     },
     { once: true },
   );
 
-  await recognition.ended;
+  /*
+   * The hold may already be over — this path is also reached as a mid-hold fallback when the
+   * recorder turns out to be unusable, and `addEventListener` on a signal that has already
+   * aborted never fires. Without this the session would run to `maxMs` with nobody holding
+   * anything, which is fifteen seconds of a bar that looks alive and is not.
+   */
+  if (opts.cancel?.aborted) {
+    cancelled = true;
+    recognition.abort();
+    releaseHold();
+  } else if (opts.stop?.aborted) {
+    endHold();
+  }
+
+  /*
+   * A race, never a bare await. iOS Safari sometimes ends a `SpeechRecognition` session late and
+   * sometimes never ends one at all, and an await with no ceiling in here is what latched
+   * `ChatBar`'s listening guard and killed every hold after it. The engine gets its settle window
+   * after the hold ends; then whatever it heard is what it heard.
+   */
+  await Promise.race([
+    recognition.ended,
+    heldUntilReleased.then(() => sleep(RECOGNITION_SETTLE_MS)),
+  ]);
   clearTimeout(timer);
   if (cancelled) return { text: "" };
 
@@ -314,78 +408,176 @@ async function listenWithBrowser(
   return { text };
 }
 
+/* --------------------------------------------------------- iOS audio session */
+
+interface AudioSessionLike {
+  type: string;
+}
+
+function audioSession(): AudioSessionLike | null {
+  if (typeof navigator === "undefined") return null;
+  const session = (navigator as Navigator & { audioSession?: AudioSessionLike }).audioSession;
+  return session ?? null;
+}
+
+/**
+ * Tell iOS this page is about to RECORD, and give the session back afterwards.
+ *
+ * `lib/speech/unlock.ts` sets the session type to `playback` so the ring/silent switch cannot
+ * mute the reading. That is correct while 明明 is talking and wrong the moment the microphone
+ * opens: `playback` is the type for a page that does not capture. Safari 16.4+ only; everywhere
+ * else `navigator.audioSession` is absent and both halves of this are no-ops.
+ *
+ * Returns the restore, which is idempotent and safe to call from a `finally`.
+ */
+function claimRecordingSession(): () => void {
+  const session = audioSession();
+  if (!session) return () => {};
+
+  let previous: string;
+  try {
+    previous = session.type;
+    if (previous === "play-and-record") return () => {};
+    session.type = "play-and-record";
+  } catch {
+    // Not settable on this build. Capture may still work; nothing here is load-bearing.
+    return () => {};
+  }
+
+  let restored = false;
+  return () => {
+    if (restored) return;
+    restored = true;
+    try {
+      session.type = previous;
+    } catch {
+      // Same as above: the page keeps whatever the browser left it with.
+    }
+  };
+}
+
 /* ------------------------------------------------------------- audio capture */
+
+function canRecord(): boolean {
+  return (
+    typeof MediaRecorder !== "undefined" &&
+    typeof navigator !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia
+  );
+}
 
 function pickRecorderMimeType(): string | undefined {
   if (typeof MediaRecorder === "undefined") return undefined;
   return RECORDER_MIME_TYPES.find((type) => MediaRecorder.isTypeSupported(type));
 }
 
-/** A running capture. `clip` always resolves, with an empty blob when nothing was captured. */
+/** A running capture. `clip` ALWAYS resolves — with an empty blob when nothing was captured. */
 interface Recording {
   readonly clip: Promise<Blob>;
+  /** Ask the recorder to finish and deliver. Safe to call more than once. */
   stop(): void;
+  /**
+   * Stop the microphone track and settle the clip with whatever has arrived, right now, whatever
+   * state the recorder claims to be in. Idempotent, and called from every path out.
+   */
+  release(): void;
 }
 
 const EMPTY_CLIP = () => new Blob([], { type: "" });
 
-/**
- * Open the microphone and start recording. Throws `SpeechUnavailableError`, which the hybrid
- * treats as "no accurate path today" rather than as a failure — the browser engine may still be
- * running beside it.
- */
+/** Which `getUserMedia` failures mean "this reader said no" and which mean "not today". */
+function micError(error: unknown): SpeechUnavailableError {
+  const name = (error as { name?: string } | null)?.name ?? "";
+  if (name === "NotAllowedError" || name === "SecurityError" || name === "PermissionDeniedError") {
+    return new SpeechUnavailableError("denied", "Microphone permission was refused.");
+  }
+  // NotFoundError, NotReadableError (the mic is busy — another tab, or a call), AbortError,
+  // OverconstrainedError. None of them is permanent and none of them should move the bar to the
+  // keyboard for the rest of the session.
+  return new SpeechUnavailableError("provider", "The microphone could not be opened.");
+}
+
+function stopTracks(stream: MediaStream): void {
+  try {
+    for (const track of stream.getTracks()) track.stop();
+  } catch {
+    // Nothing to stop. The point is that the caller can always ask.
+  }
+}
+
+/** Open the microphone and start recording. Throws `SpeechUnavailableError`. */
 async function startRecording(): Promise<Recording> {
-  if (
-    typeof MediaRecorder === "undefined" ||
-    !navigator.mediaDevices?.getUserMedia
-  ) {
+  if (!canRecord()) {
     throw new SpeechUnavailableError("no_api", "This browser cannot record audio.");
   }
+
+  const restoreSession = claimRecordingSession();
 
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch {
-    throw new SpeechUnavailableError("denied", "Microphone permission was refused.");
+  } catch (error) {
+    restoreSession();
+    throw micError(error);
   }
-
-  const release = () => {
-    for (const track of stream.getTracks()) track.stop();
-  };
 
   const mimeType = pickRecorderMimeType();
   let recorder: MediaRecorder;
   try {
     recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
   } catch {
-    release();
+    stopTracks(stream);
+    restoreSession();
     throw new SpeechUnavailableError("no_api", "This browser cannot record audio.");
   }
 
   const chunks: Blob[] = [];
-  let deliver: (clip: Blob) => void = () => {};
+  let deliver: ((clip: Blob) => void) | null = null;
   const clip = new Promise<Blob>((resolve) => {
     deliver = resolve;
   });
 
+  /** Hands the clip over exactly once, however many events or timeouts race to do it. */
+  const settle = () => {
+    const hand = deliver;
+    if (!hand) return;
+    deliver = null;
+    hand(
+      chunks.length > 0
+        ? new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" })
+        : EMPTY_CLIP(),
+    );
+  };
+
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    try {
+      if (recorder.state !== "inactive") recorder.stop();
+    } catch {
+      // Safari throws `InvalidStateError` on a recorder whose track already ended. The chunks it
+      // did produce are still in hand, which is the entire point of the timeslice.
+    }
+    stopTracks(stream);
+    restoreSession();
+    settle();
+  };
+
   recorder.ondataavailable = (event) => {
     if (event.data.size > 0) chunks.push(event.data);
   };
-  recorder.onstop = () => {
-    release();
-    deliver(new Blob(chunks, { type: recorder.mimeType || mimeType || "audio/webm" }));
-  };
-  // A recorder that errors mid-hold must not leave the caller waiting on `clip` forever; an
-  // empty blob is the signal to fall back to what the browser engine heard.
-  recorder.onerror = () => {
-    release();
-    deliver(EMPTY_CLIP());
-  };
+  recorder.onstop = release;
+  // A recorder that errors mid-hold must not leave the caller waiting on `clip` forever.
+  recorder.onerror = release;
 
   try {
-    recorder.start();
+    // With a timeslice rather than one blob at the end: a recorder that never stops cleanly has
+    // still handed over most of the utterance by the time anything gives up on it.
+    recorder.start(RECORDER_TIMESLICE_MS);
   } catch {
-    release();
+    stopTracks(stream);
+    restoreSession();
     throw new SpeechUnavailableError("no_api", "Recording could not be started.");
   }
 
@@ -393,30 +585,51 @@ async function startRecording(): Promise<Recording> {
     clip,
     stop: () => {
       if (recorder.state === "inactive") {
-        // Never started, or already ended: there is no clip to wait for.
         release();
-        deliver(EMPTY_CLIP());
         return;
       }
-      recorder.stop();
+      try {
+        // Force the tail of the utterance out before ending: the last partial chunk is often the
+        // second half of a short question.
+        recorder.requestData();
+      } catch {
+        // Not implemented, or the wrong state. `stop()` below delivers what there is.
+      }
+      try {
+        recorder.stop();
+      } catch {
+        release();
+      }
     },
+    release,
   };
 }
 
+/* ------------------------------------------------------------------- upload */
+
+type UploadOutcome =
+  /** The route answered with words. */
+  | { kind: "text"; text: string }
+  /** The route answered, and there was nothing in the clip to transcribe. */
+  | { kind: "empty" }
+  /** 503: this deployment is configured for device speech. Retrying cannot help. */
+  | { kind: "unconfigured" }
+  /** A timeout, a dropped connection, a 5xx. Worth exactly one more try. */
+  | { kind: "failed" };
+
 /**
- * Post the clip to `/api/stt` and return the transcript, or null.
+ * Post the clip to `/api/stt` once.
  *
- * Null for EVERY failure — no clip, no network, a timeout, a 503 meaning "recognise on the
- * device", a 502 from the provider, a body that is not JSON, an empty transcript. The caller
- * has the browser's text and one job: never turn a bad network into silence.
+ * Never throws, and never logs: the transcript is the reader's question and the clip is their
+ * voice. What comes back is a shape the caller can act on, because with no second engine behind
+ * it the difference between "the network dropped" and "this build does not do cloud speech" is
+ * the difference between retrying and switching engines for good.
  */
-async function transcribeClip(
+async function uploadClip(
   clip: Blob,
   language: InputLanguage,
   timeoutMs: number,
-): Promise<string | null> {
-  if (clip.size === 0) return null;
-
+): Promise<UploadOutcome> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), timeoutMs);
   try {
@@ -426,46 +639,78 @@ async function transcribeClip(
       body: clip,
       signal: abort.signal,
     });
-    if (!response.ok) return null;
+    if (response.status === 503) return { kind: "unconfigured" };
+    if (!response.ok) return { kind: "failed" };
     const payload = (await response.json()) as { text?: string };
     const text = (payload.text ?? "").trim();
-    return text.length > 0 ? text : null;
+    return text.length > 0 ? { kind: "text", text } : { kind: "empty" };
   } catch {
-    return null;
+    return { kind: "failed" };
   } finally {
     clearTimeout(timer);
   }
 }
 
-/* ------------------------------------------------------------------- hybrid */
+/* ------------------------------------------------------------ engine choice */
+
+type Engine = "upload" | "browser";
 
 /**
- * Both engines at once: the browser for what the reader sees, the recording for what is sent.
+ * Set for the rest of the page's life when the recorder proves it cannot do the job on THIS
+ * device — it would not build, would not start, handed back nothing from a hold long enough to
+ * have held a question, or the route said this deployment wants device speech.
  *
- * Neither is required. With no recorder this is exactly `listenWithBrowser`; with no browser
- * engine it is a plain record-and-upload, silent until the answer comes back. Only when both are
- * missing does it give up and ask for the keyboard.
+ * A per-hold coin flip is what made the old build feel random. This is decided once, on evidence,
+ * and then it stops changing.
  */
-async function listenHybrid(
+let forcedEngine: Engine | null = null;
+
+/** Fall back for good, but only to an engine that is actually there. */
+function downgradeToBrowser(): void {
+  if (getSpeechRecognitionCtor() !== null) forcedEngine = "browser";
+}
+
+/** Test seam: forget what this session learned. Never called by the app. */
+export function resetSttEngine(): void {
+  forcedEngine = null;
+}
+
+function chooseEngine(): Engine {
+  if (getSttMode() !== "cloud") return "browser";
+  if (forcedEngine) return forcedEngine;
+  return canRecord() ? "upload" : "browser";
+}
+
+/* --------------------------------------------------------------- upload path */
+
+/**
+ * Record the hold, upload it, return the transcript.
+ *
+ * The contract, in order of what matters:
+ *
+ *   · audio captured + a transcript          → the transcript
+ *   · audio captured + no transcript at all  → THROWS, so the bar can say so out loud
+ *   · nothing captured (a slip of the thumb) → `{ text: "" }`, so the bar can say "say it again"
+ *   · cancelled                              → `{ text: "" }` and nothing leaves the phone
+ *
+ * There is no fourth outcome where the reader spoke and the app said nothing.
+ */
+async function listenWithUpload(
   language: InputLanguage,
   opts: ListenOptions,
 ): Promise<{ text: string }> {
-  // Recognition starts FIRST, and synchronously: `getUserMedia` below can sit behind a
-  // permission prompt for seconds, and nothing may delay words reaching the screen.
-  const recognition = startRecognition(language, opts.onInterim);
-
+  const pressedAt = now();
   let recording: Recording | null = null;
   let holdOver = false;
   let cancelled = false;
   let released: () => void = () => {};
-  const release = new Promise<void>((resolve) => {
+  const heldUntilReleased = new Promise<void>((resolve) => {
     released = resolve;
   });
 
   const endHold = () => {
     if (holdOver) return;
     holdOver = true;
-    recognition?.stop();
     recording?.stop();
     released();
   };
@@ -481,55 +726,73 @@ async function listenHybrid(
     { once: true },
   );
 
-  let micFailure: SpeechUnavailableError | null = null;
   try {
     recording = await startRecording();
-    // The hold can end behind the permission prompt. Nothing may keep the microphone open.
+    // The hold can end behind the permission prompt — on a first run that prompt IS the first
+    // hold. Nothing may keep the microphone open past it.
     if (holdOver) recording.stop();
   } catch (error) {
-    micFailure = error instanceof SpeechUnavailableError ? error : null;
-  }
-
-  if (!recognition && !recording) {
     clearTimeout(timer);
-    throw (
-      micFailure ?? new SpeechUnavailableError("no_api", "This device has no speech input.")
-    );
+    const failure =
+      error instanceof SpeechUnavailableError
+        ? error
+        : new SpeechUnavailableError("provider", "The microphone could not be opened.");
+
+    // A refusal is the reader's answer and is permanent for this session; anything else is this
+    // device saying "not through the recorder", so the session switches engines and, if the
+    // reader is still holding, this very hold is served by the other one.
+    if (failure.reason !== "denied") {
+      downgradeToBrowser();
+      if (forcedEngine === "browser" && !cancelled) {
+        return listenWithBrowser(language, opts);
+      }
+    }
+    throw failure;
   }
 
-  await release;
+  await heldUntilReleased;
   clearTimeout(timer);
 
-  if (cancelled) {
-    recognition?.abort();
+  const heldMs = now() - pressedAt;
+  const capture = recording;
+
+  // Whatever happens below, the microphone is closed before this function returns. `release()`
+  // also settles the clip, which is what puts a ceiling on the await underneath it.
+  const settleTimer = setTimeout(() => capture.release(), CLIP_SETTLE_MS);
+  let clip: Blob;
+  try {
+    clip = await capture.clip;
+  } finally {
+    clearTimeout(settleTimer);
+    capture.release();
+  }
+
+  if (cancelled) return { text: "" };
+
+  if (clip.size === 0) {
+    // Nothing at all came out of the recorder. From a real hold that means the recorder is not
+    // working on this device, so the session stops using it; from a flick of the thumb it means
+    // exactly what it looks like.
+    if (heldMs >= MEANINGFUL_HOLD_MS) downgradeToBrowser();
     return { text: "" };
   }
 
-  // The accurate transcript, when the network allows it.
-  if (recording) {
-    const cloud = await transcribeClip(
-      await recording.clip,
-      language,
-      opts.cloudTimeoutMs ?? DEFAULT_CLOUD_TIMEOUT_MS,
-    );
-    if (cloud) return { text: cloud };
+  const timeoutMs = opts.cloudTimeoutMs ?? DEFAULT_CLOUD_TIMEOUT_MS;
+  let outcome = await uploadClip(clip, language, timeoutMs);
+  // One retry, and only for the failures a retry can fix. A 503 means this build does not do
+  // cloud speech at all, and an empty answer means the clip had no words in it.
+  if (outcome.kind === "failed") outcome = await uploadClip(clip, language, timeoutMs);
+
+  if (outcome.kind === "text") return { text: outcome.text };
+  if (outcome.kind === "empty") return { text: "" };
+  if (outcome.kind === "unconfigured") {
+    downgradeToBrowser();
+    throw new SpeechUnavailableError("network", "Speech is recognised on the device here.");
   }
 
-  // It did not, so send what the reader already watched appear on screen.
-  if (recognition) {
-    await Promise.race([recognition.ended, sleep(RECOGNITION_SETTLE_MS)]);
-    const text = recognition.heard();
-    const failure = recognition.failure();
-    // Only the ENGINE's own failure counts here, never `micFailure`. A phone with no recorder
-    // still has a working bar, so "this browser cannot record audio" must not be raised as
-    // though speech input were gone — that would move the bar to the keyboard for good the
-    // first time somebody held it and said nothing.
-    if (failure && text.length === 0) throw failure;
-    return { text };
-  }
-
-  // Recording only, and it gave us nothing. The caller says one sentence and the bar resets.
-  return { text: "" };
+  // Audio was captured and could not be turned into words. This is the case that used to end in
+  // silence, and it is now the one thing this function is loudest about.
+  throw new SpeechUnavailableError("network", "The recording could not be sent.");
 }
 
 /* ------------------------------------------------------------------- public */
@@ -538,20 +801,17 @@ async function listenHybrid(
 export function isSttAvailable(): boolean {
   if (!isBrowser()) return false;
   const canRecognise = getSpeechRecognitionCtor() !== null;
-  if (getSttMode() === "cloud") {
-    const canRecord =
-      typeof MediaRecorder !== "undefined" && !!navigator.mediaDevices?.getUserMedia;
-    return canRecord || canRecognise;
-  }
+  if (getSttMode() === "cloud") return canRecord() || canRecognise;
   return canRecognise;
 }
 
 /**
  * Capture one spoken question and return its transcript.
  *
- * Resolves `{ text: "" }` when the user cancels or said nothing usable, and throws
- * `SpeechUnavailableError` when speech input cannot work at all, which is the UI's cue to show
- * the typed box.
+ * Resolves `{ text: "" }` when the user cancels or nothing was captured, and throws
+ * `SpeechUnavailableError` otherwise: `no_api` and `denied` are permanent for the session and are
+ * the UI's cue to show the typed box for good, while `network`, `provider` and `no_speech` are
+ * this hold only and must be SAID rather than swallowed.
  */
 export async function listen(
   language: InputLanguage,
@@ -560,6 +820,6 @@ export async function listen(
   if (!isBrowser()) {
     throw new SpeechUnavailableError("no_api", "Speech input needs a browser.");
   }
-  if (getSttMode() === "cloud") return listenHybrid(language, opts);
+  if (chooseEngine() === "upload") return listenWithUpload(language, opts);
   return listenWithBrowser(language, opts);
 }
