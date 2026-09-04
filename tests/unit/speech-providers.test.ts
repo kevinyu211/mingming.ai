@@ -33,6 +33,10 @@ import {
   hexToBytes,
 } from "../../lib/speech/providers/minimax";
 import {
+  createOpenAiSttProvider,
+  fileNameFor,
+} from "../../lib/speech/providers/openai";
+import {
   SpeechConfigError,
   SpeechProviderError,
 } from "../../lib/speech/providers/types";
@@ -72,6 +76,10 @@ const ENV_KEYS = [
   "AZURE_VOICE_YUE",
   "AZURE_VOICE_CMN",
   "AZURE_VOICE_EN",
+  "OPENAI_API_KEY",
+  "OPENAI_BASE_URL",
+  "OPENAI_STT_MODEL",
+  "NEXT_PUBLIC_STT_MODE",
 ] as const;
 
 let savedEnv: Record<string, string | undefined>;
@@ -366,6 +374,100 @@ describe("elevenlabs stt adapter", () => {
   });
 });
 
+/* -------------------------------------------------------------------- OpenAI */
+
+describe("openai stt adapter", () => {
+  beforeEach(() => {
+    process.env.OPENAI_API_KEY = "test-openai-key";
+  });
+
+  it("posts multipart gpt-4o-mini-transcribe with a zh hint and trims the text", async () => {
+    const calls = mockFetch(jsonResponse({ text: "  覆診要帶咩？  " }));
+
+    const result = await createOpenAiSttProvider().transcribe(AUDIO_BYTES, "audio/mp4", "yue");
+
+    expect(calls[0].url).toBe("https://api.openai.com/v1/audio/transcriptions");
+    expect(headerOf(calls[0].init, "Authorization")).toBe("Bearer test-openai-key");
+    // fetch must set the multipart boundary itself.
+    expect(headerOf(calls[0].init, "Content-Type")).toBeUndefined();
+
+    const form = calls[0].init.body as FormData;
+    expect(form).toBeInstanceOf(FormData);
+    expect(form.get("model")).toBe("gpt-4o-mini-transcribe");
+    // There is no ISO-639-1 code for Cantonese; the audio decides which Chinese it is.
+    expect(form.get("language")).toBe("zh");
+    // "verbose_json" is rejected by the gpt-4o transcribe models.
+    expect(form.get("response_format")).toBe("json");
+    expect(form.get("file")).toBeInstanceOf(Blob);
+
+    expect(result).toEqual({ text: "覆診要帶咩？" });
+  });
+
+  it("names the file by its container, because OpenAI reads the format off the extension", () => {
+    // Confirmed live on 2026-09-04: "question.audio", the constant the other adapters use, is
+    // rejected with 400 "Unsupported file format audio".
+    expect(fileNameFor("audio/mp4")).toBe("question.mp4");
+    expect(fileNameFor("audio/webm;codecs=opus")).toBe("question.webm");
+    expect(fileNameFor("audio/ogg;codecs=opus")).toBe("question.ogg");
+    expect(fileNameFor("audio/wav")).toBe("question.wav");
+    expect(fileNameFor("audio/mpeg")).toBe("question.mp3");
+    // Unknown or unlabelled: webm is what Chrome and Android record.
+    expect(fileNameFor("application/octet-stream")).toBe("question.webm");
+    // And it never carries anything about the user or the question.
+    for (const mime of ["audio/mp4", "audio/webm", "audio/wav"]) {
+      expect(fileNameFor(mime)).toMatch(/^question\.[a-z0-9]+$/);
+    }
+  });
+
+  it("steers Cantonese with a fixed prompt, and sends no prompt otherwise", async () => {
+    const calls = mockFetch(jsonResponse({ text: "ok" }));
+    const provider = createOpenAiSttProvider();
+
+    await provider.transcribe(AUDIO_BYTES, "audio/mp4", "yue");
+    await provider.transcribe(AUDIO_BYTES, "audio/mp4", "cmn");
+    await provider.transcribe(AUDIO_BYTES, "audio/mp4", "en");
+
+    // Without it "覆診" comes back as "複產" or "復診" (measured 2026-09-04). The prompt is a
+    // constant about clinics and medicine - never a word about the patient or the sheet.
+    const prompt = (calls[0].init.body as FormData).get("prompt");
+    expect(typeof prompt).toBe("string");
+    expect(prompt).toContain("廣東話");
+    expect((calls[1].init.body as FormData).get("prompt")).toBeNull();
+    expect((calls[1].init.body as FormData).get("language")).toBe("zh");
+    expect((calls[2].init.body as FormData).get("prompt")).toBeNull();
+    expect((calls[2].init.body as FormData).get("language")).toBe("en");
+  });
+
+  it("takes the model from OPENAI_STT_MODEL", async () => {
+    process.env.OPENAI_STT_MODEL = "gpt-4o-transcribe";
+    const calls = mockFetch(jsonResponse({ text: "ok" }));
+
+    await createOpenAiSttProvider().transcribe(AUDIO_BYTES, "audio/mp4", "yue");
+
+    expect((calls[0].init.body as FormData).get("model")).toBe("gpt-4o-transcribe");
+  });
+
+  it("throws a SpeechProviderError carrying only the status", async () => {
+    mockFetch(jsonResponse({ error: { message: "unsupported" } }, 400));
+
+    await expect(
+      createOpenAiSttProvider().transcribe(AUDIO_BYTES, "audio/mp4", "yue"),
+    ).rejects.toBeInstanceOf(SpeechProviderError);
+  });
+
+  it("throws a clear error when STT_PROVIDER=openai without a key", () => {
+    delete process.env.OPENAI_API_KEY;
+    process.env.STT_PROVIDER = "openai";
+    expect(() => getSttProvider()).toThrow(SpeechConfigError);
+    expect(() => getSttProvider()).toThrow(/OPENAI_API_KEY/);
+  });
+
+  it("is selectable as the stt provider", () => {
+    process.env.STT_PROVIDER = "openai";
+    expect(getSttProvider().id).toBe("openai");
+  });
+});
+
 /* --------------------------------------------------------------------- Azure */
 
 describe("azure tts adapter", () => {
@@ -603,6 +705,21 @@ describe("no adapter logs the text, the audio or the key", () => {
     expect(written).not.toContain("super-secret-key");
     expect(written).toContain("provider=elevenlabs");
   });
+
+  it("keeps the transcript out of an openai transcription log", async () => {
+    process.env.OPENAI_API_KEY = "super-secret-key";
+    const transcript = "如果佢覺得頭暈，係咪要即刻返醫院？";
+    mockFetch(jsonResponse({ text: transcript }));
+    const spies = spyOnConsole();
+
+    await createOpenAiSttProvider().transcribe(AUDIO_BYTES, "audio/mp4", "yue");
+
+    const written = everythingWritten(spies);
+    expect(written).not.toContain(transcript);
+    expect(written).not.toContain("super-secret-key");
+    expect(written).toContain("provider=openai");
+    expect(written).toContain("status=200");
+  });
 });
 
 /**
@@ -682,5 +799,229 @@ describe("a released hold sends what was heard, final or not", () => {
     stop.abort();
     await expect(result).resolves.toEqual({ text: "覆診要帶咩" });
     vi.unstubAllGlobals();
+  });
+});
+
+/**
+ * The hybrid, which is the other half of the same bug.
+ *
+ * Keeping the last interim stopped the transcript vanishing, but the browser engine itself is the
+ * weak link: it fails silently, it differs on every iOS point release, it is poor at Cantonese,
+ * and on Chrome it uploads the audio to Google anyway. So `listen` now runs BOTH — the engine for
+ * what the reader watches appear, `MediaRecorder` for what is actually sent — and the rule that
+ * matters at a conference is that a bad network degrades to yesterday's behaviour, never to
+ * silence. Every one of these cases must end with the reader's words going somewhere.
+ */
+describe("the hybrid: instant on screen, accurate on the wire", () => {
+  /** A non-empty clip is all `transcribeClip` asks for before it will upload. */
+  const CLIP = Uint8Array.from([1, 2, 3]);
+  /** What OpenAI would return: the engine's guess, corrected. */
+  const ACCURATE = "呢隻藥要唔要隨餐食？";
+  /** What the browser engine put on the screen while the reader was still speaking. */
+  const HEARD = "呢隻藥要唔要隨參食";
+
+  function fakeRecognition(said: string) {
+    return class {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      maxAlternatives = 1;
+      onresult: ((event: unknown) => void) | null = null;
+      onerror: ((event: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      start(): void {
+        if (said.length === 0) return;
+        this.onresult?.({
+          resultIndex: 0,
+          results: [{ isFinal: false, 0: { transcript: said } }],
+        });
+      }
+      stop(): void {
+        this.onend?.();
+      }
+      abort(): void {
+        this.onend?.();
+      }
+    };
+  }
+
+  function fakeRecorder() {
+    return class {
+      static isTypeSupported = () => true;
+      state = "inactive";
+      mimeType = "audio/webm;codecs=opus";
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      start(): void {
+        this.state = "recording";
+      }
+      stop(): void {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob([CLIP], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+    };
+  }
+
+  interface HoldOptions {
+    /** What the engine hears. "" is the iOS case where it silently produces nothing. */
+    heard?: string;
+    /** Take the engine away entirely (Firefox, and some locked-down WebViews). */
+    noRecognition?: boolean;
+    /** Take the recorder away entirely — the bar must be exactly what it was before. */
+    noRecorder?: boolean;
+    /** What `/api/stt` does. Defaults to answering with `ACCURATE`. */
+    upload?: (init: RequestInit) => Promise<Response>;
+    cloudTimeoutMs?: number;
+    cancel?: boolean;
+  }
+
+  interface Hold {
+    result: Promise<{ text: string }>;
+    uploads: { url: string; init: RequestInit }[];
+    interims: string[];
+  }
+
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  /** Press the bar, speak, release it — with the world the options describe. */
+  async function hold(options: HoldOptions = {}): Promise<Hold> {
+    vi.resetModules();
+    const uploads: { url: string; init: RequestInit }[] = [];
+    const interims: string[] = [];
+
+    const win: Record<string, unknown> = {};
+    if (!options.noRecognition) {
+      win.webkitSpeechRecognition = fakeRecognition(options.heard ?? HEARD);
+    }
+    vi.stubGlobal("window", win);
+
+    if (options.noRecorder) {
+      vi.stubGlobal("MediaRecorder", undefined);
+      vi.stubGlobal("navigator", {});
+    } else {
+      vi.stubGlobal("MediaRecorder", fakeRecorder());
+      vi.stubGlobal("navigator", {
+        mediaDevices: { getUserMedia: async () => ({ getTracks: () => [] }) },
+      });
+    }
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        uploads.push({ url, init });
+        return options.upload ? options.upload(init) : jsonResponse({ text: ACCURATE });
+      }),
+    );
+
+    process.env.NEXT_PUBLIC_STT_MODE = "cloud";
+    const { listen } = await import("@/lib/speech/stt");
+
+    const stop = new AbortController();
+    const cancel = new AbortController();
+    const result = listen("yue", {
+      stop: stop.signal,
+      cancel: cancel.signal,
+      cloudTimeoutMs: options.cloudTimeoutMs,
+      onInterim: (text) => interims.push(text),
+    });
+    // `ChatBar` awaits `listen` inside a try/catch, so its handler is attached synchronously.
+    // Here the tick below comes first, so a rejection would land unhandled and Vitest would
+    // report it as an error even though the test goes on to assert it.
+    result.catch(() => {});
+    // The microphone opens behind an async permission prompt; a real hold outlives it.
+    await tick();
+    if (options.cancel) cancel.abort();
+    else stop.abort();
+
+    return { result, uploads, interims };
+  }
+
+  it("shows the browser's guess while speaking and sends the upload's transcript", async () => {
+    const { result, uploads, interims } = await hold();
+
+    await expect(result).resolves.toEqual({ text: ACCURATE });
+    // The instant feedback is the point of keeping the browser engine at all.
+    expect(interims).toContain(HEARD);
+    expect(uploads).toHaveLength(1);
+    expect(uploads[0].url).toBe("/api/stt?language=yue");
+    expect(uploads[0].init.method).toBe("POST");
+  });
+
+  it("sends what was heard when the upload cannot go through at all", async () => {
+    const { result } = await hold({
+      upload: () => Promise.reject(new Error("network down")),
+    });
+
+    await expect(result).resolves.toEqual({ text: HEARD });
+  });
+
+  it("sends what was heard when the upload times out", async () => {
+    const { result } = await hold({
+      cloudTimeoutMs: 20,
+      upload: (init) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new Error("aborted")), {
+            once: true,
+          });
+        }),
+    });
+
+    await expect(result).resolves.toEqual({ text: HEARD });
+  });
+
+  it("sends what was heard when the route answers 503, 502 or nothing usable", async () => {
+    for (const upload of [
+      () => Promise.resolve(jsonResponse({ error: "browser_fallback" }, 503)),
+      () => Promise.resolve(jsonResponse({ error: "stt_failed" }, 502)),
+      () => Promise.resolve(jsonResponse({ text: "   " })),
+    ]) {
+      const { result } = await hold({ upload });
+      await expect(result).resolves.toEqual({ text: HEARD });
+    }
+  });
+
+  it("sends the upload's transcript when the engine silently heard nothing", async () => {
+    // The iOS case Kevin hit: he said it, he let go, and the engine produced no result at all.
+    const { result } = await hold({ heard: "" });
+
+    await expect(result).resolves.toEqual({ text: ACCURATE });
+  });
+
+  it("is exactly the old browser path when the device cannot record", async () => {
+    const { result, uploads, interims } = await hold({ noRecorder: true });
+
+    await expect(result).resolves.toEqual({ text: HEARD });
+    expect(uploads).toHaveLength(0);
+    expect(interims).toContain(HEARD);
+  });
+
+  it("does not confuse a missing recorder with a missing microphone", async () => {
+    // The bar switches to the keyboard FOR GOOD on a fatal error, so "this browser cannot record
+    // audio" must never be raised on a device whose engine is working and simply heard silence.
+    const { result } = await hold({ noRecorder: true, heard: "" });
+
+    await expect(result).resolves.toEqual({ text: "" });
+  });
+
+  it("still works, silently, when the device has no recognition engine", async () => {
+    const { result, interims } = await hold({ noRecognition: true });
+
+    await expect(result).resolves.toEqual({ text: ACCURATE });
+    expect(interims).toEqual([]);
+  });
+
+  it("asks for the keyboard only when neither engine exists", async () => {
+    const { result } = await hold({ noRecognition: true, noRecorder: true });
+
+    await expect(result).rejects.toMatchObject({ code: "speech_unavailable" });
+  });
+
+  it("uploads nothing when the hold is cancelled", async () => {
+    const { result, uploads } = await hold({ cancel: true });
+
+    await expect(result).resolves.toEqual({ text: "" });
+    expect(uploads).toHaveLength(0);
   });
 });

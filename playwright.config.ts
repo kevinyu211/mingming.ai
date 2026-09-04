@@ -62,8 +62,12 @@ export default defineConfig({
     timeout: 120_000,
     env: {
       TTS_PROVIDER: "browser",
+      // No key, so `/api/stt` answers 503 and the hybrid falls back to the browser engine -
+      // which is the point. The MODE stays "cloud" because that is what production runs, and
+      // every spec that holds the bar deletes `MediaRecorder` anyway, so what these tests
+      // exercise is `listenHybrid` degrading to browser-only rather than a path nobody ships.
       STT_PROVIDER: "browser",
-      NEXT_PUBLIC_STT_MODE: "browser",
+      NEXT_PUBLIC_STT_MODE: "cloud",
     },
   },
 });

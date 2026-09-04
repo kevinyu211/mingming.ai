@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 
 import { createAzureSttProvider } from "../../lib/speech/providers/azure";
 import { createElevenLabsSttProvider } from "../../lib/speech/providers/elevenlabs";
+import { createOpenAiSttProvider } from "../../lib/speech/providers/openai";
 import {
   SpeechConfigError,
   type InputLanguage,
@@ -37,10 +38,11 @@ const RESULTS_FILE = join(HERE, "stt.md");
 /** Runs are inserted here, newest first, so the PICK line stays the last line of the file. */
 const RUNS_MARKER = "<!-- tests/eval/stt.ts appends run tables below this line. -->";
 
-const ALL_PROVIDERS = ["elevenlabs", "azure"] as const;
+const ALL_PROVIDERS = ["openai", "elevenlabs", "azure"] as const;
 type ProviderName = (typeof ALL_PROVIDERS)[number];
 
 const FACTORIES: Record<ProviderName, () => SttProvider> = {
+  openai: createOpenAiSttProvider,
   elevenlabs: createElevenLabsSttProvider,
   azure: createAzureSttProvider,
 };
@@ -49,6 +51,8 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   ".m4a": "audio/mp4",
   ".mp4": "audio/mp4",
   ".wav": "audio/wav",
+  ".webm": "audio/webm",
+  ".mp3": "audio/mpeg",
 };
 
 interface Clip {
