@@ -150,6 +150,21 @@ export interface Beat {
   link: "track" | null;
   stopped: boolean;
   unverified: boolean;
+  /**
+   * After this beat, STOP and wait for the reader. The beat's own text is the question.
+   *
+   * This is the difference between a conversation and a monologue with pauses in it. The briefing
+   * used to play every beat to the end whatever the reader did, which meant the only way to be
+   * heard was to interrupt — and a reader in their seventies does not interrupt, they sit there.
+   * Now the script hands the floor over at the end of every section and does not take it back
+   * until something comes in.
+   */
+  awaits: boolean;
+  /**
+   * Which run of the script this beat belongs to, so "say that again" can replay the whole
+   * section rather than the single bubble the reader happened to stop on.
+   */
+  section: string;
 }
 
 /** The connective that introduces each kind of card. `warning` has its own longer lead-in. */
@@ -194,7 +209,7 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
   const { t, display, dialect } = ctx;
   const beats: Beat[] = [];
 
-  const rule = (key: string, text: string): Beat => ({
+  const rule = (key: string, text: string, section: string, awaits = false): Beat => ({
     key,
     lead: null,
     text: display(text),
@@ -204,14 +219,16 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
     link: null,
     stopped: false,
     unverified: false,
+    awaits,
+    section,
   });
 
-  beats.push(rule("hello", fill(t("brief.hello"), { title: ctx.sheetWord })));
-  beats.push(rule("intro", t("brief.intro")));
+  beats.push(rule("hello", fill(t("brief.hello"), { title: ctx.sheetWord }), "opening"));
+  beats.push(rule("intro", t("brief.intro"), "opening"));
 
   // The red flags. `empty` means the page printed none and the `noWarnings` card is standing in
   // its slot — that is not an alarm, so it gets neither the amber tone nor the "go now" lead-in.
-  if (warnings.length > 0 && !empty) beats.push(rule("warn-lead", t("brief.warnLead")));
+  if (warnings.length > 0 && !empty) beats.push(rule("warn-lead", t("brief.warnLead"), "warn"));
 
   warnings.forEach((card, i) => {
     beats.push({
@@ -224,20 +241,37 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       link: null,
       stopped: false,
       unverified: card.unverified === true,
+      awaits: false,
+      section: "warn",
     });
   });
 
-  // Teach-back, once, right after the part that matters most — and only when there is more to
-  // come. Asking 「明唔明？」 immediately before 「講完喇」 is a question with nowhere to go.
+  // Teach-back after the part that matters most, and it WAITS. Only when there is more to come:
+  // asking 「明唔明？」 immediately before 「講完喇」 is a question with nowhere to go.
   if (warnings.length > 0 && pieces.length > 0) {
-    beats.push(rule("check", t("brief.checkUnderstand")));
+    beats.push(rule("check", t("brief.checkUnderstand"), "warn", true));
   }
 
+  /**
+   * The rest of the page, one SECTION per kind of card — medicines, follow-up, diet, activity,
+   * anything unreadable — and a question at the end of each one.
+   *
+   * Sectioning by card type rather than by card is what gives the reader somewhere to breathe
+   * without turning three medicines into three separate interrogations: the run of medicines is
+   * said together under one connective, and then 明仔 stops and asks once.
+   */
   const trackAt = trackLinkIndex(pieces);
   let previousType: CardType | null = null;
   pieces.forEach((card, i) => {
-    const leadKey = card.type === previousType ? undefined : LEAD_KEY[card.type];
+    const isNewRun = card.type !== previousType;
+    const leadKey = isNewRun ? LEAD_KEY[card.type] : undefined;
+
+    // Close the previous run before opening this one.
+    if (isNewRun && previousType !== null) {
+      beats.push(rule(`ask-${previousType}`, t("brief.askContinue"), `piece-${previousType}`, true));
+    }
     previousType = card.type;
+
     beats.push({
       key: `piece-${i}`,
       lead: leadKey ? display(t(leadKey)) : null,
@@ -248,10 +282,18 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       link: i === trackAt ? "track" : null,
       stopped: card.stopped === true,
       unverified: card.unverified === true,
+      awaits: false,
+      section: `piece-${card.type}`,
     });
   });
 
-  beats.push(rule("end", t("brief.end")));
+  // The final run gets its question too, so the reader is asked after every section and never
+  // walked straight from the last medicine into the closing line.
+  if (previousType !== null) {
+    beats.push(rule(`ask-${previousType}`, t("brief.askContinue"), `piece-${previousType}`, true));
+  }
+
+  beats.push(rule("end", t("brief.end"), "end"));
   return beats;
 }
 

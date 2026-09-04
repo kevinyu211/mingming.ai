@@ -25,7 +25,22 @@ import type { DraftPlan } from "@/lib/rules/plan-from-reading";
  * writes them any more — the greeting and the warning signs are ordinary beats now, and the
  * warning beats come first by construction (constitution II).
  */
-export type BriefPhase = "idle" | "intro" | "warn" | "ask" | "speaking" | "end";
+/**
+ * Where the briefing is.
+ *
+ * `waiting` is the one that makes it a conversation: the script has said a section, asked, and
+ * handed the floor over. It does not take the floor back on a timer — only a reply moves it on.
+ * The stored `step` alongside it is the beat to resume FROM, so closing the app mid-conversation
+ * and coming back lands on the same question rather than replaying the section.
+ */
+export type BriefPhase =
+  | "idle"
+  | "intro"
+  | "warn"
+  | "ask"
+  | "speaking"
+  | "waiting"
+  | "end";
 
 /**
  * The daily medicine check-in. `none` until the briefing has finished and the sheet actually has

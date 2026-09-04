@@ -78,6 +78,7 @@ import {
   hasCountableDose,
   pauseAfter,
 } from "@/components/chat/briefing";
+import { classifyReply } from "@/components/chat/turns";
 import { useVoice } from "@/components/chat/useVoice";
 import { ask } from "@/lib/client/ask-stream";
 import { readSheet, type ImageInput } from "@/lib/client/read-stream";
@@ -85,7 +86,7 @@ import { DEFAULT_SAMPLE, filterCards, isSampleId, loadSampleReading } from "@/li
 import type { Card, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import { downscale } from "@/lib/image/downscale";
 import { scriptForDialect, toScript } from "@/lib/i18n/script";
-import type { UiLocale } from "@/lib/i18n/ui";
+import type { UiKey, UiLocale } from "@/lib/i18n/ui";
 import { memoryBrief, rememberExchange, rememberReading } from "@/lib/memory";
 import { buildCards, cardTitle } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
@@ -301,6 +302,22 @@ function ChatScreen() {
         driving.current = false;
 
         const next = index + 1;
+
+        /**
+         * The end of a section. 明仔 has asked, and now he waits — no timer, no next beat.
+         *
+         * This is the whole difference between a conversation and a monologue with pauses in it.
+         * Before this, the script played to the end whatever the reader did, so the only way to be
+         * heard was to interrupt; a reader in their seventies does not interrupt, they sit and
+         * listen and then have nowhere to put a question. `submit()` is what starts it again.
+         */
+        if (beat.awaits) {
+          playing.current = false;
+          setThinking(false);
+          setBriefing("waiting", next);
+          return;
+        }
+
         if (next >= beats.length) {
           playing.current = false;
           setBriefing("end", beats.length);
@@ -327,6 +344,47 @@ function ChatScreen() {
     runRef.current = runBeat;
   }, [runBeat]);
 
+  /** Take the floor back and carry on from `index`. The only way out of `waiting`. */
+  const resumeFrom = useCallback((index: number) => {
+    playing.current = true;
+    driving.current = false;
+    runRef.current?.(index);
+  }, []);
+
+  /**
+   * The first beat of the section the reader was just asked about.
+   *
+   * `step` while waiting is the index AFTER the question, so the question itself is `step - 1`.
+   * Walking back over its own section is what makes "say that again" replay the whole run of
+   * medicines rather than the one bubble that happened to come last — which is what a person
+   * means when they say they did not follow it.
+   */
+  const sectionStart = useCallback(
+    (step: number) => {
+      const askIndex = step - 1;
+      const ask = beats[askIndex];
+      if (!ask) return Math.max(0, askIndex);
+      let i = askIndex;
+      while (i > 0 && beats[i - 1].section === ask.section) i -= 1;
+      return i;
+    },
+    [beats],
+  );
+
+  /** Say one fixed line, commit it, then do something. Used for the acknowledgements. */
+  const sayLine = useCallback(
+    (key: UiKey, then?: () => void) => {
+      const line = display(t(key));
+      setSpeakingId("ack");
+      say(line, () => {
+        appendMessage({ role: "agent", text: line, origin: "rule" });
+        setSpeakingId(null);
+        then?.();
+      });
+    },
+    [display, say, t],
+  );
+
   /**
    * Starts, or picks up, the script.
    *
@@ -339,6 +397,20 @@ function ChatScreen() {
       const current = loadSheets().active;
       if (!current || beats.length === 0) return;
       if (current.briefing.phase === "end") return;
+
+      /**
+       * The floor belongs to the reader, and `play` may not take it back.
+       *
+       * `play` runs from an effect whenever the screen settles — a re-render, a keyboard opening,
+       * a return to the tab. Without this line it resumed the script out of `waiting` on its own,
+       * so 明仔 asked a question and then answered it himself a beat later, which is the exact
+       * monologue this whole change exists to end. Worse, it did it while the reader was typing:
+       * by the time the reply arrived the phase had already moved to `speaking`, the reply was
+       * posted to the model as a question, and 「明白」 came back as 「張紙冇講呢樣」.
+       *
+       * Only `resumeFrom`, called from the reply handler, moves the conversation on.
+       */
+      if (current.briefing.phase === "waiting") return;
 
       playing.current = true;
       const from = Math.min(Math.max(0, current.briefing.step), beats.length);
@@ -491,6 +563,44 @@ function ChatScreen() {
         return;
       }
 
+      /**
+       * Gate 3: 明仔 asked a question and this is the answer to it.
+       *
+       * "Yeah" is the commonest thing anyone says to this app. Posting it to a model to be told it
+       * means yes would put a network round trip, a cost and a failure mode in the middle of every
+       * turn — so the script answers its own question. Anything `classifyReply` cannot place falls
+       * through to the model below, which is the same path a question has always taken.
+       *
+       * It runs AFTER the crisis and medicine-change gates on purpose: those two must win over
+       * everything, including a reply that looks like a cheerful yes.
+       */
+      /*
+       * Read the briefing back out of storage rather than off the captured `sheet`.
+       *
+       * `submit` is handed to the bar, and the bar keeps its handlers in refs so a press that
+       * began before a re-render still completes — which is correct for the gesture and fatal
+       * here: the closure can be one render behind, and one render behind is exactly the render
+       * where the phase was not yet `waiting`. The symptom was 「明白」 being posted to the model,
+       * answered with 「張紙冇講呢樣」, and the script resuming anyway — the reader saw 明仔 fail to
+       * understand the single commonest word in the conversation.
+       */
+      const live = loadSheets().active;
+      if (live?.briefing.phase === "waiting") {
+        const step = live.briefing.step;
+        const intent = classifyReply(text);
+
+        if (intent === "continue") {
+          sayLine("brief.ackContinue", () => resumeFrom(step));
+          return;
+        }
+        if (intent === "repeat") {
+          sayLine("brief.ackRepeat", () => resumeFrom(sectionStart(step)));
+          return;
+        }
+        // "question" carries on into the model path below, and the phase stays `waiting` — so
+        // once it is answered, the next "yes" still picks the script up where it left off.
+      }
+
       setAsking(true);
       setThinking(true);
       const controller = new AbortController();
@@ -539,7 +649,7 @@ function ChatScreen() {
         });
       }
     },
-    [asking, cards, dialect, display, locale, reading, say, takeFloor],
+    [asking, cards, dialect, display, locale, reading, resumeFrom, say, sayLine, sectionStart, takeFloor],
   );
 
   /* ------------------------------------------------------- getting a sheet */

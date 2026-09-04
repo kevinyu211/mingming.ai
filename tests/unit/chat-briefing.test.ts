@@ -306,6 +306,8 @@ describe("what a beat says out loud, and how long it is given", () => {
     link: null,
     stopped: false,
     unverified: false,
+    awaits: false,
+    section: "piece-medicine",
     ...overrides,
   });
 
@@ -386,5 +388,80 @@ describe("the check-in only counts what the page actually printed", () => {
 
   it("has nothing to check in about on a sheet with no medicines", () => {
     expect(hasCountableDose(reading())).toBe(false);
+  });
+});
+
+/**
+ * Where the script hands the floor over.
+ *
+ * The briefing used to play every beat to the end whatever the reader did, so the only way to be
+ * heard was to interrupt — and the reader this is built for does not interrupt. They listen, and
+ * then have nowhere to put the question. Now every section ends with a question that WAITS.
+ */
+describe("the script stops and asks at the end of every section", () => {
+  const beats = buildBeats(
+    buildCards(
+      reading({
+        warningSigns: [warning("胸口痛"), warning("氣促")],
+        medicines: [medicine(), medicine({ name: "Aspirin" }), medicine({ name: "Statin" })],
+      }),
+    ),
+    CTX,
+  );
+  const asks = beats.filter((b) => b.awaits);
+
+  it("waits after the red flags, before anything else is said", () => {
+    const firstAsk = beats.findIndex((b) => b.awaits);
+    expect(firstAsk).toBeGreaterThan(0);
+    expect(beats[firstAsk].section).toBe("warn");
+    // Nothing from a later section may be spoken before the reader has answered.
+    expect(beats.slice(0, firstAsk).every((b) => !b.section.startsWith("piece-"))).toBe(true);
+  });
+
+  it("asks once per section, not once per card", () => {
+    // Three medicines are one run and get one question between them, not three.
+    const medicineBeats = beats.filter((b) => b.section === "piece-medicine" && !b.awaits);
+    const medicineAsks = beats.filter((b) => b.section === "piece-medicine" && b.awaits);
+    expect(medicineBeats.length).toBeGreaterThan(1);
+    expect(medicineAsks).toHaveLength(1);
+  });
+
+  it("puts the question last in its own section, so a resume lands on the next one", () => {
+    for (const ask of asks) {
+      const i = beats.indexOf(ask);
+      const after = beats[i + 1];
+      if (after) expect(after.section).not.toBe(ask.section);
+    }
+  });
+
+  it("never ends the conversation on a question with nowhere to go", () => {
+    expect(beats[beats.length - 1].awaits).toBe(false);
+    expect(beats[beats.length - 1].key).toBe("end");
+  });
+
+  /**
+   * The section label is what "say that again" walks back over. If a run's beats disagreed about
+   * which section they belong to, a repeat would replay part of a section and call it whole.
+   */
+  it("gives every beat in a run the same section label", () => {
+    const runs = new Map<string, string[]>();
+    for (const beat of beats) {
+      if (!runs.has(beat.section)) runs.set(beat.section, []);
+      runs.get(beat.section)?.push(beat.key);
+    }
+    for (const [section, keys] of runs) {
+      expect(keys.length, `section ${section} is empty`).toBeGreaterThan(0);
+    }
+    // Sections are contiguous: a label never reappears after a different one has started.
+    const order = beats.map((b) => b.section);
+    const seen = new Set<string>();
+    let previous = "";
+    for (const section of order) {
+      if (section !== previous) {
+        expect(seen.has(section), `section ${section} is split in two`).toBe(false);
+        seen.add(section);
+        previous = section;
+      }
+    }
   });
 });

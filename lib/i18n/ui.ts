@@ -257,6 +257,17 @@ const hant = {
   // The teach-back beat. It is a question, not a form: there is no 明白 button to press, because
   // the answer this app wants is the reader talking back into the same thread.
   "brief.checkUnderstand": "講到呢度，明唔明？有邊句唔明白，撳住下面個掣話我知，我再講一次。",
+  // Asked at the end of every later section, and 明仔 WAITS for the answer. Deliberately offers
+  // both doors — carry on, or ask — because a reader who is only told they may continue will not
+  // think to ask.
+  "brief.askContinue": "明唔明？想我講埋跟住嗰樣，或者有嘢想問，撳住下面個掣同我講。",
+  // What he says on the way into the next section. One word: the reader said yes, not "explain
+  // yourself", and a long acknowledgement is another thing to sit through.
+  "brief.ackContinue": "好。",
+  "brief.ackRepeat": "冇問題，我再講一次。",
+  // After a question has been answered, the floor goes back to the reader rather than the script
+  // grabbing it again.
+  "brief.afterAnswer": "仲有冇嘢想問？想繼續就話我知。",
   "brief.end": "張紙上面嘅嘢，我講晒喇。想知多啲乜嘢，撳住下面個掣同我講就得。",
   "brief.trackLink": "睇「跟進」嘅藥同覆診",
   // The quiet connectives above each bubble. App copy, never a model turn — they are what makes
@@ -535,6 +546,10 @@ const hans: Record<UiKey, string> = {
   "brief.intro": "我一样一样讲给你听，不急。最要紧的放在最前面。",
   "brief.warnLead": "先讲最要紧的。纸上写着，如果有下面这些情况，别等，马上回医院。",
   "brief.checkUnderstand": "讲到这里，明白吗？哪一句不明白，按住下面那个键告诉我，我再讲一次。",
+  "brief.askContinue": "明白吗？想我讲下一样，或者有什么想问，按住下面那个键跟我说。",
+  "brief.ackContinue": "好。",
+  "brief.ackRepeat": "没问题，我再讲一次。",
+  "brief.afterAnswer": "还有什么想问吗？想继续就告诉我。",
   "brief.end": "纸上的内容，我讲完了。想知道什么，按住下面那个键跟我说就行。",
   "brief.trackLink": "看「跟进」里的药和复诊",
   "lead.medicine": "接着讲药。",
@@ -801,6 +816,10 @@ const en: Record<UiKey, string> = {
   "brief.intro": "I'll take it one piece at a time, no rush. The part that matters most comes first.",
   "brief.warnLead": "Here's the most important part. The sheet says that if any of these happen, don't wait — go straight back to the hospital.",
   "brief.checkUnderstand": "That's the important bit. Is it clear so far? If any of it isn't, hold the bar below and tell me — I'll go over it again.",
+  "brief.askContinue": "Is that clear? Hold the bar below and tell me to carry on, or ask me anything.",
+  "brief.ackContinue": "Right.",
+  "brief.ackRepeat": "Of course — I'll say it again.",
+  "brief.afterAnswer": "Anything else you'd like to ask? Tell me when you want to carry on.",
   "brief.end": "That's everything the sheet says. Hold the bar below and ask me anything about it.",
   "brief.trackLink": "See the medicines and the visit in Follow-up",
   "lead.medicine": "Now the medicines.",
