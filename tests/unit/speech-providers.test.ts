@@ -1276,6 +1276,19 @@ describe("cloud speech: one engine per hold, and never silence", () => {
     expect(w.tracks[0].stopped).toBeGreaterThan(0);
   }, 10_000);
 
+  it("says the same thing when the microphone opens a hair AFTER the release", async () => {
+    // It won the race by a whisker, so there is a recorder — but it was never listening while
+    // anybody was talking, and the clip is empty. The reader is owed "it was not open", not
+    // 「我冇聽到」: the first tells them to hold it longer, the second tells them to shout.
+    const w = await world({ micOpensAfterMs: 150, silent: true });
+    const { result } = await hold(w);
+
+    await expect(result).rejects.toMatchObject({ reason: "provider" });
+    expect(w.opens).toEqual([]);
+    // And it is not mistaken for a broken recorder, so the session stays on the cloud path.
+    expect(w.tracks[0].stopped).toBeGreaterThan(0);
+  });
+
   it("is still instant on the browser engine, which is listening the moment it starts", async () => {
     const w = await world({ noRecorder: true });
     await (await hold(w)).result;

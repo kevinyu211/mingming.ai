@@ -847,10 +847,19 @@ async function listenWithUpload(
   if (cancelled) return { text: "" };
 
   if (clip.size === 0) {
-    // Nothing at all came out of the recorder. From a real hold on a microphone that WAS open
-    // that means the recorder is not working on this device, so the session stops using it; from
-    // a flick of the thumb it means exactly what it looks like.
-    if (opened && heldMs >= MEANINGFUL_HOLD_MS) downgradeToBrowser();
+    // Nothing came out of the recorder, and WHY decides which sentence the reader gets.
+    //
+    // The microphone finished opening after they had already let go — it won the race by a hair,
+    // so there is a recorder here, but it was never listening while anybody was talking. That is
+    // the same failure as the too-slow case above and it earns the same answer: "it was not
+    // open", not "I did not hear you".
+    if (!opened) {
+      throw new SpeechUnavailableError("provider", "The microphone did not open in time.");
+    }
+    // It WAS open and still produced nothing. From a real hold that means the recorder does not
+    // work on this device, so the session stops using it; from a flick of the thumb it means
+    // exactly what it looks like.
+    if (heldMs >= MEANINGFUL_HOLD_MS) downgradeToBrowser();
     return { text: "" };
   }
 
