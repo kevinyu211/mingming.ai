@@ -222,7 +222,12 @@ const hant = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "讀住你張紙…",
-  "reading.meta": "{n} 頁 · 大概十秒",
+  // Measured, not hoped for: a clean one-page read ran 27–46 s against the live model
+  // (tests/eval/results.md) and the hard fixtures 45–105 s. The screen used to promise ten
+  // seconds, which is a false promise on the one screen where the user has nothing to do but
+  // wait — and on a stack of six pages it was out by a factor of ten.
+  "reading.meta": "{n} 頁 · 大概半分鐘",
+  "reading.metaLong": "{n} 頁 · 可能要一兩分鐘",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "返去記錄",
@@ -476,7 +481,8 @@ const hans: Record<UiKey, string> = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "读着你的纸…",
-  "reading.meta": "{n} 页 · 大概十秒",
+  "reading.meta": "{n} 页 · 大概半分钟",
+  "reading.metaLong": "{n} 页 · 可能要一两分钟",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "回到记录",
@@ -729,7 +735,8 @@ const en: Record<UiKey, string> = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "Reading your sheet…",
-  "reading.meta": "{n} pages · about ten seconds",
+  "reading.meta": "{n} pages · about half a minute",
+  "reading.metaLong": "{n} pages · this may take a minute or two",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "Back to sheets",

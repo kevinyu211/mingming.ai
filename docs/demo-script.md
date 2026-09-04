@@ -1,81 +1,201 @@
 # Demo script (5 minutes) and backup video checklist
 
+Written for the three-tab app (記錄 · 傾偈 · 跟進). Every label below is the one actually on screen.
+
+**The one number to know cold:** a read takes **about 30 seconds** on a clean single page, longer on
+a stack. That is measured, not hoped for (`tests/eval/results.md`: 27–46 s across the three
+fixtures). Plan the talk around that gap — it is the only dead air in the demo, and section 1:00
+exists to fill it. Do not photograph a sheet and then stand in silence.
+
+---
+
 ## Setup before you walk up
 
-- Phone on the hotspot or venue Wi-Fi, app open at `/` with consent already tapped once so the
-  gate is one tap.
-- The printed Hong Kong English sheet (`fixtures/sheets/hk_en.png`) on the table; the mainland sheet
-  in the bag.
-- Volume up. Cantonese voice confirmed working that morning (Settings → play a card).
-- Laptop with `next start` and the QR code as the fallback link; sample-sheet path as the last resort.
+- Phone on the venue Wi-Fi, **on the deployed HTTPS URL, not the LAN address** — hold-to-talk needs
+  a secure origin. Test the mic once that morning.
+- Consent tapped once already so the gate does not eat 15 seconds. (It reappears every session by
+  design; tap it before you're on.)
+- 記錄 empty, no active sheet, so the demo starts from a clean phone.
+- The printed English sheet (`fixtures/sheets/hk_en.png`) on the table. Mainland sheet in the bag.
+- Volume up, and the speaker toggle in the chat header ON.
+- Laptop open with the backup video and the QR code. 用示範紙 is the last resort if the network dies.
 
-## 0:00 Hook (30 s)
+---
 
-Hold up the sheet. "This is what a family gets when they leave a Hong Kong hospital. One page. In
-English. My persona's mother is 72 and reads only Chinese. Her daughter reads English slowly, and is
-holding this in a taxi. Everything she needs to do for the next two weeks is on here, and neither of
-them can read it."
+## 0:00 — The gap, in the Hospital Authority's own numbers (40 s)
 
-## 0:30 Live read (90 s)
+Hold up the sheet.
 
-Tap the language tile (廣東話), photograph the sheet, tap 開始讀. While the progress line runs: "It
-reads the page into a fixed structure. The first thing it will say is the warning signs, always."
+> "This is what a Hong Kong family carries out of hospital. The Hospital Authority already prints a
+> good version of it — medicines, side effects, warning signs, follow-up date, in Chinese, in large
+> type. They built it in 2017.
+>
+> Their own published study on how it gets delivered found that **78% of nurses consistently print
+> it, and 57% consistently explain it**. And the workflow says, in as many words, **teach-back is
+> not required**.
+>
+> So roughly two families in five walk out holding this with no explanation at all — and nobody
+> checks that the ones who got an explanation understood it. That is the gap. Not the paper. The
+> conversation that was supposed to happen next to it."
 
-Tap 讀出嚟. Let the Cantonese warning card play in full. Then scroll: "Three medicines, exactly as
-printed. Name, strength, how much, how often. Nothing added." Tap 睇張紙點寫 on a medicine card:
-"Every card shows the line it came from, verbatim. If it can't read a part, it says so instead of
-guessing." Play the follow-up card.
+*(Source: `docs/real-sheet-evidence.md`. If a judge asks, it is the PDIS implementation study,
+published in Implementation Science Communications.)*
 
-## 2:00 Ask it (60 s)
+---
 
-Tap 問問題. Hold the mic and ask in Mandarin: 「二甲双胍要随餐吃吗？」 Play the Cantonese answer; point
-at the cited-card chip and the source quote. "You ask in your language, she hears it in hers. The
-answer has to cite one card the server built, or it says the sheet doesn't say."
+## 0:40 — Photograph it (20 s)
 
-Then ask the question that shows the honesty, in Cantonese: 「白色嗰粒係朝早定夜晚食？」 It answers
-「張紙冇講呢樣」. "The sheet records names, strengths and frequencies. It never records what colour
-the pill is. So it doesn't guess."
+Tap **拍張紙**. Shoot the sheet. The review grid appears: **睇下夠唔夠清楚 / 矇嘅可以再拍**.
 
-Type 「可唔可以唔食？」. "Anything about changing, skipping or adding a medicine is refused before the
-model is even called, and it points to the pharmacist or the number on the sheet."
+Point at the line under the thumbnails:
 
-Measured on the synthetic sheets with Claude Opus 5: answers land in about 3 seconds, 6 at the
-95th percentile. Do not promise a number you have not re-measured on the venue network.
+> "張紙留在你電話。你唔send，冇人睇到. It stays on the phone."
 
-## 3:00 What the AI is, and isn't (45 s)
+Tap **講俾我聽**.
 
-"Two jobs are the model: reading a page of abbreviations, and writing what a daughter would say to
-her mother in Cantonese. Everything that decides what you're told is code: the card order, the
-banned-word filter, the refusal, the grounding check, the plan dates. Remove the model and you have a
-rulebook with nothing to read. And yes, with a perfect prompt a frontier model gets close on the
-reasoning. Nobody writes that prompt, nobody has this pipeline, and it still has to be said out loud
-in Cantonese at a kitchen table."
+---
 
-## 3:45 Compliance in one breath (30 s)
+## 1:00 — Talk over the read (30 s, and this is the dead-air slot)
 
-"Facts about the page, never verdicts about the person. No diagnosis is ever collected. Every
-generated word passes a banned-term filter. Disclaimer on every screen, AI label on every card.
-Synthetic sheets only. Nothing stored anywhere but the phone; the image is dropped after reading.
-Crisis phrases get a referral card, not an answer."
+The screen says 讀住你張紙… and about half a minute. Use it:
 
-## 4:15 Where it goes (30 s)
+> "Two things here are the model, and only two: reading a page of clinical abbreviations, and
+> writing the sentence a daughter would say to her mother in Cantonese.
+>
+> Everything that decides *what you are told* is code. The order the pieces come in. The words that
+> can never be spoken. Whether a question gets refused. Whether a number is allowed on screen at
+> all. If you took the model away you would have a rulebook with nothing to read."
 
-"Next document types are the lab report and the medicine box, same engine. Next users are the parent
-alone, by voice, and the relative who cooks, by a shared card. Hospitals hand out this checklist
-because families leave without knowing these things; this makes the sheet say them out loud."
+---
 
-## 4:45 Buffer for questions
+## 1:30 — 明仔 reads it out (75 s)
 
-Rehearsed answers: "Isn't this medical advice?" (it restates the sheet; refuses changes; defers to the
-pharmacist). "What if it misreads a medicine?" (verbatim fields, source quote on every card, unread
-regions flagged, eval on three fixtures with zero invented items as the pass line). "Why not ChatGPT?"
-(the three-question answer above).
+He introduces himself, then the amber block appears **and reads itself**. Do not touch anything.
+
+> "Warning signs first. Always. That is not a prompt asking nicely — it is `lib/rules/card-order.ts`,
+> and no model output can reorder it or push it down the screen."
+
+When 明唔明？ appears with 再講一次 / 明白:
+
+> "**This is the teach-back the hospital workflow explicitly does not require.** One piece at a
+> time, and it will not move on until she says she understood."
+
+Tap **明白**. The medicines arrive. Point at one:
+
+> "Name, strength, and the instruction exactly as printed. Not paraphrased."
+
+Tap **睇張紙點寫** under it — the source sheet opens with the verbatim line.
+
+> "Every sentence he says traces to a line on the page, and you can see the line."
+
+Tap **明白** twice more (follow-up, then diet), and stop at 講完晒.
+
+---
+
+## 2:45 — Ask it (60 s)
+
+**Hold** the bar and ask in Mandarin: 「二甲双胍要随餐吃吗？」 Let the Cantonese answer play.
+
+> "She asks in her language, he answers in hers. Median 3.1 seconds, 5.9 at the 95th — re-measured
+> this morning against the live model, twelve questions, every outcome as expected."
+
+Then the question that shows the honesty — hold and ask in Cantonese:
+「白色嗰粒係朝早定夜晚食？」 It answers 張紙冇講呢樣.
+
+> "The sheet records names, strengths and frequencies. It never records what colour a pill is. So
+> he doesn't guess. That refusal is worth more than a right answer."
+
+**Tap** the bar to switch to the keyboard, type 「可唔可以唔食？」, send.
+
+> "Anything about changing, skipping or adding a medicine is refused **before the model is called at
+> all**. Same for crisis phrases — those get a referral, not an answer. Those are `lib/rules/`, not
+> a system prompt. In the eval those three refusals come back in **0.0 seconds**, because nothing
+> leaves the phone."
+
+---
+
+## 3:45 — 跟進, and the thing that is easy to get wrong (45 s)
+
+Tap **跟進**.
+
+> "The appointment, with the days remaining — **only because that date was printed**. If the sheet
+> had said 'about two weeks', it would show those words and no countdown. It never computes a date
+> the page didn't give it."
+
+Point at a dose card:
+
+> "張紙寫：BD with meals — verbatim. And the counter says **今日仲有 2 次**. Times remaining today.
+>
+> It will never say 8am. The sheet prints a frequency, not a clock. The moment this app invents a
+> time of day, it stops describing a document and starts prescribing — and that is the line we don't
+> cross. There is a rule that refuses to count anything it can't read as a number of times, and a
+> test that sweeps this whole screen for anything that looks like a time."
+
+If there is a stopped medicine on the sheet, point at it:
+
+> "The page says this one was stopped. It's shown, because the family needs to know the drug is
+> named — but no counter, and no 食咗 button. That bug was real: we caught the reader scheduling a
+> drug the hospital had withdrawn."
+
+---
+
+## 4:30 — The loop, and close (30 s)
+
+Tap **記錄**. The check-in is waiting from 明仔, with the unread dot.
+
+> "Later, the same conversation asks 今日食咗藥未 — quoting the sheet's own frequency back. She taps
+> 食咗, and the counter moves. That's the whole loop: photograph once, understood repeatedly."
+
+Close:
+
+> "Nothing is stored anywhere but the phone. The photo is dropped after it's read. One button wipes
+> everything. And every sheet we've tested is one we wrote ourselves — we have never fed it a real
+> discharge summary, and I'm not going to stand here and claim otherwise."
+
+---
+
+## Rehearsed answers
+
+**"Isn't this medical advice?"** It restates what the page says and cites the line. It refuses
+anything about changing a medicine before the model is called. It defers to the pharmacist and the
+number printed on the sheet. It never collects a diagnosis.
+
+**"What if it misreads a medicine?"** Fields are verbatim, every card carries its source quote, and
+anything it can't read it flags rather than guesses. On the four deliberately hard fixtures: **zero
+invented medicines and zero missing ones on every run**, three of the four at 100% verbatim on every
+field, and the fourth losing one blurred glyph in a printed instruction — which it does not hide.
+And after a bug we found and fixed, **zero withdrawn drugs reach the plan**. That last one is the
+one I'd want a clinician to check first.
+
+**"Why not just ChatGPT?"** Three things. It refuses before it answers. It reads warning signs first
+by rule, not by luck. And it says it out loud in Cantonese to someone who cannot read the page. Ask
+a chatbot the pill-colour question and it will answer confidently.
+
+**"Has a clinician validated this?"** No. It has never read a real discharge summary. The *fields* we
+extract match the HA's own discharge checklist almost one-to-one, which we arrived at independently
+— but the reading accuracy is measured on synthetic sheets only, and that is the honest state of it.
+
+**"What's the business model / next step?"** Next is one real sheet from a consenting family, then
+the medicine box against the sheet's own list. Not more features.
+
+---
 
 ## Backup video (≤ 3 minutes, one continuous real run)
 
-- Screen-record the phone: consent → language → photograph the printed sheet → cards → play the
-  warning card → source quote → ask by voice → refusal by text. No cuts inside the run.
-- Record with the actual voice provider chosen by the listening test; keep the browser-voice take as
-  a second file.
-- Keep the file under 3 minutes; state at the start that the sheet is synthetic.
-- Load it on the laptop and the phone; judges watch it alongside the live demo.
+- Screen-record the phone: 記錄 → 拍張紙 → review → 講俾我聽 → the amber block reading itself → 明白
+  through to 講完晒 → a source quote → one spoken question → one refusal → 跟進 with the counter.
+- **No cuts inside the run.** The 30-second read stays in, sped up with a visible time indicator if
+  needed — cutting it invites the question of what else was cut.
+- Say at the start that the sheet is synthetic.
+- Record with MiniMax Cantonese, the voice the live demo uses.
+- Load it on both the laptop and the phone.
+
+## If something breaks on stage
+
+| Fails | Do |
+| --- | --- |
+| Camera | 上載相片 and pick the sheet from the photo library — same flow from the review grid on |
+| Network mid-read | 用示範紙 — bundled, needs nothing, reaches the same conversation |
+| Mic / hold-to-talk | Tap the bar instead of holding, and type the question. Say you're typing for time |
+| Voice silent | Say so and keep going — the text types itself out regardless, which is the designed fallback |
+| Phone entirely | Backup video on the laptop, and finish the talk over it |

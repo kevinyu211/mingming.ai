@@ -22,7 +22,7 @@ export default function ReadingProgress({ pageCount }: { pageCount: number }) {
       <h1 className="text-display font-bold text-ink">{t("reading.title")}</h1>
       {pageCount > 0 ? (
         <p className="text-body text-muted">
-          {t("reading.meta").replace("{n}", String(pageCount))}
+          {t(pageCount > 2 ? "reading.metaLong" : "reading.meta").replace("{n}", String(pageCount))}
         </p>
       ) : null}
       <p className="text-meta text-muted">{t("progress.note")}</p>
