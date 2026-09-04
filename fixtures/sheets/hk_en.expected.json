@@ -60,6 +60,7 @@
       "amount": "1 tab",
       "frequency": "daily",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "Amlodipine 5mg，一粒，每日一次。",
         "cmn": "Amlodipine 5mg，一片，每天一次。",
@@ -77,6 +78,7 @@
       "amount": "1 tab",
       "frequency": "BD with meals",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "Metformin 500mg，一粒，一日兩次，同飯一齊食。",
         "cmn": "Metformin 500mg，一片，一天两次，随餐服用。",
@@ -94,6 +96,7 @@
       "amount": "1 tab",
       "frequency": "nocte",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "Atorvastatin 20mg，一粒，每晚一次。",
         "cmn": "Atorvastatin 20mg，一片，每晚一次。",

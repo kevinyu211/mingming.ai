@@ -34,10 +34,30 @@ import { NdjsonBuffer, jsonError, ndjsonResponse } from "@/lib/server/ndjson";
 import { runReadingPipeline, type FilterCounts } from "@/lib/server/reading-pipeline";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+/**
+ * Six pages of a discharge stack take materially longer than one. The live stress runs on a single
+ * dense page sat at 45–105 s (tests/eval/stress.md), so the old 120 s ceiling would have timed out
+ * a full stack before the model finished reading it.
+ */
+export const maxDuration = 300;
 
 /** contracts/api-read.md: "Request body limit 8 MB." */
 const MAX_BODY_BYTES = 8 * 1024 * 1024;
+
+/**
+ * How many pages one read may carry. Must equal `MAX_PAGES` in `components/Capture.tsx`, which
+ * `tests/unit/page-limit.test.ts` pins — a client that accepts more pages than the route does is
+ * a silently truncated medical document, which is the one thing the capture screen must never do.
+ *
+ * Six, not two, because a Hong Kong patient does not leave with one sheet. The Hospital Authority's
+ * own HKWC discharge checklist (docs/reference/, and docs/real-sheet-evidence.md) tells the patient
+ * to carry 出院紙, 覆診紙, 繳費單, 病假紙, 抽血紙 and 治療處方 — the follow-up date is printed on a
+ * different piece of paper from the medicines. A two-page limit reads a third of the discharge.
+ *
+ * The body limit still holds: `lib/image/downscale.ts` lands each page at roughly 200–400 KB, so
+ * six encode to about 1.6–3.2 MB against the 8 MB ceiling.
+ */
+const MAX_PAGES = 6;
 
 /**
  * At most one progress line per 1.5 s. The first delta always beats, so the client learns the read
@@ -50,9 +70,9 @@ const ImageSchema = z.strictObject({
   base64: z.string().min(1),
 });
 
-/** One or two pages. No other fields: the profile and dialect are never sent (principle V). */
+/** One page up to a whole stack. No other fields: the profile and dialect are never sent (principle V). */
 const ReadRequestSchema = z.strictObject({
-  images: z.array(ImageSchema).min(1).max(2),
+  images: z.array(ImageSchema).min(1).max(MAX_PAGES),
 });
 
 /* -------------------------------------------------------------------------- */

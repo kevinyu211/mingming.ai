@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discharge Summary — St Brendan's General Hospital (synthetic stress fixture)</title>
+<style>
+  /* STRESS FIXTURE 1 of 4 — "dense".
+     Two columns, small type (12.5px on a 1240px A4), tight leading (1.16), and a
+     ruled eight-row medicine table carrying two strengths of one ingredient, three
+     meal-timed lines, a taper and a PRN. Rendered by fixtures/stress/render.ts. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #fff; color: #101010;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 12.5px; line-height: 1.16;
+    padding: 34px 40px 26px 40px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-end; }
+  .hosp { font-size: 18px; font-weight: bold; letter-spacing: .3px; }
+  .hosp small { display: block; font-size: 10.5px; font-weight: normal; letter-spacing: 0; margin-top: 2px; color: #222; }
+  .doctype { font-size: 17px; font-weight: bold; letter-spacing: 1.6px; text-align: right; }
+  .doctype small { display: block; font-size: 10px; font-weight: normal; letter-spacing: .4px; margin-top: 2px; }
+  .rule { border-top: 1.6px solid #101010; margin-top: 6px; }
+
+  .idbar { display: flex; border: 1px solid #101010; border-top: none; }
+  .idbar div { padding: 4px 7px; border-right: 1px solid #101010; }
+  .idbar div:last-child { border-right: none; }
+  .idbar b { font-weight: bold; }
+  .idbar .g { color: #333; font-size: 10.5px; display: block; letter-spacing: .4px; }
+
+  .cols { display: flex; margin-top: 9px; }
+  .colL { width: 690px; padding-right: 13px; }
+  .colR { width: 470px; padding-left: 13px; border-left: 1px solid #101010; }
+
+  h2 {
+    font-size: 12px; font-weight: bold; letter-spacing: .9px; text-transform: uppercase;
+    margin: 0 0 2px 0; padding: 1px 0 1px 0; border-bottom: 1px solid #101010;
+  }
+  .sec { margin-bottom: 8px; }
+  .sec p { margin: 0; text-align: justify; }
+  .ln { display: block; }
+  .tight { line-height: 1.12; }
+
+  .alert { border: 2px solid #101010; padding: 5px 7px 6px 7px; margin-bottom: 9px; }
+  .alert .t { font-size: 12.5px; font-weight: bold; letter-spacing: .7px; margin-bottom: 2px; }
+  .alert ol { margin: 0; padding-left: 16px; }
+  .alert li { margin-bottom: 1px; }
+  .alert .then { margin-top: 3px; font-weight: bold; }
+
+  table.rx { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.rx th, table.rx td { border: 1px solid #101010; padding: 3px 5px; vertical-align: top; text-align: left; }
+  table.rx th { font-size: 10.5px; letter-spacing: .5px; text-transform: uppercase; background: #ededed; }
+  table.rx td.n { width: 20px; text-align: center; }
+  table.rx td.d { width: 168px; }
+  table.rx td.s { width: 74px; }
+  table.rx td.a { width: 118px; }
+  table.rx td.u { width: 84px; }
+  .rxfoot { font-size: 10.5px; color: #222; margin-top: 3px; display: flex; justify-content: space-between; }
+
+  .sig { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 10px; }
+  .sig i { font-family: "Snell Roundhand", "Brush Script MT", cursive; font-style: normal; font-size: 24px; border-bottom: 1px solid #101010; padding: 0 30px 1px 4px; }
+  .foot { margin-top: 9px; border-top: 1px solid #999; padding-top: 4px; font-size: 9.5px; color: #555; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hosp">ST BRENDAN'S GENERAL HOSPITAL
+    <small>Department of Medicine &amp; Geriatrics &nbsp;&middot;&nbsp; 44 Kwai Fung Path, Hong Kong &nbsp;&middot;&nbsp; Form MR-14 (rev 2025)</small>
+  </div>
+  <div class="doctype">DISCHARGE SUMMARY<small>Page 1 of 1 &nbsp;&middot;&nbsp; printed 03-09-2026 08:41</small></div>
+</div>
+<div class="rule"></div>
+
+<div class="idbar">
+  <div style="width:250px;"><span class="g">PATIENT</span><b>TAM Yuk Ching</b> &nbsp; F / 79</div>
+  <div style="width:180px;"><span class="g">CASE NO.</span>B7-XXXXXX</div>
+  <div style="width:170px;"><span class="g">WARD / BED</span>11C / 07</div>
+  <div style="width:190px;"><span class="g">ADMITTED</span>26-08-2026</div>
+  <div style="width:190px;"><span class="g">DISCHARGED</span>03-09-2026</div>
+  <div style="flex:1;"><span class="g">ALLERGY</span><b>PENICILLIN (rash)</b></div>
+</div>
+
+<div class="cols">
+  <div class="colL">
+    <div class="sec">
+      <h2>Reason for Admission</h2>
+      <p class="tight"><span class="ln">79F, known CHF (LVEF 34% on echo 2024), permanent AF on apixaban, T2DM x 12 yrs, CKD stage 3b, gout, iron-deficiency anaemia.</span>
+      <span class="ln">Presented with 5/7 progressive exertional dyspnoea (NYHA III), orthopnoea x 2 pillows, bilateral ankle oedema to mid-shin, and 3 kg weight gain over 10/7. Nil chest pain, nil palpitation, nil syncope. Nil fever, nil cough, nil haemoptysis.</span>
+      <span class="ln">On arrival: BP 148/86, HR 96 irregular, SpO2 92% on room air, RR 22, temp 36.6, weight 61.4 kg (dry weight 58.5 kg).</span></p>
+    </div>
+    <div class="sec">
+      <h2>Past Medical History</h2>
+      <p class="tight"><span class="ln">1. Congestive heart failure, HFrEF — echo 08/2024 LVEF 34%, moderate MR, LA dilated.</span>
+      <span class="ln">2. Atrial fibrillation, permanent, rate-controlled. CHA2DS2-VASc 5.</span>
+      <span class="ln">3. Type 2 diabetes mellitus x 12 yrs, on oral agents. Background retinopathy, no maculopathy.</span>
+      <span class="ln">4. Chronic kidney disease stage 3b, baseline creatinine 132-146.</span>
+      <span class="ln">5. Gout — last flare 05/2026, right first MTP joint.</span>
+      <span class="ln">6. Iron-deficiency anaemia — OGD/colonoscopy 2023 nil malignancy, angiodysplasia caecum.</span>
+      <span class="ln">7. Cataract, right eye, operated 2021. 8. Osteoarthritis both knees.</span></p>
+    </div>
+    <div class="sec">
+      <h2>Investigations &amp; Progress in Hospital</h2>
+      <p class="tight"><span class="ln">Bloods on admission: Hb 9.6, MCV 76, WCC 7.2, Plt 244, Na 136, K 4.8, urea 12.1, creatinine 148 (eGFR 32), albumin 33, ALT 22, CRP 8. NT-proBNP 3120. HbA1c 8.1%. Ferritin 14, transferrin sat 9%. TSH 2.1.</span>
+      <span class="ln">CXR: cardiomegaly, upper-lobe blood diversion, small bilateral effusions. ECG: AF, rate 96, nil acute ischaemic change, QTc 428.</span>
+      <span class="ln">Echo 28-08-2026: LVEF 32%, global hypokinesia, moderate functional MR, RV function preserved, no pericardial effusion, IVC dilated.</span>
+      <span class="ln">Given IV frusemide 40mg BD D1-D3, converted to oral D4. Net negative 4.1 L over 8/7. Weight on discharge 58.9 kg. Creatinine peaked 162 on D3, settled to 151 on D7. K 4.1 on discharge, nil supplement needed.</span>
+      <span class="ln">Iron infusion (ferric carboxymaltose 500mg) given D5; nil reaction. Hb 9.9 on discharge, to be rechecked at day ward.</span>
+      <span class="ln">Gout flare right knee D4 — settled with a short oral steroid course, which is being tapered as below. Nil NSAID given in view of CKD.</span>
+      <span class="ln">Seen by physiotherapist and occupational therapist. Mobilises 30 m with a stick, independent for washing and dressing, needs help with shopping. Daughter lives in the same building. Cantonese speaking; reads Chinese, reads no English.</span></p>
+    </div>
+    <div class="sec">
+      <h2>Discharge Diagnoses</h2>
+      <p class="tight"><span class="ln">1. Acute decompensated congestive heart failure, HFrEF, NYHA III on admission &mdash; improved to NYHA II.</span>
+      <span class="ln">2. Permanent atrial fibrillation on oral anticoagulant.</span>
+      <span class="ln">3. Chronic kidney disease stage 3b, stable on discharge.</span>
+      <span class="ln">4. Iron-deficiency anaemia &mdash; iron replaced during admission.</span>
+      <span class="ln">5. Acute gout, right knee, resolving on a tapering steroid course.</span>
+      <span class="ln">6. Type 2 diabetes mellitus, suboptimal control.</span></p>
+    </div>
+    <div class="sec">
+      <h2>Condition on Discharge</h2>
+      <p class="tight"><span class="ln">Comfortable at rest, NYHA II, chest clear on auscultation, ankle oedema resolved, weight 58.9 kg. BP 126/74 sitting, HR 78 irregular. Ambulant with a stick. Home with daughter. Glucometer and blood-pressure machine at home; daughter shown how to record both in the booklet provided.</span></p>
+    </div>
+    <div class="sec">
+      <h2>Medicines Stopped or Changed This Admission (not to be taken)</h2>
+      <p class="tight"><span class="ln">STOPPED: Diltiazem SR 90mg daily &mdash; stopped D1 in view of reduced LVEF.</span>
+      <span class="ln">STOPPED: Ibuprofen 400mg TDS PRN &mdash; stopped D1, nephrotoxic in CKD 3b.</span>
+      <span class="ln">STOPPED: Frusemide 20mg BD (old dose) &mdash; replaced by the split dose on the discharge list.</span>
+      <span class="ln">CHANGED: Metformin XR reduced from 1000mg daily to 750mg daily on D5 (eGFR 32).</span>
+      <span class="ln">CHANGED: Apixaban reduced from 5mg BD to 2.5mg BD on D2 (age, weight, creatinine).</span>
+      <span class="ln">HELD then RESTARTED: Spironolactone 12.5mg daily &mdash; held D1-D5, NOT restarted on discharge, to be reviewed at the Heart Failure Clinic.</span></p>
+    </div>
+    <div class="sec">
+      <h2>Nursing Assessment on Discharge</h2>
+      <p class="tight"><span class="ln">Pressure areas intact, Braden 18. Continent of urine and bowels. Nil pressure dressing.</span>
+      <span class="ln">Peripheral cannula right forearm removed 03-09-2026 08:10, site clean, small bruise, nil phlebitis.</span>
+      <span class="ln">Falls risk: moderate &mdash; walking stick, night light advised, bathroom rail already fitted at home.</span>
+      <span class="ln">Swallowing normal, nil aspiration risk, normal texture diet tolerated.</span></p>
+    </div>
+    <div class="sec" style="margin-bottom:0;">
+      <h2>Social &amp; Functional</h2>
+      <p class="tight"><span class="ln">Lives in a public housing flat on the 9th floor, lift available. Daughter on the 4th floor of the same block, visits twice daily.</span>
+      <span class="ln">Barthel index 85/100. Uses a stick indoors and outdoors. Shops with the daughter's help; cooks simple meals.</span>
+      <span class="ln">Old Age Living Allowance recipient. No domestic helper. Declined day-care referral this admission.</span></p>
+    </div>
+  </div>
+
+  <div class="colR">
+    <div class="alert">
+      <div class="t">RETURN TO A&amp;E IMMEDIATELY IF:</div>
+      <ol>
+        <li>Weight gain of more than 1.5 kg over 2 days, or new ankle swelling</li>
+        <li>Breathless at rest, or needing to sleep sitting up</li>
+        <li>Black stool, vomiting blood, or bleeding that will not stop</li>
+        <li>Chest pain not relieved by 3 doses of GTN spray</li>
+      </ol>
+      <div class="then">Do not wait for the clinic appointment. Attend A&amp;E or call 999.</div>
+    </div>
+
+    <div class="sec">
+      <h2>Follow-up Appointments</h2>
+      <p class="tight"><span class="ln">1. Heart Failure Clinic &mdash; 10-09-2026 09:15 &mdash; bring all medicine boxes</span>
+      <span class="ln">2. Renal SOPD &mdash; 6/52 &mdash; RFT and potassium 3 days before</span>
+      <span class="ln">3. Haematology Day Ward &mdash; 24-09-2026 14:00 &mdash; Hb and ferritin</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Diet</h2>
+      <p class="tight"><span class="ln">Diet: no added salt; fluid restriction 1.2 L per day.</span>
+      <span class="ln">Weigh yourself each morning before breakfast and write it in the booklet.</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Activity &amp; Wound Care</h2>
+      <p class="tight"><span class="ln">Activity: walk on the flat as able; no lifting over 5 kg x 6/52.</span>
+      <span class="ln">Keep the cannula site dry and covered x 48 hrs.</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Community Support Arranged</h2>
+      <p class="tight"><span class="ln">Community nurse home visit 08-09-2026 (weight, BP, cannula site).</span>
+      <span class="ln">Meals-on-wheels resumed from 05-09-2026.</span>
+      <span class="ln">Elderly centre transport booked for the Heart Failure Clinic visit.</span></p>
+    </div>
+
+    <div class="sec" style="margin-bottom:0;">
+      <h2>Contact</h2>
+      <p class="tight"><span class="ln">Ward 11C enquiries: 2xxx xxxx (24 hrs)</span>
+      <span class="ln">Heart Failure Nurse, office hours: 3xxx xxxx</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Certificates Issued</h2>
+      <p class="tight"><span class="ln">Attendance certificate 26-08-2026 to 03-09-2026 issued to the daughter.</span>
+      <span class="ln">Nil sick-leave certificate required (retired).</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Equipment on Loan</h2>
+      <p class="tight"><span class="ln">Bathroom seat and walking stick, from the ward OT store, return within 3/12.</span>
+      <span class="ln">Weighing scale purchased by the family; daughter shown how to record daily weights.</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Education Given</h2>
+      <p class="tight"><span class="ln">Daily weight and fluid diary explained to the patient and the daughter.</span>
+      <span class="ln">Medicine box and dosette walked through item by item with the ward pharmacist.</span>
+      <span class="ln">GTN spray technique demonstrated; patient able to repeat it back.</span>
+      <span class="ln">Bleeding precautions on an anticoagulant explained; card carried in the handbag.</span></p>
+    </div>
+
+    <div class="sec">
+      <h2>Vaccination</h2>
+      <p class="tight"><span class="ln">Seasonal influenza vaccine given 02-09-2026, left deltoid, nil reaction.</span>
+      <span class="ln">Pneumococcal vaccine already received 2024; nil due.</span></p>
+    </div>
+
+    <div class="sec" style="margin-bottom:0;">
+      <h2>Notes for the Community Nurse</h2>
+      <p class="tight"><span class="ln">Please check the standing and sitting blood pressure at the first visit.</span>
+      <span class="ln">Please look at the right forearm cannula site and record any redness.</span>
+      <span class="ln">Please confirm the family has started the daily weight diary.</span></p>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-top:10px;">Discharge Medications &mdash; supply 4 weeks unless stated</h2>
+<table class="rx">
+  <tr>
+    <th class="n">#</th><th class="d">Drug</th><th class="s">Strength</th><th class="a">Dose</th>
+    <th>Frequency / instructions</th><th class="u">Duration</th>
+  </tr>
+  <tr><td class="n">1</td><td class="d">Furosemide</td><td class="s">40mg</td><td class="a">1 tab</td><td>every morning</td><td class="u"></td></tr>
+  <tr><td class="n">2</td><td class="d">Furosemide</td><td class="s">20mg</td><td class="a">1 tab</td><td>at midday (12:00)</td><td class="u"></td></tr>
+  <tr><td class="n">3</td><td class="d">Apixaban</td><td class="s">2.5mg</td><td class="a">1 tab</td><td>BD</td><td class="u"></td></tr>
+  <tr><td class="n">4</td><td class="d">Metformin XR</td><td class="s">750mg</td><td class="a">1 tab</td><td>daily with breakfast</td><td class="u"></td></tr>
+  <tr><td class="n">5</td><td class="d">Pantoprazole</td><td class="s">40mg</td><td class="a">1 tab</td><td>daily, 30 min before breakfast</td><td class="u"></td></tr>
+  <tr><td class="n">6</td><td class="d">Ferrous fumarate</td><td class="s">210mg</td><td class="a">1 tab</td><td>BD, 1 hr before food</td><td class="u">x 3/12</td></tr>
+  <tr><td class="n">7</td><td class="d">Prednisolone</td><td class="s">5mg</td><td class="a">8 tabs then 4 tabs</td><td>40mg daily x 3/7 then 20mg daily</td><td class="u">x 10/7</td></tr>
+  <tr><td class="n">8</td><td class="d">GTN spray</td><td class="s">400mcg</td><td class="a">1-2 puffs SL</td><td>PRN chest pain, max 3 doses</td><td class="u"></td></tr>
+</table>
+<div class="rxfoot">
+  <span>Dispensed by: Pharmacy, St Brendan's General Hospital &nbsp;&middot;&nbsp; counselled with daughter present &nbsp;&middot;&nbsp; old boxes of frusemide 20mg returned</span>
+  <span>MR-14 / RX / 8 items</span>
+</div>
+
+<div class="sig">
+  <div>Doctor: Dr S. M. CHEUNG, MBBS (HK), MRCP &nbsp; Reg. No. M0XXXXX &nbsp; 03-09-2026 &nbsp;&nbsp; Signature: <i>S.M. Cheung</i></div>
+  <div style="text-align:right;">Nurse discharge check: <i>K. Ip</i></div>
+</div>
+
+<div class="foot">
+  <span>SYNTHETIC DEMO DOCUMENT &mdash; FICTIONAL PATIENT AND FICTIONAL HOSPITAL. NOT A REAL MEDICAL RECORD.</span>
+  <span>SBGH-DS-STRESS-01</span>
+</div>
+
+</body>
+</html>

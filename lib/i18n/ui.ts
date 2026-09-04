@@ -134,8 +134,160 @@ const hant = {
   "fallback.noVoice": "睇字",
   "fallback.noVoiceNote": "而家出唔到聲，內容喺下面睇得到。",
   "fallback.modelUnavailable": "而家讀唔到，用示範紙睇下點運作",
-  "fallback.cameraDenied": "用唔到相機。可以喺相簿揀相，或者打字輸入。",
+  "fallback.cameraDenied": "用唔到相機。喺相簿揀張出院紙嘅相都得。",
   "fallback.offline": "而家connect唔到。示範紙照用得。",
+
+  // ==========================================================================
+  // v2 — the three-tab flow (docs/v2-build-brief.md).
+  //
+  // Cantonese is taken VERBATIM from design-canvas/workflow-v2.dc.html wherever the canvas has
+  // the line; Mandarin and English are written to match its register — a daughter explaining a
+  // page to her mother, not a hospital leaflet.
+  //
+  // PLACEHOLDERS. Some of these carry {n}, {name}, {printed}, {text} or {date}. The caller fills
+  // them with a plain string replace, never a model turn. The unit test asserts that all three
+  // locales of a key carry the same placeholders: a dropped {n} in one script is a counter that
+  // silently stops counting.
+  //
+  // NO CLOCK TIMES, EVER. A discharge sheet prints a FREQUENCY (「每日兩次，隨餐」), never a time
+  // of day, so a counter counts REMAINING TIMES TODAY and nothing else. Printing "8pm" would be
+  // prescribing (brief section 2, rule 7). This is the one place the canvas is deliberately not
+  // followed: its check-in reply says 「夜晚仲有一次」, which invents an evening dose the page
+  // never printed — it is 「今日仲有 N 次」 here. If you add a counter string, count times.
+  // ==========================================================================
+
+  // --- V2 Tabs -------------------------------------------------------------
+  "tab.record": "記錄",
+  "tab.chat": "傾偈",
+  "tab.track": "跟進",
+  "tab.navLabel": "主要頁面",
+  "tab.chatPending": "明仔有嘢想問你",
+
+  // --- V2 明仔 -------------------------------------------------------------
+  // He is drawn, never labelled: components/Mascot.tsx is aria-hidden and THIS is the real text.
+  "mascot.name": "明仔",
+
+  // --- V2 記錄 -------------------------------------------------------------
+  "home.title": "記錄",
+  "home.emptySubtitle": "出院張紙，拍咗或者揀相俾我睇。",
+  "home.emptyMascot": "仲未有紙。拍完我就即刻講俾你聽。",
+  "home.nowTalking": "傾緊呢張",
+  "home.pages": "{n} 頁",
+  "home.medicines": "{n} 隻藥",
+  "home.chatNotStarted": "未講過",
+  "home.chatPartway": "講到一半",
+  "home.chatDone": "講完晒 · 有問題就問我",
+  "home.dosesLeft": "今日嘅藥：仲有 {n} 次",
+  "home.dosesDone": "今日嘅藥：食晒",
+  "home.older": "以前嘅 ({n})",
+  "home.readOnly": "只可以睇",
+
+  // --- V2 Capture buttons --------------------------------------------------
+  // The sub-labels are the English gloss the canvas prints under the Chinese label, for the adult
+  // child holding the phone. In the English interface they say something else, not the same thing.
+  "capture.photo": "拍張紙",
+  "capture.photoSub": "Take a photo",
+  "capture.upload": "上載相片",
+  "capture.uploadSub": "From your photos",
+
+  // --- V2 Camera -----------------------------------------------------------
+  // Six pages is the ceiling and it is said in all three places it can bite. A medical document
+  // is never silently truncated: if the app cannot take a page it has to say so.
+  "camera.hintFirst": "成張紙入框",
+  "camera.hintFirstSub": "Whole page inside the frame",
+  "camera.hintNext": "仲有下一頁？",
+  "camera.hintNextSub": "Shoot the next page, or press 完成",
+  "camera.hintFull": "夠 6 頁喇，按「完成」",
+  "camera.hintFullSub": "Six pages is the maximum",
+  "camera.done": "完成",
+  "camera.guiding": "講住指示",
+  "camera.edgesLocked": "對正咗 · 揸穩部機",
+  "camera.close": "熄相機",
+  "camera.shutter": "影一張",
+
+  // --- V2 Photo picker -----------------------------------------------------
+  "pick.title": "揀你部電話嘅相",
+  "pick.subtitle": "出院紙嘅相或者 PDF 都可以 · 最多 6 張",
+  "pick.subtitleFull": "揀夠 6 張喇",
+  "pick.use": "用揀好嘅 {n} 張",
+  "pick.useNone": "揀最少一張",
+
+  // --- V2 Review -----------------------------------------------------------
+  "review.title": "睇下夠唔夠清楚",
+  "review.subtitle": "矇嘅可以再拍",
+  "review.retake": "再拍",
+  "review.addPage": "加一頁",
+  "review.onDevice": "張紙留在你電話。你唔send，冇人睇到。",
+  "review.start": "講俾我聽",
+
+  // --- V2 Reading ----------------------------------------------------------
+  "reading.title": "讀住你張紙…",
+  "reading.meta": "{n} 頁 · 大概十秒",
+
+  // --- V2 Chat shell -------------------------------------------------------
+  "chat.back": "返去記錄",
+  "chat.sheetLine": "{date}出院紙",
+  "chat.muteSpeaker": "熄咗把聲",
+  "chat.unmuteSpeaker": "開返把聲",
+  "chat.language": "揀用邊種話",
+  "chat.today": "今日",
+  "chat.reading": "讀住",
+  "chat.readingThis": "讀住呢段",
+
+  // --- V2 The briefing -----------------------------------------------------
+  "brief.intro": "我睇完你張紙。最緊要嘅先講。",
+  "brief.warnTitle": "有呢啲情況，即刻返醫院",
+  "brief.understandQuestion": "明唔明？",
+  "brief.repeat": "再講一次",
+  "brief.understand": "明白",
+  "brief.left": "仲有 {n} 段",
+  "brief.end": "講完晒。有咩想問，按住下面個框講。",
+  "brief.trackLink": "睇「跟進」嘅藥同覆診",
+
+  // --- V2 The bar: hold to talk, tap to type -------------------------------
+  "bar.hold": "按住講嘢",
+  "bar.holdSub": "· 點一下打字",
+  "bar.listening": "聽住你講…",
+  "bar.listeningSub": "· 放手就送出",
+  "bar.typePlaceholder": "打字問我…",
+  "bar.send": "送",
+  "bar.backToVoice": "改用講嘢",
+
+  // --- V2 The check-in -----------------------------------------------------
+  // {printed} is the frequency clause VERBATIM off the page. The template is fixed; a model turn
+  // never assembles this question and never fills that slot.
+  "checkin.question": "今日食咗{name}未？張紙寫{printed}。",
+  "checkin.took": "食咗",
+  "checkin.notYet": "未食",
+  "checkin.tookReply": "好，我幫你記低咗。今日仲有 {n} 次。",
+  "checkin.tookReplyAll": "好，我幫你記低咗。今日食晒喇。",
+  // 未食 quotes the page back and stops. No nudge, no "remember to", no second ask.
+  "checkin.notYetReply": "張紙寫：{printed}",
+
+  // --- V2 跟進 -------------------------------------------------------------
+  "track.title": "跟進",
+  "track.following": "跟緊呢張紙",
+  "track.nextVisit": "下次覆診",
+  "track.daysAfter": "{n} 日之後",
+  "track.todayMeds": "今日嘅藥",
+  "track.warnings": "危險訊號 ({n})",
+  "track.saySigns": "叫明仔講一次",
+  "appt.directions": "睇下點去",
+
+  // --- V2 Dose cards -------------------------------------------------------
+  // `card.printed` is the one wrapper for verbatim page text: the dose frequency, the appointment
+  // line when the date would not parse, and the 未食 reply all quote through it.
+  "card.printed": "張紙寫：{text}",
+  "dose.left": "今日仲有 {n} 次",
+  "dose.done": "今日食晒",
+  "dose.asNeeded": "唔痛就唔使食",
+  // A stopped medicine still shows — the family needs to know the page names it — with no button
+  // and no counter (brief section 2, rule 8).
+  "dose.stopped": "張紙寫唔使再食",
+  "dose.take": "食咗",
+
+  // --- V2 Sheets (the UI kind) ---------------------------------------------
+  "sheet.close": "閂返",
 
   // --- Persistent, every screen -------------------------------------------
   // EXEMPT from the banned-term filter: this is rules.md section 16 verbatim wording.
@@ -260,8 +412,129 @@ const hans: Record<UiKey, string> = {
   "fallback.noVoice": "看文字",
   "fallback.noVoiceNote": "现在出不了声音，内容在下面看得到。",
   "fallback.modelUnavailable": "现在读不了，用示范纸看看怎么用",
-  "fallback.cameraDenied": "用不了相机。可以从相册选，或者打字输入。",
+  "fallback.cameraDenied": "用不了相机。从相册选一张出院纸的照片也可以。",
   "fallback.offline": "现在连不上。示范纸还是能用。",
+
+  // --- V2 Tabs -------------------------------------------------------------
+  "tab.record": "记录",
+  "tab.chat": "聊天",
+  "tab.track": "跟进",
+  "tab.navLabel": "主要页面",
+  "tab.chatPending": "明仔有话想问你",
+
+  // --- V2 明仔 -------------------------------------------------------------
+  "mascot.name": "明仔",
+
+  // --- V2 记录 -------------------------------------------------------------
+  "home.title": "记录",
+  "home.emptySubtitle": "出院这张纸，拍一张或者选张照片给我看。",
+  "home.emptyMascot": "还没有纸。拍好我就马上讲给你听。",
+  "home.nowTalking": "在聊这张",
+  "home.pages": "{n} 页",
+  "home.medicines": "{n} 种药",
+  "home.chatNotStarted": "还没讲过",
+  "home.chatPartway": "讲到一半",
+  "home.chatDone": "讲完了 · 有问题就问我",
+  "home.dosesLeft": "今天的药：还有 {n} 次",
+  "home.dosesDone": "今天的药：吃完了",
+  "home.older": "以前的 ({n})",
+  "home.readOnly": "只可以看",
+
+  // --- V2 Capture buttons --------------------------------------------------
+  "capture.photo": "拍这张纸",
+  "capture.photoSub": "Take a photo",
+  "capture.upload": "上传照片",
+  "capture.uploadSub": "From your photos",
+
+  // --- V2 Camera -----------------------------------------------------------
+  "camera.hintFirst": "整张纸进框",
+  "camera.hintFirstSub": "Whole page inside the frame",
+  "camera.hintNext": "还有下一页吗？",
+  "camera.hintNextSub": "Shoot the next page, or press 完成",
+  "camera.hintFull": "够 6 页了，按「完成」",
+  "camera.hintFullSub": "Six pages is the maximum",
+  "camera.done": "完成",
+  "camera.guiding": "边讲边教你",
+  "camera.edgesLocked": "对准了 · 拿稳手机",
+  "camera.close": "关掉相机",
+  "camera.shutter": "拍一张",
+
+  // --- V2 Photo picker -----------------------------------------------------
+  "pick.title": "选你手机里的照片",
+  "pick.subtitle": "出院纸的照片或者 PDF 都可以 · 最多 6 张",
+  "pick.subtitleFull": "选够 6 张了",
+  "pick.use": "用选好的 {n} 张",
+  "pick.useNone": "至少选一张",
+
+  // --- V2 Review -----------------------------------------------------------
+  "review.title": "看看够不够清楚",
+  "review.subtitle": "模糊的可以重拍",
+  "review.retake": "重拍",
+  "review.addPage": "加一页",
+  "review.onDevice": "这张纸留在你手机里。你不发出去，没人看得到。",
+  "review.start": "讲给我听",
+
+  // --- V2 Reading ----------------------------------------------------------
+  "reading.title": "读着你的纸…",
+  "reading.meta": "{n} 页 · 大概十秒",
+
+  // --- V2 Chat shell -------------------------------------------------------
+  "chat.back": "回到记录",
+  "chat.sheetLine": "{date}出院纸",
+  "chat.muteSpeaker": "关掉声音",
+  "chat.unmuteSpeaker": "打开声音",
+  "chat.language": "选用哪种话",
+  "chat.today": "今天",
+  "chat.reading": "读着",
+  "chat.readingThis": "读着这段",
+
+  // --- V2 The briefing -----------------------------------------------------
+  "brief.intro": "我看完你的纸了。最要紧的先讲。",
+  "brief.warnTitle": "有这些情况，马上回医院",
+  "brief.understandQuestion": "明白吗？",
+  "brief.repeat": "再讲一次",
+  "brief.understand": "明白",
+  "brief.left": "还有 {n} 段",
+  "brief.end": "讲完了。有什么想问，按住下面那个框讲。",
+  "brief.trackLink": "看「跟进」里的药和复诊",
+
+  // --- V2 The bar ----------------------------------------------------------
+  "bar.hold": "按住说话",
+  "bar.holdSub": "· 点一下打字",
+  "bar.listening": "听着你说…",
+  "bar.listeningSub": "· 放开就发出",
+  "bar.typePlaceholder": "打字问我…",
+  "bar.send": "发",
+  "bar.backToVoice": "改用说话",
+
+  // --- V2 The check-in -----------------------------------------------------
+  "checkin.question": "今天吃了{name}没有？纸上写{printed}。",
+  "checkin.took": "吃了",
+  "checkin.notYet": "还没吃",
+  "checkin.tookReply": "好，我帮你记下了。今天还有 {n} 次。",
+  "checkin.tookReplyAll": "好，我帮你记下了。今天吃完了。",
+  "checkin.notYetReply": "纸上写：{printed}",
+
+  // --- V2 跟进 -------------------------------------------------------------
+  "track.title": "跟进",
+  "track.following": "跟着这张纸",
+  "track.nextVisit": "下次复诊",
+  "track.daysAfter": "{n} 天之后",
+  "track.todayMeds": "今天的药",
+  "track.warnings": "危险讯号 ({n})",
+  "track.saySigns": "叫明仔讲一次",
+  "appt.directions": "看看怎么去",
+
+  // --- V2 Dose cards -------------------------------------------------------
+  "card.printed": "纸上写：{text}",
+  "dose.left": "今天还有 {n} 次",
+  "dose.done": "今天吃完了",
+  "dose.asNeeded": "不痛就不用吃",
+  "dose.stopped": "纸上写不用再吃",
+  "dose.take": "吃了",
+
+  // --- V2 Sheets (the UI kind) ---------------------------------------------
+  "sheet.close": "关掉",
 
   // EXEMPT: rules.md section 16 verbatim wording.
   "disclaimer":
@@ -390,8 +663,131 @@ const en: Record<UiKey, string> = {
   "fallback.noVoice": "Read it instead",
   "fallback.noVoiceNote": "No voice right now. The words are below.",
   "fallback.modelUnavailable": "Can't read a sheet right now. Open a sample to see how it works.",
-  "fallback.cameraDenied": "The camera isn't available. Pick a photo, or type it instead.",
+  "fallback.cameraDenied": "The camera isn't available. Choose a photo of the discharge sheet instead.",
   "fallback.offline": "No connection right now. The sample sheets still work.",
+
+  // --- V2 Tabs -------------------------------------------------------------
+  "tab.record": "Sheets",
+  "tab.chat": "Chat",
+  "tab.track": "Follow-up",
+  "tab.navLabel": "Main sections",
+  "tab.chatPending": "Ming has a question waiting",
+
+  // --- V2 明仔 -------------------------------------------------------------
+  // Romanised for the English interface. He is still 明仔 to the parent, who hears him, not reads.
+  "mascot.name": "Ming",
+
+  // --- V2 Sheets tab -------------------------------------------------------
+  "home.title": "Sheets",
+  "home.emptySubtitle": "Photograph the discharge sheet, or pick a photo of it.",
+  "home.emptyMascot": "No sheet yet. Photograph one and I'll read it to you straight away.",
+  "home.nowTalking": "The sheet we're on",
+  "home.pages": "{n} pages",
+  "home.medicines": "{n} medicines",
+  "home.chatNotStarted": "Not read yet",
+  "home.chatPartway": "Halfway through",
+  "home.chatDone": "All read · ask me anything",
+  "home.dosesLeft": "Today's medicine: {n} left",
+  "home.dosesDone": "Today's medicine: all taken",
+  "home.older": "Earlier sheets ({n})",
+  "home.readOnly": "Read-only",
+
+  // --- V2 Capture buttons --------------------------------------------------
+  // In English the main label already says it, so the second line says something else.
+  "capture.photo": "Take a photo",
+  "capture.photoSub": "Use the camera",
+  "capture.upload": "Pick a photo",
+  "capture.uploadSub": "From your library",
+
+  // --- V2 Camera -----------------------------------------------------------
+  "camera.hintFirst": "Whole page inside the frame",
+  "camera.hintFirstSub": "Line up all four edges",
+  "camera.hintNext": "Another page?",
+  "camera.hintNextSub": "Shoot the next page, or press Done",
+  "camera.hintFull": "Six pages is the maximum — press Done",
+  "camera.hintFullSub": "The camera won't take a seventh",
+  "camera.done": "Done",
+  "camera.guiding": "Talking you through it",
+  "camera.edgesLocked": "Edges locked · hold still",
+  "camera.close": "Close the camera",
+  "camera.shutter": "Take the picture",
+
+  // --- V2 Photo picker -----------------------------------------------------
+  "pick.title": "Pick from your photos",
+  "pick.subtitle": "A photo or a PDF of the sheet · 6 pages maximum",
+  "pick.subtitleFull": "That's the six-page maximum",
+  "pick.use": "Use the {n} you picked",
+  "pick.useNone": "Pick at least one",
+
+  // --- V2 Review -----------------------------------------------------------
+  "review.title": "Check they're clear enough",
+  "review.subtitle": "Anything blurry can be shot again",
+  "review.retake": "Retake",
+  "review.addPage": "Add a page",
+  "review.onDevice": "The page stays on your phone. Nobody sees it unless you send it.",
+  "review.start": "Read it to me",
+
+  // --- V2 Reading ----------------------------------------------------------
+  "reading.title": "Reading your sheet…",
+  "reading.meta": "{n} pages · about ten seconds",
+
+  // --- V2 Chat shell -------------------------------------------------------
+  "chat.back": "Back to sheets",
+  "chat.sheetLine": "Discharge sheet, {date}",
+  "chat.muteSpeaker": "Turn the voice off",
+  "chat.unmuteSpeaker": "Turn the voice on",
+  "chat.language": "Choose the language",
+  "chat.today": "Today",
+  "chat.reading": "Reading aloud",
+  "chat.readingThis": "Reading this out",
+
+  // --- V2 The briefing -----------------------------------------------------
+  "brief.intro": "I've read your sheet. The most important part first.",
+  "brief.warnTitle": "With any of these, go back to the hospital now",
+  "brief.understandQuestion": "Is that clear?",
+  "brief.repeat": "Say it again",
+  "brief.understand": "Got it",
+  "brief.left": "{n} more to go",
+  "brief.end": "That's everything. Hold the bar below and ask me anything.",
+  "brief.trackLink": "See the medicines and the visit in Follow-up",
+
+  // --- V2 The bar ----------------------------------------------------------
+  "bar.hold": "Hold to talk",
+  "bar.holdSub": "· tap to type",
+  "bar.listening": "Listening…",
+  "bar.listeningSub": "· let go to send",
+  "bar.typePlaceholder": "Type a question…",
+  "bar.send": "Send",
+  "bar.backToVoice": "Switch back to talking",
+
+  // --- V2 The check-in -----------------------------------------------------
+  "checkin.question": "Have you had {name} today? The sheet says {printed}.",
+  "checkin.took": "Taken",
+  "checkin.notYet": "Not yet",
+  "checkin.tookReply": "Right, I've noted it. {n} more today.",
+  "checkin.tookReplyAll": "Right, I've noted it. That's all of them today.",
+  "checkin.notYetReply": "The sheet says: {printed}",
+
+  // --- V2 Follow-up tab ----------------------------------------------------
+  "track.title": "Follow-up",
+  "track.following": "Following this sheet",
+  "track.nextVisit": "Next visit",
+  "track.daysAfter": "in {n} days",
+  "track.todayMeds": "Today's medicines",
+  "track.warnings": "Warning signs ({n})",
+  "track.saySigns": "Ask Ming to read them out",
+  "appt.directions": "How to get there",
+
+  // --- V2 Dose cards -------------------------------------------------------
+  "card.printed": "The sheet says: {text}",
+  "dose.left": "{n} left today",
+  "dose.done": "All taken today",
+  "dose.asNeeded": "Only when there is pain",
+  "dose.stopped": "The sheet says this one has stopped",
+  "dose.take": "Taken",
+
+  // --- V2 Sheets (the UI kind) ---------------------------------------------
+  "sheet.close": "Close",
 
   // EXEMPT: rules.md section 16 verbatim wording.
   "disclaimer":

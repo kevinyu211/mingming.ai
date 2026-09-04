@@ -13,7 +13,7 @@
  * Delete really deletes. `deleteEverything()` removes the single localStorage key; this screen
  * then clears sessionStorage (the consent mark and any page bytes `Capture` left mid-navigation)
  * and drops the in-memory audio cache, so nothing about the sheet survives anywhere in the tab.
- * The redirect lands on `/`, which shows the consent notice again and then setup — the same
+ * The redirect lands on 記錄, which shows the consent notice again over an empty 記錄 — the same
  * state a phone that has never seen this app is in.
  */
 import Link from "next/link";

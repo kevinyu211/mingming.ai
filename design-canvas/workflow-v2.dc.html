@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700;900&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#EFEAE1;font-family:"Instrument Sans",system-ui,sans-serif}
+a{color:#1E8C6E}a:hover{color:#14705A}
+@keyframes wv{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes edge{0%,100%{opacity:.5}50%{opacity:1}}
+input{font-family:"Noto Sans HK",sans-serif}
+</style></helmet>
+
+<section style="padding:44px 48px 52px">
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 6px">
+    <span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:#2A2723;color:#fff;border-radius:5px">P</span>
+    <span style="font:600 13px/1.2 'Instrument Sans',sans-serif;color:#2A2723">出院紙傾偈 — clickable workflow, v2</span>
+  </div>
+  <p style="max-width:860px;margin:0 0 34px;font:400 13.5px/1.6 'Instrument Sans',sans-serif;color:rgba(42,39,35,.62);text-wrap:pretty">Nothing to press to hear the agent — it types itself out and reads aloud on its own. Speaker and language moved to the top right; the speaker turns the voice off and the text keeps typing. One combined WeChat-style bar at the bottom: <b>hold it to talk, tap it to type</b>. On 記錄 the block under 拍張紙 is now a notification, and tapping it opens the current sheet's thread with 明仔's check-in waiting. The reset button sits under the phone.</p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+
+    <div style="flex:none;display:flex;flex-direction:column;gap:12px">
+      <div style="font:400 12.5px/1.3 'Instrument Sans',sans-serif;color:rgba(42,39,35,.55)">Live prototype · 390×844</div>
+      <div style="width:390px;height:844px;background:#FBF8F3;border-radius:14px;overflow:hidden;position:relative;box-shadow:0 8px 32px rgba(42,39,35,.13)">
+
+        <div style="{{ statusStyle }}">
+          <span style="font:600 15px 'Instrument Sans',sans-serif">9:41</span>
+          <div style="display:flex;gap:5px;align-items:center"><span style="width:17px;height:11px;border-radius:2px;background:currentColor"></span><span style="width:15px;height:11px;border-radius:2px;background:currentColor"></span><span style="width:24px;height:12px;border-radius:3px;background:currentColor"></span></div>
+        </div>
+
+        <sc-if value="{{ isHomeEmpty }}">
+          <div style="position:absolute;inset:52px 0 96px;display:flex;flex-direction:column;padding:14px 24px 24px;box-sizing:border-box">
+            <div style="font:700 30px/1.3 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:6px">記錄</div>
+            <div style="font:400 18px/1.55 'Noto Sans HK',sans-serif;color:#7C7A73;margin-bottom:34px">出院張紙，拍咗或者揀相俾我睇。</div>
+            <div style="display:flex;gap:12px">
+              <button onClick="{{ goCamera }}" style="flex:1;border:0;border-radius:22px;background:#1E8C6E;box-shadow:0 4px 0 #14705A;padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">
+                <svg width="46" height="41" viewBox="0 0 27 24" fill="none"><rect x="1.4" y="5.4" width="24.2" height="17.2" rx="4" stroke="#fff" stroke-width="2.1"/><path d="M9 5.2 10.5 1.4h5.9L18 5.2" stroke="#fff" stroke-width="2.1" stroke-linejoin="round"/><circle cx="13.5" cy="13.8" r="4.7" stroke="#fff" stroke-width="2.1"/></svg>
+                <div style="text-align:center"><div style="font:700 23px/1.25 'Noto Sans HK',sans-serif;color:#fff">拍張紙</div><div style="font:400 13.5px/1.35 'Instrument Sans',sans-serif;color:rgba(255,255,255,.74);margin-top:3px">Take a photo</div></div>
+              </button>
+              <button onClick="{{ onOpenPick }}" style="flex:1;border:0;border-radius:22px;background:#E9F4F0;box-shadow:0 4px 0 #CFE4DC;padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #CFE4DC">
+                <svg width="46" height="41" viewBox="0 0 27 24" fill="none"><rect x="1.4" y="3.4" width="24.2" height="19.2" rx="4" stroke="#14705A" stroke-width="2.1"/><path d="M1.6 17.4l6.6-5.6 5.4 4.6 3.6-3 8.2 6.8" stroke="#14705A" stroke-width="2.1" stroke-linejoin="round"/><circle cx="8.4" cy="8.6" r="2.3" stroke="#14705A" stroke-width="2.1"/></svg>
+                <div style="text-align:center"><div style="font:700 23px/1.25 'Noto Sans HK',sans-serif;color:#14705A">上載相片</div><div style="font:400 13.5px/1.35 'Instrument Sans',sans-serif;color:rgba(20,112,90,.68);margin-top:3px">From your photos</div></div>
+              </button>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding-bottom:40px">
+              <div style="width:64px;height:64px;position:relative;opacity:.34">
+                <div style="position:absolute;left:2px;top:0;width:23px;height:23px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;right:2px;top:0;width:23px;height:23px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;left:0;top:8px;width:64px;height:56px;border-radius:50%;background:#fff"></div>
+                <div style="position:absolute;left:12px;top:24px;width:15px;height:19px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;right:12px;top:24px;width:15px;height:19px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;left:28px;top:46px;width:9px;height:6px;border-radius:4px;background:#2A2723"></div>
+              </div>
+              <div style="font:400 18px/1.6 'Noto Sans HK',sans-serif;color:#A5A29A;text-align:center;max-width:250px">仲未有紙。<br>拍完我就即刻講俾你聽。</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isHome }}">
+          <div style="position:absolute;inset:52px 0 96px;overflow:auto;padding:14px 24px 24px;box-sizing:border-box">
+            <div style="font:700 30px/1.3 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:22px">記錄</div>
+            <div style="display:flex;gap:12px">
+              <button onClick="{{ goCamera }}" style="flex:1;border:0;border-radius:20px;background:#1E8C6E;box-shadow:0 4px 0 #14705A;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">
+                <svg width="34" height="30" viewBox="0 0 27 24" fill="none"><rect x="1.4" y="5.4" width="24.2" height="17.2" rx="4" stroke="#fff" stroke-width="2.1"/><path d="M9 5.2 10.5 1.4h5.9L18 5.2" stroke="#fff" stroke-width="2.1" stroke-linejoin="round"/><circle cx="13.5" cy="13.8" r="4.7" stroke="#fff" stroke-width="2.1"/></svg>
+                <span style="font:700 21px 'Noto Sans HK',sans-serif;color:#fff">拍張紙</span>
+              </button>
+              <button onClick="{{ onOpenPick }}" style="flex:1;border:0;border-radius:20px;background:#E9F4F0;box-shadow:0 4px 0 #CFE4DC;padding:20px 14px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #CFE4DC">
+                <svg width="34" height="30" viewBox="0 0 27 24" fill="none"><rect x="1.4" y="3.4" width="24.2" height="19.2" rx="4" stroke="#14705A" stroke-width="2.1"/><path d="M1.6 17.4l6.6-5.6 5.4 4.6 3.6-3 8.2 6.8" stroke="#14705A" stroke-width="2.1" stroke-linejoin="round"/><circle cx="8.4" cy="8.6" r="2.3" stroke="#14705A" stroke-width="2.1"/></svg>
+                <span style="font:700 21px 'Noto Sans HK',sans-serif;color:#14705A">上載相片</span>
+              </button>
+            </div>
+
+            <sc-if value="{{ notifOpen }}">
+              <button onClick="{{ onOpenNotif }}" style="border:0;width:100%;text-align:left;margin-top:14px;background:#E9F4F0;border-radius:20px;padding:20px;display:flex;align-items:center;gap:15px;cursor:pointer;min-height:48px;animation:rise .4s ease both" style-hover="background:#DEEEE8">
+                <div style="width:46px;height:46px;border-radius:23px;background:#1E8C6E;display:grid;place-items:center;flex:none;position:relative">
+                  <div style="width:30px;height:30px;position:relative">
+                    <div style="position:absolute;left:1px;top:0;width:11px;height:11px;border-radius:50%;background:#2A2723"></div>
+                    <div style="position:absolute;right:1px;top:0;width:11px;height:11px;border-radius:50%;background:#2A2723"></div>
+                    <div style="position:absolute;left:0;top:4px;width:30px;height:26px;border-radius:50%;background:#FBF8F3"></div>
+                    <div style="position:absolute;left:5px;top:11px;width:7px;height:9px;border-radius:50%;background:#2A2723"></div>
+                    <div style="position:absolute;right:5px;top:11px;width:7px;height:9px;border-radius:50%;background:#2A2723"></div>
+                  </div>
+                  <span style="position:absolute;top:-2px;right:-2px;width:13px;height:13px;border-radius:7px;background:#C88A16;border:2.5px solid #E9F4F0"></span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+                    <span style="font:700 17px 'Noto Sans HK',sans-serif;color:#14705A">明仔</span>
+                    <span style="font:400 14px 'Instrument Sans',sans-serif;color:#8FA79E;flex:none">今朝 9:00</span>
+                  </div>
+                  <div style="font:500 19px/1.45 'Noto Sans HK',sans-serif;color:#2A2723;margin-top:4px">今日食咗藥未？張紙寫要食兩次。</div>
+                </div>
+                <span style="font:400 22px 'Instrument Sans',sans-serif;color:#8FA79E;flex:none">›</span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ notifDone }}">
+              <button onClick="{{ goTrack }}" style="border:0;width:100%;text-align:left;margin-top:14px;background:transparent;border-radius:18px;padding:18px 4px;display:flex;align-items:center;gap:12px;cursor:pointer;min-height:48px">
+                <svg width="20" height="20" viewBox="0 0 17 17" fill="none" style="flex:none"><path d="M3.4 9l3.4 3.4L13.8 4.8" stroke="#1E8C6E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="flex:1;font:400 18px 'Noto Sans HK',sans-serif;color:#7C7A73">{{ notifDoneLabel }}</span>
+                <span style="font:400 20px 'Instrument Sans',sans-serif;color:#C9C5BB">›</span>
+              </button>
+            </sc-if>
+
+            <div style="font:500 15px 'Noto Sans HK',sans-serif;color:#A5A29A;letter-spacing:.06em;margin:30px 2px 12px">傾緊呢張</div>
+            <button onClick="{{ goChat }}" style="border:0;width:100%;background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:20px;display:flex;gap:16px;align-items:center;cursor:pointer;text-align:left;min-height:48px">
+              <div style="width:52px;height:66px;border-radius:6px;background:#F1EDE4;flex:none;padding:9px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px">
+                <div style="height:3px;background:#1E8C6E;border-radius:2px"></div><div style="height:3px;background:#D8D3C8;border-radius:2px;width:80%"></div><div style="height:3px;background:#D8D3C8;border-radius:2px"></div><div style="height:3px;background:#D8D3C8;border-radius:2px;width:62%"></div><div style="height:3px;background:#D8D3C8;border-radius:2px"></div><div style="height:3px;background:#D8D3C8;border-radius:2px;width:74%"></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font:700 22px/1.35 'Noto Sans HK',sans-serif;color:#2A2723">瑪麗醫院 · 心內科</div>
+                <div style="font:400 18px/1.5 'Noto Sans HK',sans-serif;color:#7C7A73;margin-top:4px">9月1日 · {{ pageLabel }} · 3隻藥</div>
+                <div style="font:400 16px/1.5 'Noto Sans HK',sans-serif;color:#A5A29A;margin-top:8px">{{ chatPreview }}</div>
+              </div>
+              <span style="font:400 22px 'Instrument Sans',sans-serif;color:#C9C5BB;flex:none">›</span>
+            </button>
+
+            <button onClick="{{ onToggleOlder }}" style="border:0;width:100%;background:transparent;padding:20px 2px;margin-top:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;text-align:left;min-height:48px">
+              <span style="font:400 18px 'Noto Sans HK',sans-serif;color:#7C7A73">以前嘅 (2)</span>
+              <span style="font:400 20px 'Instrument Sans',sans-serif;color:#C9C5BB">{{ olderChev }}</span>
+            </button>
+            <sc-if value="{{ olderOpen }}">
+              <div style="display:flex;flex-direction:column;gap:10px;animation:rise .3s ease both">
+                <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:18px;display:flex;gap:14px;align-items:center;opacity:.72">
+                  <div style="width:40px;height:52px;border-radius:5px;background:#F1EDE4;flex:none"></div>
+                  <div style="flex:1"><div style="font:500 19px/1.3 'Noto Sans HK',sans-serif;color:#2A2723">廣華醫院 · 內科</div><div style="font:400 16px 'Noto Sans HK',sans-serif;color:#A5A29A;margin-top:3px">8月14日 · 只可以睇</div></div>
+                </div>
+                <div style="background:#fff;border-radius:18px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:18px;display:flex;gap:14px;align-items:center;opacity:.72">
+                  <div style="width:40px;height:52px;border-radius:5px;background:#F1EDE4;flex:none"></div>
+                  <div style="flex:1"><div style="font:500 19px/1.3 'Noto Sans HK',sans-serif;color:#2A2723">瑪麗醫院 · 眼科</div><div style="font:400 16px 'Noto Sans HK',sans-serif;color:#A5A29A;margin-top:3px">6月2日 · 只可以睇</div></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isCamera }}">
+          <div style="position:absolute;inset:0;background:#141312;overflow:hidden">
+            <div style="position:absolute;inset:0;background:linear-gradient(160deg,#2B2823,#171614 48%,#100F0E)"></div>
+            <div style="position:absolute;left:34px;right:34px;top:196px;bottom:250px;background:#F6F3ED;border-radius:5px;transform:rotate(-1deg);box-shadow:0 22px 56px rgba(0,0,0,.5);padding:28px 24px;box-sizing:border-box">
+              <div style="font:500 11px 'Instrument Sans',sans-serif;color:rgba(42,39,35,.55);letter-spacing:.09em">HOSPITAL AUTHORITY</div>
+              <div style="font:600 14px 'Instrument Sans',sans-serif;color:#2A2723;margin-top:11px">DISCHARGE SUMMARY</div>
+              <div style="display:flex;flex-direction:column;gap:7px;margin-top:16px">
+                <div style="height:4px;background:rgba(42,39,35,.3);border-radius:3px;width:86%"></div><div style="height:4px;background:rgba(42,39,35,.17);border-radius:3px"></div><div style="height:4px;background:rgba(42,39,35,.17);border-radius:3px;width:70%"></div><div style="height:4px;background:rgba(42,39,35,.3);border-radius:3px;width:44%;margin-top:11px"></div><div style="height:4px;background:rgba(42,39,35,.17);border-radius:3px"></div><div style="height:4px;background:rgba(42,39,35,.17);border-radius:3px;width:88%"></div><div style="height:4px;background:rgba(42,39,35,.17);border-radius:3px;width:62%"></div>
+              </div>
+            </div>
+            <div style="position:absolute;left:26px;right:26px;top:188px;bottom:242px;border:2.5px solid #6FD3B4;border-radius:8px;box-shadow:0 0 40px rgba(30,140,110,.5);animation:edge 2.2s ease-in-out infinite"></div>
+            <div style="position:absolute;top:60px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 20px;box-sizing:border-box">
+              <button onClick="{{ closeCamera }}" style="width:48px;height:48px;border-radius:24px;border:0;background:rgba(255,255,255,.15);color:#fff;font:300 22px/1 'Instrument Sans',sans-serif;cursor:pointer">×</button>
+              <div style="display:flex;align-items:center;gap:8px;padding:9px 15px;border-radius:22px;background:rgba(255,255,255,.15)">
+                <span style="width:7px;height:7px;border-radius:4px;background:#6FD3B4;animation:blink 1.4s infinite"></span>
+                <span style="font:500 15px 'Noto Sans HK',sans-serif;color:#fff">講住指示</span>
+              </div>
+              <button onClick="{{ onOpenLang }}" style="width:48px;height:48px;border-radius:24px;border:0;background:rgba(255,255,255,.15);color:#fff;font:500 16px 'Noto Sans HK',sans-serif;cursor:pointer">{{ langShort }}</button>
+            </div>
+            <div style="position:absolute;top:120px;left:28px;right:28px;text-align:center">
+              <div style="font:500 23px/1.4 'Noto Sans HK',sans-serif;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.55)">{{ camHint }}</div>
+              <div style="font:400 15px/1.4 'Instrument Sans',sans-serif;color:rgba(255,255,255,.6);margin-top:5px">{{ camHintEn }}</div>
+            </div>
+            <div style="position:absolute;bottom:146px;left:0;right:0;display:flex;justify-content:center">
+              <div style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:22px;background:rgba(111,211,180,.18);border:1px solid rgba(111,211,180,.4)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7.4l3.2 3.2L12 3.6" stroke="#A8E8D3" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span style="font:500 14.5px 'Instrument Sans',sans-serif;color:#BDEEDD">Edges locked · hold still</span>
+              </div>
+            </div>
+            <div style="position:absolute;bottom:48px;left:0;right:0;padding:0 24px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;width:96px">
+                <sc-for list="{{ pageList }}" as="p" hint-placeholder-count="0">
+                  <div style="width:38px;height:50px;border-radius:6px;background:#EDE8DF;border:2px solid rgba(255,255,255,.75);margin-left:-14px;display:grid;place-items:center;font:600 14px 'Instrument Sans',sans-serif;color:rgba(42,39,35,.55)">{{ p.n }}</div>
+                </sc-for>
+              </div>
+              <button onClick="{{ onShutter }}" style="{{ shutterStyle }}"></button>
+              <div style="width:96px;display:flex;justify-content:flex-end">
+                <sc-if value="{{ hasPages }}">
+                  <button onClick="{{ goReview }}" style="border:0;padding:15px 20px;border-radius:24px;background:#1E8C6E;color:#fff;font:700 17px 'Noto Sans HK',sans-serif;cursor:pointer;min-height:48px">完成</button>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isReview }}">
+          <div style="position:absolute;inset:52px 0 0;display:flex;flex-direction:column;padding:14px 24px 34px;box-sizing:border-box">
+            <div style="font:700 28px/1.3 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:4px">睇下夠唔夠清楚</div>
+            <div style="font:400 17px/1.5 'Noto Sans HK',sans-serif;color:#7C7A73;margin-bottom:22px">矇嘅可以再拍</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <sc-for list="{{ pageList }}" as="p" hint-placeholder-count="2">
+                <div style="border-radius:14px;position:relative;background:#F1EDE4;height:190px;overflow:hidden;padding:16px 14px;box-sizing:border-box;display:flex;flex-direction:column;gap:5px">
+                  <div style="font:600 9px 'Instrument Sans',sans-serif;color:rgba(42,39,35,.5);letter-spacing:.08em">DISCHARGE SUMMARY</div>
+                  <div style="height:3px;background:rgba(42,39,35,.22);border-radius:2px;margin-top:8px;width:80%"></div><div style="height:3px;background:rgba(42,39,35,.13);border-radius:2px"></div><div style="height:3px;background:rgba(42,39,35,.13);border-radius:2px;width:64%"></div><div style="height:3px;background:rgba(42,39,35,.22);border-radius:2px;width:44%;margin-top:8px"></div><div style="height:3px;background:rgba(42,39,35,.13);border-radius:2px"></div>
+                  <div style="position:absolute;bottom:9px;left:9px;padding:4px 11px;border-radius:14px;background:#1E8C6E;font:600 13px 'Instrument Sans',sans-serif;color:#fff">{{ p.n }}</div>
+                  <button onClick="{{ p.onRetake }}" style="position:absolute;bottom:9px;right:9px;border:0;padding:9px 13px;border-radius:14px;background:rgba(42,39,35,.72);color:#fff;font:500 14px 'Noto Sans HK',sans-serif;cursor:pointer">再拍</button>
+                </div>
+              </sc-for>
+              <sc-if value="{{ canAddPage }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ onAddPage }}" style="border-radius:14px;border:1.5px dashed rgba(42,39,35,.22);background:transparent;height:190px;cursor:pointer;display:grid;place-items:center" style-hover="background:#F4F0E7">
+                  <div style="text-align:center"><div style="font:300 30px/1 'Instrument Sans',sans-serif;color:rgba(42,39,35,.35)">+</div><div style="font:500 15px 'Noto Sans HK',sans-serif;color:rgba(42,39,35,.45);margin-top:7px">加一頁</div></div>
+                </button>
+              </sc-if>
+            </div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:16px;background:#F1EDE4;margin-bottom:14px">
+              <svg width="17" height="17" viewBox="0 0 17 17" fill="none" style="flex:none"><rect x="3" y="1.3" width="11" height="14.4" rx="2.4" stroke="#8B8880" stroke-width="1.6"/><path d="M6 5.4h5M6 8.5h5M6 11.6h3" stroke="#8B8880" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span style="font:400 15px/1.45 'Noto Sans HK',sans-serif;color:#7C7A73">張紙留在你電話。你唔send，冇人睇到。</span>
+            </div>
+            <button onClick="{{ goReading }}" style="border:0;width:100%;border-radius:20px;background:#1E8C6E;box-shadow:0 4px 0 #14705A;padding:24px;font:700 22px 'Noto Sans HK',sans-serif;color:#fff;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">講俾我聽</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isReading }}">
+          <div style="position:absolute;inset:52px 0 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:0 40px;box-sizing:border-box">
+            <div style="width:92px;height:92px;position:relative">
+              <div style="position:absolute;left:2px;top:0;width:33px;height:33px;border-radius:50%;background:#2A2723"></div>
+              <div style="position:absolute;right:2px;top:0;width:33px;height:33px;border-radius:50%;background:#2A2723"></div>
+              <div style="position:absolute;left:0;top:11px;width:92px;height:81px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px #EAE5DC"></div>
+              <div style="position:absolute;left:17px;top:33px;width:22px;height:27px;border-radius:50%;background:#2A2723"></div>
+              <div style="position:absolute;right:17px;top:33px;width:22px;height:27px;border-radius:50%;background:#2A2723"></div>
+              <div style="position:absolute;left:26px;top:41px;width:8px;height:10px;border-radius:50%;background:#fff"></div>
+              <div style="position:absolute;right:26px;top:41px;width:8px;height:10px;border-radius:50%;background:#fff"></div>
+              <div style="position:absolute;left:40px;top:66px;width:12px;height:8px;border-radius:6px;background:#2A2723"></div>
+            </div>
+            <div style="font:700 26px/1.4 'Noto Sans HK',sans-serif;color:#2A2723;text-align:center">讀住你張紙…</div>
+            <div style="font:400 18px/1.55 'Noto Sans HK',sans-serif;color:#A5A29A;text-align:center">{{ pageLabel }} · 大概十秒</div>
+            <div style="display:flex;gap:8px">
+              <div style="width:10px;height:10px;border-radius:5px;background:#1E8C6E;animation:blink 1.1s infinite"></div>
+              <div style="width:10px;height:10px;border-radius:5px;background:#1E8C6E;animation:blink 1.1s .2s infinite"></div>
+              <div style="width:10px;height:10px;border-radius:5px;background:#1E8C6E;animation:blink 1.1s .4s infinite"></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isChat }}">
+          <div style="position:absolute;top:52px;left:0;right:0;padding:8px 14px 12px;box-sizing:border-box;background:#FBF8F3;border-bottom:1px solid #EAE5DC;z-index:4;display:flex;align-items:center;gap:6px">
+            <button onClick="{{ goHome }}" style="width:48px;height:48px;border:0;background:transparent;cursor:pointer;font:400 26px/1 'Instrument Sans',sans-serif;color:#8B8880;flex:none;padding:0">‹</button>
+            <div style="flex:1;min-width:0">
+              <div style="font:700 19px/1.3 'Noto Sans HK',sans-serif;color:#2A2723;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">瑪麗醫院 · 心內科</div>
+              <div style="font:400 14px 'Noto Sans HK',sans-serif;color:#A5A29A;margin-top:1px">9月1日出院紙</div>
+            </div>
+            <button onClick="{{ onToggleSpeaker }}" style="{{ spkStyle }}">
+              <sc-if value="{{ speakerOn }}" hint-placeholder-val="{{ true }}">
+                <svg width="22" height="20" viewBox="0 0 18 16" fill="none"><path d="M8.4 2.2 5.1 5.2H2.4v5.6h2.7l3.3 3V2.2Z" stroke="#14705A" stroke-width="1.9" stroke-linejoin="round"/><path d="M11.6 5.4a3.7 3.7 0 0 1 0 5.2M14.2 3.2a7 7 0 0 1 0 9.6" stroke="#14705A" stroke-width="1.9" stroke-linecap="round"/></svg>
+              </sc-if>
+              <sc-if value="{{ speakerOff }}">
+                <svg width="22" height="20" viewBox="0 0 18 16" fill="none"><path d="M8.4 2.2 5.1 5.2H2.4v5.6h2.7l3.3 3V2.2Z" stroke="#8B8880" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 6l4 4M16 6l-4 4" stroke="#8B8880" stroke-width="1.9" stroke-linecap="round"/></svg>
+              </sc-if>
+            </button>
+            <button onClick="{{ onOpenLang }}" style="width:48px;height:48px;border-radius:24px;border:0;background:#F1EDE4;cursor:pointer;font:500 16px 'Noto Sans HK',sans-serif;color:#5C594F;flex:none">{{ langShort }}</button>
+          </div>
+
+          <div ref="{{ threadRef }}" style="position:absolute;inset:126px 0 128px;overflow:auto;padding:20px 22px 8px;box-sizing:border-box">
+            <div style="text-align:center;font:400 14.5px 'Noto Sans HK',sans-serif;color:#B4B0A7;margin-bottom:22px">今日</div>
+
+            <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:22px">
+              <div style="width:44px;height:44px;position:relative;flex:none;margin-top:2px">
+                <div style="position:absolute;left:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;right:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;left:0;top:5px;width:44px;height:39px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px #EAE5DC"></div>
+                <div style="position:absolute;left:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;right:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                <div style="position:absolute;left:19px;top:32px;width:6px;height:4px;border-radius:3px;background:#2A2723"></div>
+              </div>
+              <div style="background:#fff;border-radius:6px 20px 20px 20px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:16px 20px;font:400 18px/1.6 'Noto Sans HK',sans-serif;color:#2A2723;max-width:242px">{{ introText }}</div>
+            </div>
+
+            <sc-if value="{{ showWarn }}">
+              <div style="background:#FCF2DC;border-radius:22px;padding:22px 20px;margin-bottom:22px;animation:rise .4s ease both">
+                <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px">
+                  <svg width="26" height="24" viewBox="0 0 21 19" fill="none" style="flex:none"><path d="M10.5 1.6 19.6 17H1.4L10.5 1.6Z" stroke="#8A6104" stroke-width="2.1" stroke-linejoin="round"/><path d="M10.5 7.2v4M10.5 13.9v.2" stroke="#8A6104" stroke-width="2.3" stroke-linecap="round"/></svg>
+                  <div style="flex:1;font:700 23px/1.3 'Noto Sans HK',sans-serif;color:#6B4B03">有呢啲情況，即刻返醫院</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:13px">
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">發燒到 38 度以上</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">氣促、透唔到氣</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">胸口痛、心跳好快</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">腳腫、成日想睡</span></div>
+                </div>
+                <sc-if value="{{ warnReading }}">
+                  <div style="display:flex;align-items:center;gap:9px;margin-top:16px">
+                    <span style="display:flex;align-items:flex-end;gap:2.5px;height:15px">
+                      <span style="width:3px;height:45%;background:#C88A16;border-radius:2px;animation:wv .9s ease-in-out infinite"></span><span style="width:3px;height:100%;background:#C88A16;border-radius:2px;animation:wv .9s ease-in-out .1s infinite"></span><span style="width:3px;height:65%;background:#C88A16;border-radius:2px;animation:wv .9s ease-in-out .2s infinite"></span><span style="width:3px;height:88%;background:#C88A16;border-radius:2px;animation:wv .9s ease-in-out .3s infinite"></span>
+                    </span>
+                    <span style="font:500 15px 'Noto Sans HK',sans-serif;color:#8A6104">讀住呢段</span>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-for list="{{ said }}" as="m" hint-placeholder-count="0">
+              <div style="margin-bottom:22px;animation:rise .4s ease both">
+                <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;justify-content:flex-end">
+                    <div style="background:#DCEFE7;border-radius:20px 6px 20px 20px;padding:16px 20px;max-width:258px;font:400 20px/1.6 'Noto Sans HK',sans-serif;color:#134D3D">{{ m.text }}</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.isAgent }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;align-items:flex-start;gap:11px">
+                    <div style="width:44px;height:44px;position:relative;flex:none;margin-top:2px">
+                      <div style="position:absolute;left:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                      <div style="position:absolute;right:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                      <div style="position:absolute;left:0;top:5px;width:44px;height:39px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px #EAE5DC"></div>
+                      <div style="position:absolute;left:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                      <div style="position:absolute;right:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                      <div style="position:absolute;left:19px;top:32px;width:6px;height:4px;border-radius:3px;background:#2A2723"></div>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font:400 20px/1.68 'Noto Sans HK',sans-serif;color:#2A2723">{{ m.text }}</div>
+                      <sc-if value="{{ m.reading }}">
+                        <div style="display:flex;align-items:center;gap:9px;margin-top:10px">
+                          <span style="display:flex;align-items:flex-end;gap:2.5px;height:14px">
+                            <span style="width:3px;height:45%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out infinite"></span><span style="width:3px;height:100%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .1s infinite"></span><span style="width:3px;height:65%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .2s infinite"></span><span style="width:3px;height:88%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .3s infinite"></span>
+                          </span>
+                          <span style="font:500 15px 'Noto Sans HK',sans-serif;color:#14705A">讀住</span>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ m.hasLink }}">
+                        <button onClick="{{ goTrack }}" style="border:0;background:#E4F1EC;border-radius:14px;padding:14px 18px;margin-top:13px;font:500 17px 'Noto Sans HK',sans-serif;color:#14705A;cursor:pointer;min-height:48px">睇「跟進」嘅藥同覆診 ›</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ isTyping }}">
+              <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:22px">
+                <div style="width:44px;height:44px;position:relative;flex:none;margin-top:2px">
+                  <div style="position:absolute;left:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                  <div style="position:absolute;right:1px;top:0;width:16px;height:16px;border-radius:50%;background:#2A2723"></div>
+                  <div style="position:absolute;left:0;top:5px;width:44px;height:39px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 1px #EAE5DC"></div>
+                  <div style="position:absolute;left:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                  <div style="position:absolute;right:8px;top:17px;width:11px;height:13px;border-radius:50%;background:#2A2723"></div>
+                  <div style="position:absolute;left:19px;top:32px;width:6px;height:4px;border-radius:3px;background:#2A2723"></div>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font:400 20px/1.68 'Noto Sans HK',sans-serif;color:#2A2723">{{ typing }}<span style="display:inline-block;width:3px;height:20px;background:#1E8C6E;margin-left:3px;vertical-align:-3px;animation:blink .9s infinite"></span></div>
+                  <sc-if value="{{ speakerOn }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;gap:9px;margin-top:10px">
+                      <span style="display:flex;align-items:flex-end;gap:2.5px;height:14px">
+                        <span style="width:3px;height:45%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out infinite"></span><span style="width:3px;height:100%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .1s infinite"></span><span style="width:3px;height:65%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .2s infinite"></span><span style="width:3px;height:88%;background:#1E8C6E;border-radius:2px;animation:wv .9s ease-in-out .3s infinite"></span>
+                      </span>
+                      <span style="font:500 15px 'Noto Sans HK',sans-serif;color:#14705A">讀住</span>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showQuick }}">
+              <div style="display:flex;gap:12px;margin-bottom:22px;padding-left:55px;animation:rise .4s ease both">
+                <button onClick="{{ onTook }}" style="flex:1;border:0;background:#1E8C6E;box-shadow:0 4px 0 #14705A;border-radius:16px;padding:18px 0;font:700 19px 'Noto Sans HK',sans-serif;color:#fff;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">食咗</button>
+                <button onClick="{{ onNotYet }}" style="flex:1;border:0;background:#F1EDE4;border-radius:16px;padding:18px 0;font:500 19px 'Noto Sans HK',sans-serif;color:#5C594F;cursor:pointer;min-height:48px" style-hover="background:#E8E3D8">未食</button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showAsk }}">
+              <div style="background:#fff;border-radius:22px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:22px 20px;margin-bottom:22px;animation:rise .4s ease both">
+                <div style="font:700 24px/1.4 'Noto Sans HK',sans-serif;color:#2A2723;text-align:center">明唔明？</div>
+                <div style="display:flex;gap:12px;margin-top:18px">
+                  <button onClick="{{ onRepeat }}" style="flex:1;border:0;background:#F1EDE4;border-radius:16px;padding:18px 0;font:500 19px 'Noto Sans HK',sans-serif;color:#5C594F;cursor:pointer;min-height:48px" style-hover="background:#E8E3D8">再講一次</button>
+                  <button onClick="{{ onUnderstand }}" style="flex:1;border:0;background:#1E8C6E;box-shadow:0 4px 0 #14705A;border-radius:16px;padding:18px 0;font:700 19px 'Noto Sans HK',sans-serif;color:#fff;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">明白</button>
+                </div>
+                <sc-if value="{{ askAfter }}">
+                  <div style="font:400 15px/1.5 'Noto Sans HK',sans-serif;color:#A5A29A;text-align:center;margin-top:14px">仲有 {{ leftLabel }} 段</div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ showEnd }}">
+              <div style="padding:0 2px 8px;font:400 18px/1.6 'Noto Sans HK',sans-serif;color:#A5A29A;animation:rise .5s ease both">講完晒。有咩想問，按住下面個框講。</div>
+            </sc-if>
+          </div>
+
+          <div style="position:absolute;bottom:0;left:0;right:0;z-index:8;background:#FBF8F3;border-top:1px solid #EAE5DC;padding:14px 16px 34px;box-sizing:border-box">
+            <sc-if value="{{ isVoiceMode }}" hint-placeholder-val="{{ true }}">
+              <button onMouseDown="{{ onBarDown }}" onMouseUp="{{ onBarUp }}" onMouseLeave="{{ onBarLeave }}" onTouchStart="{{ onBarDown }}" onTouchEnd="{{ onBarUp }}" style="{{ barStyle }}">
+                <sc-if value="{{ holding }}">
+                  <span style="display:flex;align-items:flex-end;gap:4px;height:26px">
+                    <span style="width:4px;height:100%;background:#fff;border-radius:3px;animation:wv .7s ease-in-out infinite"></span><span style="width:4px;height:100%;background:#fff;border-radius:3px;animation:wv .7s ease-in-out .08s infinite"></span><span style="width:4px;height:100%;background:#fff;border-radius:3px;animation:wv .7s ease-in-out .16s infinite"></span><span style="width:4px;height:100%;background:#fff;border-radius:3px;animation:wv .7s ease-in-out .24s infinite"></span><span style="width:4px;height:100%;background:#fff;border-radius:3px;animation:wv .7s ease-in-out .32s infinite"></span>
+                  </span>
+                </sc-if>
+                <sc-if value="{{ notHolding }}" hint-placeholder-val="{{ true }}">
+                  <svg width="22" height="30" viewBox="0 0 15 21" fill="none" style="flex:none"><rect x="4.5" y="1" width="6" height="11.4" rx="3" stroke="#14705A" stroke-width="2.2"/><path d="M1.2 10.2a6.3 6.3 0 0 0 12.6 0M7.5 16.6V20" stroke="#14705A" stroke-width="2.2" stroke-linecap="round"/></svg>
+                </sc-if>
+                <span style="{{ barLabelStyle }}">{{ barLabel }}</span>
+                <span style="{{ barSubStyle }}">{{ barSub }}</span>
+              </button>
+            </sc-if>
+            <sc-if value="{{ isTextMode }}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <button onClick="{{ onVoiceMode }}" style="width:56px;height:56px;border-radius:28px;border:0;background:#F1EDE4;cursor:pointer;display:grid;place-items:center;flex:none">
+                  <svg width="20" height="27" viewBox="0 0 15 21" fill="none"><rect x="4.5" y="1" width="6" height="11.4" rx="3" stroke="#5C594F" stroke-width="2.2"/><path d="M1.2 10.2a6.3 6.3 0 0 0 12.6 0M7.5 16.6V20" stroke="#5C594F" stroke-width="2.2" stroke-linecap="round"/></svg>
+                </button>
+                <input value="{{ draft }}" onChange="{{ onDraft }}" placeholder="打字問我…" style="flex:1;min-width:0;height:56px;border-radius:28px;border:0;background:#fff;box-shadow:0 1px 3px rgba(42,39,35,.09);padding:0 20px;box-sizing:border-box;font:400 19px 'Noto Sans HK',sans-serif;color:#2A2723;outline:none" />
+                <button onClick="{{ onSend }}" style="{{ sendStyle }}">送</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isTrack }}">
+          <div style="position:absolute;inset:52px 0 96px;overflow:auto;padding:14px 24px 24px;box-sizing:border-box">
+            <div style="font:700 30px/1.3 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:14px">跟進</div>
+            <button onClick="{{ goChat }}" style="border:0;width:100%;text-align:left;background:#F1EDE4;border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;min-height:48px;margin-bottom:22px" style-hover="background:#E8E3D8">
+              <div style="width:30px;height:38px;border-radius:4px;background:#fff;flex:none;padding:5px 4px;box-sizing:border-box;display:flex;flex-direction:column;gap:3px">
+                <div style="height:2px;background:#1E8C6E;border-radius:1px"></div><div style="height:2px;background:#D8D3C8;border-radius:1px;width:72%"></div><div style="height:2px;background:#D8D3C8;border-radius:1px"></div><div style="height:2px;background:#D8D3C8;border-radius:1px;width:56%"></div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font:500 14.5px 'Noto Sans HK',sans-serif;color:#8B8880">跟緊呢張紙</div>
+                <div style="font:500 18px/1.4 'Noto Sans HK',sans-serif;color:#2A2723;margin-top:2px">瑪麗醫院 · 心內科 · 9月1日</div>
+              </div>
+              <span style="font:400 20px 'Instrument Sans',sans-serif;color:#B4B0A7;flex:none">›</span>
+            </button>
+
+            <button onClick="{{ onOpenAppt }}" style="border:0;width:100%;text-align:left;background:#1E8C6E;border-radius:22px;padding:24px 22px;box-shadow:0 4px 0 #14705A;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease" style-active="transform:translateY(4px);box-shadow:0 0 0 #14705A">
+              <div style="font:500 15px 'Noto Sans HK',sans-serif;color:rgba(255,255,255,.76);letter-spacing:.06em">下次覆診</div>
+              <div style="font:700 26px/1.35 'Noto Sans HK',sans-serif;color:#fff;margin-top:7px">9月24日 · 早上 10:15</div>
+              <div style="font:400 18px/1.5 'Noto Sans HK',sans-serif;color:rgba(255,255,255,.82);margin-top:4px">瑪麗醫院 心內科</div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.24)">
+                <div style="display:flex;align-items:baseline;gap:9px"><span style="font:700 40px/1 'Noto Sans HK',sans-serif;color:#fff">21</span><span style="font:400 19px 'Noto Sans HK',sans-serif;color:rgba(255,255,255,.82)">日之後</span></div>
+                <span style="font:400 22px 'Instrument Sans',sans-serif;color:rgba(255,255,255,.7)">›</span>
+              </div>
+            </button>
+
+            <div style="font:500 15px 'Noto Sans HK',sans-serif;color:#A5A29A;letter-spacing:.06em;margin:30px 2px 12px">今日嘅藥</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ doses }}" as="d" hint-placeholder-count="3">
+                <div style="background:#fff;border-radius:20px;box-shadow:0 1px 3px rgba(42,39,35,.08);padding:20px">
+                  <div style="display:flex;align-items:center;gap:13px">
+                    <span style="width:38px;height:38px;border-radius:19px;background:#E4F1EC;flex:none"></span>
+                    <div style="flex:1"><div style="font:700 22px/1.3 'Noto Sans HK',sans-serif;color:#2A2723">{{ d.name }}</div><div style="font:400 15px 'Instrument Sans',sans-serif;color:#A5A29A;margin-top:2px">{{ d.generic }}</div></div>
+                  </div>
+                  <div style="margin-top:14px;padding:14px 16px;border-radius:14px;background:#F6F3EC;font:400 18px/1.55 'Noto Sans HK',sans-serif;color:#5C594F">{{ d.printed }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px">
+                    <div style="font:500 20px 'Noto Sans HK',sans-serif;color:{{ d.color }}">{{ d.count }}</div>
+                    <sc-if value="{{ d.hasBtn }}" hint-placeholder-val="{{ true }}">
+                      <button onClick="{{ d.onTake }}" style="{{ d.btn }}">{{ d.label }}</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+
+            <button onClick="{{ onToggleWarn }}" style="border:0;width:100%;background:#FCF2DC;border-radius:20px;padding:20px;margin-top:20px;display:flex;align-items:center;gap:13px;cursor:pointer;text-align:left;min-height:48px">
+              <svg width="24" height="22" viewBox="0 0 21 19" fill="none" style="flex:none"><path d="M10.5 1.6 19.6 17H1.4L10.5 1.6Z" stroke="#8A6104" stroke-width="2.1" stroke-linejoin="round"/><path d="M10.5 7.2v4M10.5 13.9v.2" stroke="#8A6104" stroke-width="2.3" stroke-linecap="round"/></svg>
+              <span style="flex:1;font:700 20px 'Noto Sans HK',sans-serif;color:#6B4B03">危險訊號 (4)</span>
+              <span style="font:400 20px 'Instrument Sans',sans-serif;color:#B08A3E">{{ warnChev }}</span>
+            </button>
+            <sc-if value="{{ warnOpen }}">
+              <div style="background:#FCF2DC;border-radius:20px;padding:4px 20px 22px;margin-top:-8px;animation:rise .3s ease both">
+                <div style="display:flex;flex-direction:column;gap:13px;padding-top:16px">
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">發燒到 38 度以上</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">氣促、透唔到氣</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">胸口痛、心跳好快</span></div>
+                  <div style="display:flex;gap:12px;align-items:flex-start"><span style="width:8px;height:8px;border-radius:4px;background:#C88A16;margin-top:9px;flex:none"></span><span style="font:500 22px/1.45 'Noto Sans HK',sans-serif;color:#6B4B03">腳腫、成日想睡</span></div>
+                </div>
+                <button onClick="{{ onSayWarn }}" style="border:0;width:100%;background:#F6E4BE;border-radius:16px;padding:16px;margin-top:18px;font:500 17px 'Noto Sans HK',sans-serif;color:#8A6104;cursor:pointer;min-height:48px">叫明仔講一次</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showTabs }}">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:96px;background:#FBF8F3;border-top:1px solid #EAE5DC;display:flex;padding:10px 6px 0;box-sizing:border-box;z-index:6">
+            <button onClick="{{ goHome }}" style="flex:1;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;min-height:48px">
+              <svg width="26" height="26" viewBox="0 0 20 21" fill="none"><rect x="3" y="1.6" width="14" height="17.8" rx="3" stroke="{{ tab1 }}" stroke-width="2"/><path d="M6.6 6.4h6.8M6.6 10.4h6.8M6.6 14.4h4" stroke="{{ tab1 }}" stroke-width="2" stroke-linecap="round"/></svg>
+              <span style="font:500 14px 'Noto Sans HK',sans-serif;color:{{ tab1 }}">記錄</span>
+            </button>
+            <button onClick="{{ goChat }}" style="flex:1;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;min-height:48px;position:relative">
+              <svg width="26" height="26" viewBox="0 0 21 21" fill="none"><path d="M10.5 2.2c4.6 0 8.3 3 8.3 6.8s-3.7 6.8-8.3 6.8c-1 0-2-.1-2.9-.4L3.4 17.6l1-3.3A6.6 6.6 0 0 1 2.2 9c0-3.8 3.7-6.8 8.3-6.8Z" stroke="{{ tab2 }}" stroke-width="2" stroke-linejoin="round"/></svg>
+              <sc-if value="{{ notifOpen }}"><span style="position:absolute;top:4px;left:calc(50% + 9px);width:11px;height:11px;border-radius:6px;background:#C88A16;border:2px solid #FBF8F3"></span></sc-if>
+              <span style="font:500 14px 'Noto Sans HK',sans-serif;color:{{ tab2 }}">傾偈</span>
+            </button>
+            <button onClick="{{ goTrack }}" style="flex:1;border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 0;min-height:48px">
+              <svg width="26" height="26" viewBox="0 0 21 21" fill="none"><rect x="2.2" y="3.4" width="16.6" height="15.4" rx="3" stroke="{{ tab3 }}" stroke-width="2"/><path d="M6.4 1.8v3.2M14.6 1.8v3.2M2.2 8.4h16.6" stroke="{{ tab3 }}" stroke-width="2" stroke-linecap="round"/></svg>
+              <span style="font:500 14px 'Noto Sans HK',sans-serif;color:{{ tab3 }}">跟進</span>
+            </button>
+          </div>
+        </sc-if>
+        <div style="position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(42,39,35,.22);z-index:9;pointer-events:none"></div>
+
+        <sc-if value="{{ langOpen }}">
+          <div onClick="{{ onCloseSheet }}" style="position:absolute;inset:0;background:rgba(20,17,14,.34);z-index:20"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#FBF8F3;border-radius:26px 26px 0 0;padding:14px 22px 40px;z-index:21;animation:sheetUp .28s cubic-bezier(.32,.72,0,1) both">
+            <div style="width:44px;height:5px;border-radius:3px;background:rgba(42,39,35,.16);margin:0 auto 22px"></div>
+            <div style="font:700 24px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:6px">用邊種話講？</div>
+            <div style="font:400 17px 'Noto Sans HK',sans-serif;color:#A5A29A;margin-bottom:20px">明仔會用你揀嘅話講同寫</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ langs }}" as="l" hint-placeholder-count="3">
+                <button onClick="{{ l.onPick }}" style="{{ l.style }}">
+                  <span style="flex:1;text-align:left;font:500 21px 'Noto Sans HK',sans-serif">{{ l.name }}</span>
+                  <sc-if value="{{ l.on }}"><svg width="20" height="20" viewBox="0 0 17 17" fill="none"><path d="M3.4 9l3.4 3.4L13.8 4.8" stroke="#1E8C6E" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></sc-if>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ pickOpen }}">
+          <div onClick="{{ onCloseSheet }}" style="position:absolute;inset:0;background:rgba(20,17,14,.34);z-index:20"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#FBF8F3;border-radius:26px 26px 0 0;padding:14px 20px 40px;z-index:21;animation:sheetUp .28s cubic-bezier(.32,.72,0,1) both">
+            <div style="width:44px;height:5px;border-radius:3px;background:rgba(42,39,35,.16);margin:0 auto 20px"></div>
+            <div style="font:700 24px 'Noto Sans HK',sans-serif;color:#2A2723">揀你部電話嘅相</div>
+            <div style="font:400 17px/1.5 'Noto Sans HK',sans-serif;color:#A5A29A;margin-top:5px;margin-bottom:18px">{{ pickSub }}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+              <sc-for list="{{ photos }}" as="ph" hint-placeholder-count="6">
+                <button onClick="{{ ph.onPick }}" style="{{ ph.style }}">
+                  <span style="position:absolute;inset:12px 10px;display:flex;flex-direction:column;gap:4px">
+                    <span style="height:3px;background:rgba(42,39,35,.26);border-radius:2px"></span><span style="height:3px;background:rgba(42,39,35,.14);border-radius:2px;width:76%"></span><span style="height:3px;background:rgba(42,39,35,.14);border-radius:2px"></span><span style="height:3px;background:rgba(42,39,35,.14);border-radius:2px;width:58%"></span>
+                  </span>
+                  <span style="{{ ph.tickStyle }}">
+                    <sc-if value="{{ ph.on }}"><svg width="15" height="15" viewBox="0 0 17 17" fill="none"><path d="M3.6 9l3.3 3.3L13.6 5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></sc-if>
+                  </span>
+                  <span style="position:absolute;bottom:7px;left:9px;font:400 12.5px 'Instrument Sans',sans-serif;color:rgba(42,39,35,.5)">{{ ph.date }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <button onClick="{{ onUsePicked }}" style="{{ useStyle }}">{{ useLabel }}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ apptOpen }}">
+          <div onClick="{{ onCloseSheet }}" style="position:absolute;inset:0;background:rgba(20,17,14,.34);z-index:20"></div>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:#FBF8F3;border-radius:26px 26px 0 0;padding:14px 22px 40px;z-index:21;animation:sheetUp .28s cubic-bezier(.32,.72,0,1) both">
+            <div style="width:44px;height:5px;border-radius:3px;background:rgba(42,39,35,.16);margin:0 auto 22px"></div>
+            <div style="font:700 25px/1.35 'Noto Sans HK',sans-serif;color:#2A2723">9月24日 · 早上 10:15</div>
+            <div style="font:400 19px/1.5 'Noto Sans HK',sans-serif;color:#7C7A73;margin-top:6px">瑪麗醫院 心內科門診<br>薄扶林道 102 號</div>
+            <div style="margin-top:18px;padding:16px 18px;border-radius:16px;background:#F6F3EC;font:400 18px/1.55 'Noto Sans HK',sans-serif;color:#5C594F">張紙寫：帶身分證、出院紙同所有藥盒，早十五分鐘到。</div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
+              <button onClick="{{ onCloseSheet }}" style="border:0;width:100%;border-radius:18px;background:#1E8C6E;box-shadow:0 4px 0 #14705A;padding:20px;font:700 20px 'Noto Sans HK',sans-serif;color:#fff;cursor:pointer;min-height:48px">加入日曆</button>
+              <button onClick="{{ onCloseSheet }}" style="border:0;width:100%;border-radius:18px;background:#F1EDE4;padding:20px;font:500 19px 'Noto Sans HK',sans-serif;color:#5C594F;cursor:pointer;min-height:48px">睇下點去</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+      <button onClick="{{ onReset }}" style="align-self:flex-start;border:0;border-radius:12px;background:#2A2723;color:#fff;font:500 12px 'Instrument Sans',sans-serif;padding:10px 14px;cursor:pointer">↻ reset prototype</button>
+    </div>
+
+    <div style="flex:none;width:430px;display:flex;flex-direction:column;gap:12px">
+      <div style="font:400 12.5px/1.3 'Instrument Sans',sans-serif;color:rgba(42,39,35,.55)">What changed, and the 跟進 question</div>
+      <div style="background:#fff;border-radius:20px;padding:26px 24px;box-shadow:0 1px 3px rgba(42,39,35,.08);display:flex;flex-direction:column;gap:20px">
+        <div>
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:8px">1 · 冇播放掣</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">The agent types itself out and reads aloud with no press. The speaker in the top right kills the voice; the text still types. Nothing in the thread is a play button any more — the 讀住 waveform is a status, not a control.</div>
+        </div>
+        <div style="padding-top:18px;border-top:1px solid #F1EDE4">
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:8px">2 · 一個大框，WeChat 咁</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">One 72px bar across the whole width: <b>hold to talk, tap to type</b>. Holding past 220ms starts listening; a quick tap opens the keyboard with a 56px field and a 送 button. The language switch moved up top so the bar carries one job.</div>
+        </div>
+        <div style="padding-top:18px;border-top:1px solid #F1EDE4">
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:8px">3 · 通知，唔係留言卡</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">The block under 拍張紙 is now a notification — 明仔's name, the time, an amber unread dot, and the question itself. Tapping it opens the current sheet's thread, where the check-in is waiting and reads itself out with 食咗 / 未食 underneath. Answer it and the notification collapses into a quiet line that links to 跟進.</div>
+        </div>
+        <div style="padding-top:18px;border-top:1px solid #F1EDE4">
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#C88A16;margin-bottom:8px">4 · 跟進 同張紙點對齊</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">This was the real gap, so I made the model explicit: <b>one active sheet at a time</b>. 跟進 is not a global list — it is the active sheet's medicines, its appointment, its warnings, and nothing else. So 跟進 now opens with a strip naming the sheet it is following (瑪麗醫院 · 心內科 · 9月1日) which taps straight back into that thread.<br><br>Photographing a new sheet replaces the active one; the previous sheet moves into 以前嘅 as read-only history with its counters frozen — which is why those rows are now marked 只可以睇 rather than being tappable. That keeps the promise 「張紙寫：…」 makes: a counter can only ever quote one sheet.</div>
+        </div>
+        <div style="padding-top:18px;border-top:1px solid #F1EDE4">
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:8px">5 · 拍 or 上載</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty;margin-bottom:20px">The single action is now split in two equal halves — jade 拍張紙 and a tinted 上載相片 — because the adult child photographing the sheet in the ward and mailing it over is at least as likely as the patient shooting it herself. Upload opens a multi-select picker (tap several, 用揀好嘅 N 張) and lands in the same 檢查 screen, so retake/add-a-page work identically from either route. Six pages is the stated ceiling and it is visible in all three places it can bite — the picker subtitle, the dimmed thumbnails once you hit it, and the camera's own 夠 6 頁喇 hint with a spent shutter. A medical sheet must never be quietly truncated; if the app can't take a page it has to say so.</div>
+          <div style="font:700 16.5px 'Noto Sans HK',sans-serif;color:#2A2723;margin-bottom:8px">The loop you described</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">拍張紙 → 檢查 → 讀住 → 傾偈 talks itself through warnings, medicines, follow-up, diet → she says 明白 and puts the phone down → comes back to 記錄 and finds the notification → taps in → the check-in reads itself → 食咗 → the counter in 跟進 drops to 今日食晒. The reset button under the phone replays it from the start.</div>
+        </div>
+        <div style="padding-top:18px;border-top:1px solid #F1EDE4">
+          <div style="font:700 16px 'Instrument Sans',sans-serif;color:#C88A16;margin-bottom:8px">Still not wired</div>
+          <div style="font:400 14.5px/1.65 'Instrument Sans',sans-serif;color:#7C7A73;text-wrap:pretty">First-run onboarding and mic permission · real system notifications · sharing with an adult child · re-uploading pages onto the same sheet · opening an older sheet's thread.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const WARN_TEXT = '有四樣情況要即刻返醫院：發燒到三十八度以上、氣促透唔到氣、胸口痛心跳好快、腳腫成日想睡。';
+const PIECES = [
+  { id: 'meds', text: '你有三隻藥。心臟藥同血壓藥每日食，止痛藥痛先食。詳細嘅我放咗喺「跟進」度。', link: true },
+  { id: 'appt', text: '九月二十四號早上十點十五分，要返心內科覆診。仲有二十一日。' },
+  { id: 'diet', text: '飲食清淡啲，少鹽少醬油。湯少飲，罐頭同鹹魚就唔好食。水一日大約六杯。' }
+];
+const SCRIPT = [
+  { q: '止痛藥同心臟藥可以一齊食嗎？', a: '可以。張紙冇話唔可以一齊食。不過止痛藥痛先食，唔痛就唔使用。' },
+  { q: '覆診要帶咩？', a: '帶身分證、張出院紙同所有藥盒。早十五分鐘到就夠。' },
+  { q: '可以行樓梯嗎？', a: '慢慢行冇問題，行到氣喘就停低休息。頭兩個星期唔好提重嘅嘢。' }
+];
+const CHECKIN = '陳太，今日食咗心臟藥未？張紙寫每日兩次，隨餐食。';
+const LANGS = [{ k: '粵', name: '廣東話' }, { k: '普', name: '普通話' }, { k: 'EN', name: 'English' }];
+const MEDS = [
+  { key: 'd1', name: '心臟藥', generic: 'Metoprolol 25mg', printed: '張紙寫：每日兩次，隨餐', total: 2 },
+  { key: 'd2', name: '血壓藥', generic: 'Amlodipine 5mg', printed: '張紙寫：每朝一次', total: 1 },
+  { key: 'd3', name: '止痛藥', generic: 'Paracetamol 500mg', printed: '張紙寫：痛嘅時候食，一日最多四次', total: 0 }
+];
+const FRESH = {
+  route: 'homeEmpty', pages: 0, phase: 'idle', step: 0, said: [], typing: null,
+  readingWarn: false, readingIdx: -1, speaker: true, quick: false,
+  taken: { d1: 0, d2: 0 }, notif: 'pending', olderOpen: false, warnOpen: false,
+  sheet: null, lang: 0, mode: 'voice', draft: '', holding: false, picked: []
+};
+const PHOTOS = ['9月1日', '9月1日', '9月1日', '8月30日', '8月14日', '7月2日'];
+const MAX_PAGES = 6;
+
+class Component extends DCLogic {
+  state = Object.assign({}, FRESH);
+  threadRef = React.createRef();
+  timers = [];
+  componentWillUnmount() { this.timers.forEach(clearTimeout); }
+  after(ms, fn) { this.timers.push(setTimeout(fn, ms)); }
+  toBottom() { this.after(70, () => { if (this.threadRef.current) this.threadRef.current.scrollTop = 99999; }); }
+  chunks(t) {
+    const out = []; let b = '';
+    for (const c of t) { b += c; if ('，。、？！：'.includes(c) && b.length >= 3) { out.push(b); b = ''; } }
+    if (b) out.push(b);
+    return out;
+  }
+
+  // Types text out clause by clause, then commits it to the thread.
+  say(text, opts, then) {
+    this.tok = (this.tok || 0) + 1;
+    const tok = this.tok;
+    const parts = this.chunks(text);
+    this.setState({ typing: '' });
+    parts.forEach((_, n) => this.after(360 * (n + 1), () => {
+      if (this.tok !== tok) return;
+      this.setState({ typing: parts.slice(0, n + 1).join('') });
+      this.toBottom();
+    }));
+    this.after(360 * parts.length + 700, () => {
+      if (this.tok !== tok) return;
+      this.setState(s => ({
+        typing: null,
+        said: s.said.concat([{ isAgent: true, text: text, hasLink: !!(opts && opts.link) }])
+      }));
+      this.toBottom();
+      if (then) this.after(500, () => { if (this.tok === tok) then(); });
+    });
+  }
+
+  // Re-reads an already-said line without re-typing it.
+  reread(idx) {
+    this.setState({ readingIdx: idx, readingWarn: false });
+    this.after(3000, () => this.setState(s => (s.readingIdx === idx ? { readingIdx: -1 } : {})));
+  }
+  readWarn = () => {
+    this.setState({ readingWarn: true, readingIdx: -1 });
+    this.after(4000, () => this.setState({ readingWarn: false }));
+  };
+
+  startBriefing = () => {
+    this.setState({ phase: 'intro' });
+    this.after(2000, () => {
+      this.setState({ phase: 'warn' });
+      this.readWarn();
+      this.after(4200, () => this.setState({ phase: 'ask', step: 0 }));
+    });
+  };
+
+  onUnderstand = () => {
+    const i = this.state.step;
+    if (i >= PIECES.length) { this.setState({ phase: 'end' }); return; }
+    this.setState({ phase: 'speaking', step: i + 1, readingWarn: false, readingIdx: -1 });
+    this.say(PIECES[i].text, PIECES[i], () => {
+      this.setState({ phase: i + 1 >= PIECES.length ? 'end' : 'ask' });
+    });
+  };
+  onRepeat = () => {
+    const agents = this.state.said.map((m, i) => (m.isAgent ? i : -1)).filter(i => i >= 0);
+    if (this.state.step === 0 || agents.length === 0) this.readWarn();
+    else this.reread(agents[agents.length - 1]);
+  };
+  onSayWarn = () => { this.setState({ route: 'chat' }); this.after(120, this.readWarn); };
+
+  goChat = () => {
+    this.setState({ route: 'chat', sheet: null });
+    if (this.state.phase === 'idle') this.after(500, this.startBriefing);
+  };
+  onOpenNotif = () => {
+    this.setState({ route: 'chat', notif: 'open', sheet: null });
+    this.after(600, () => {
+      if (this.state.phase === 'idle') { this.startBriefing(); return; }
+      this.say(CHECKIN, null, () => this.setState({ quick: true }));
+    });
+  };
+  onTook = () => {
+    this.setState(s => ({ quick: false, notif: 'done', taken: Object.assign({}, s.taken, { d1: Math.min(2, (s.taken.d1 || 0) + 1) }), said: s.said.concat([{ isUser: true, text: '食咗' }]) }));
+    this.toBottom();
+    this.after(600, () => this.say('好，我幫你記低咗。夜晚仲有一次。'));
+  };
+  onNotYet = () => {
+    this.setState(s => ({ quick: false, notif: 'done', said: s.said.concat([{ isUser: true, text: '未食' }]) }));
+    this.toBottom();
+    this.after(600, () => this.say('記得飯後食一粒。我陣間再問你。'));
+  };
+
+  onOpenPick = () => this.setState({ sheet: 'pick', picked: [] });
+  togglePick = (i) => this.setState(s => {
+    const p = s.picked || [];
+    if (p.indexOf(i) >= 0) return { picked: p.filter(x => x !== i) };
+    if (p.length >= MAX_PAGES) return {};      // refuse rather than accept-and-drop
+    return { picked: p.concat([i]) };
+  });
+  onUsePicked = () => {
+    const n = (this.state.picked || []).length;
+    if (!n) return;
+    this.setState({ pages: n, route: 'review', sheet: null, picked: [] });
+  };
+
+  onShutter = () => this.setState(s => (s.pages >= MAX_PAGES ? {} : { pages: s.pages + 1 }));
+  onAddPage = () => this.setState({ route: 'camera' });
+  retake = () => this.setState(s => ({ route: 'camera', pages: Math.max(0, s.pages - 1) }));
+  closeCamera = () => this.setState(s => ({ route: s.pages > 0 ? 'review' : 'homeEmpty' }));
+  goReading = () => {
+    this.setState({ route: 'reading' });
+    this.after(2800, () => {
+      if (this.state.route !== 'reading') return;
+      this.setState({ route: 'chat' });
+      this.after(400, this.startBriefing);
+    });
+  };
+  onReset = () => {
+    this.tok = (this.tok || 0) + 1;
+    clearTimeout(this.holdTimer);
+    this.timers.forEach(clearTimeout);   // drop the whole queue, not just say() chains
+    this.timers = [];
+    this.tapCandidate = false;
+    this.setState(Object.assign({}, FRESH));
+  };
+
+  take = (k) => this.setState(s => {
+    const m = MEDS.filter(x => x.key === k)[0];
+    return { taken: Object.assign({}, s.taken, { [k]: Math.min(m.total, (s.taken[k] || 0) + 1) }) };
+  });
+
+  // ── combined bar: hold to talk, tap to type ─────────────────────────
+  onBarDown = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.state.holding) return;
+    this.tapCandidate = true;
+    this.holdTimer = setTimeout(() => {
+      this.tapCandidate = false;
+      const n = this.state.said.filter(x => x.isUser && x.text.length > 3).length;
+      const parts = this.chunks(SCRIPT[n % SCRIPT.length].q);
+      this.setState({ holding: true, typing: null });
+      let i = 0;
+      const tick = () => {
+        if (!this.state.holding) return;
+        i += 1;
+        this.setState({ draft: parts.slice(0, i).join('') });
+        this.toBottom();
+        if (i < parts.length) this.after(320, tick);
+      };
+      tick();
+    }, 220);
+    this.timers.push(this.holdTimer);
+  };
+  onBarUp = () => {
+    clearTimeout(this.holdTimer);
+    if (this.tapCandidate) { this.tapCandidate = false; this.setState({ mode: 'text', draft: '' }); return; }
+    if (!this.state.holding) return;
+    const n = this.state.said.filter(x => x.isUser && x.text.length > 3).length;
+    const item = SCRIPT[n % SCRIPT.length];
+    this.setState(s => ({ holding: false, draft: '', quick: false, said: s.said.concat([{ isUser: true, text: item.q }]) }));
+    this.toBottom();
+    this.after(700, () => this.say(item.a));
+  };
+  onBarLeave = () => {
+    clearTimeout(this.holdTimer);
+    this.tapCandidate = false;
+    if (this.state.holding) this.onBarUp();
+  };
+  onDraft = (e) => this.setState({ draft: e.target.value });
+  onSend = () => {
+    const t = (this.state.draft || '').trim();
+    const n = this.state.said.filter(x => x.isUser && x.text.length > 3).length;
+    const item = SCRIPT[n % SCRIPT.length];
+    const q = t || item.q;
+    this.setState(s => ({ draft: '', mode: 'voice', quick: false, said: s.said.concat([{ isUser: true, text: q }]) }));
+    this.toBottom();
+    this.after(700, () => this.say(item.a));
+  };
+
+  renderVals() {
+    const s = this.state;
+    const dark = s.route === 'camera';
+    const said = s.said.map((m, i) => ({
+      isUser: !!m.isUser, isAgent: !!m.isAgent, text: m.text,
+      hasLink: !!m.hasLink, reading: s.readingIdx === i
+    }));
+    const doses = MEDS.map(m => {
+      const taken = s.taken[m.key] || 0;
+      const left = m.total - taken;
+      const done = m.total > 0 && left <= 0;
+      return {
+        name: m.name, generic: m.generic, printed: m.printed, hasBtn: m.total > 0,
+        count: m.total === 0 ? '唔痛就唔使食' : (done ? '今日食晒' : '今日仲有 ' + left + ' 次'),
+        color: (m.total === 0 || done) ? '#A5A29A' : '#2A2723',
+        label: done ? '✓ 食咗' : '食咗',
+        btn: 'border:0;border-radius:14px;padding:15px 24px;font:700 18px "Noto Sans HK",sans-serif;cursor:pointer;min-height:48px;transition:transform .08s ease,box-shadow .08s ease;'
+          + (done ? 'background:#E4F1EC;color:#14705A;box-shadow:none;cursor:default;' : 'background:#1E8C6E;color:#fff;box-shadow:0 4px 0 #14705A;'),
+        onTake: () => this.take(m.key)
+      };
+    });
+    const d1left = 2 - (s.taken.d1 || 0);
+    return {
+      statusStyle: 'height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;box-sizing:border-box;position:relative;z-index:10;color:' + (dark ? '#fff' : '#2A2723'),
+      isHomeEmpty: s.route === 'homeEmpty', isHome: s.route === 'home',
+      isCamera: s.route === 'camera', isReview: s.route === 'review',
+      isReading: s.route === 'reading', isChat: s.route === 'chat', isTrack: s.route === 'track',
+      showTabs: ['homeEmpty', 'home', 'track'].indexOf(s.route) >= 0,
+
+      goCamera: () => this.setState({ route: 'camera', sheet: null }),
+      goReview: () => this.setState({ route: 'review', sheet: null }),
+      goReading: this.goReading,
+      goChat: this.goChat,
+      goHome: () => this.setState({ route: s.pages > 0 || s.phase !== 'idle' ? 'home' : 'homeEmpty', sheet: null }),
+      goTrack: () => this.setState({ route: 'track', sheet: null }),
+      closeCamera: this.closeCamera,
+      onShutter: this.onShutter, onAddPage: this.onAddPage, onReset: this.onReset,
+
+      pageList: Array.apply(null, { length: s.pages }).map((_, i) => ({ n: i + 1, onRetake: this.retake })),
+      hasPages: s.pages > 0,
+      pageLabel: s.pages > 0 ? s.pages + ' 頁' : '4 頁',
+      camHint: s.pages >= MAX_PAGES ? '夠 6 頁喇，按「完成」' : (s.pages === 0 ? '成張紙入框' : '仲有下一頁？'),
+      camHintEn: s.pages >= MAX_PAGES ? 'Six pages is the maximum' : (s.pages === 0 ? 'Whole page inside the frame' : 'Shoot the next page, or press 完成'),
+      canShoot: s.pages < MAX_PAGES,
+      shutterStyle: 'width:78px;height:78px;border-radius:39px;border:4px solid rgba(255,255,255,.42);cursor:pointer;flex:none;transition:opacity .15s ease;'
+        + (s.pages >= MAX_PAGES ? 'background:rgba(255,255,255,.32);cursor:default;' : 'background:#fff;box-shadow:0 6px 22px rgba(0,0,0,.4);'),
+      canAddPage: s.pages < MAX_PAGES,
+
+      threadRef: this.threadRef,
+      introText: '陳太，我睇完你張紙。最緊要嘅先講。',
+      showWarn: s.phase !== 'idle' && s.phase !== 'intro',
+      warnReading: s.readingWarn && s.speaker,
+      said: said,
+      typing: s.typing || '',
+      isTyping: s.typing !== null,
+      showAsk: s.phase === 'ask',
+      askAfter: s.step > 0,
+      leftLabel: String(PIECES.length - s.step),
+      showEnd: s.phase === 'end' && !s.quick,
+      showQuick: s.quick,
+      onUnderstand: this.onUnderstand, onRepeat: this.onRepeat,
+      onTook: this.onTook, onNotYet: this.onNotYet,
+
+      speakerOn: s.speaker, speakerOff: !s.speaker,
+      onToggleSpeaker: () => this.setState(x => ({ speaker: !x.speaker })),
+      spkStyle: 'width:48px;height:48px;border-radius:24px;border:0;cursor:pointer;display:grid;place-items:center;flex:none;background:' + (s.speaker ? '#E4F1EC' : '#F1EDE4'),
+
+      isVoiceMode: s.mode === 'voice', isTextMode: s.mode === 'text',
+      onBarDown: this.onBarDown, onBarUp: this.onBarUp, onBarLeave: this.onBarLeave,
+      onVoiceMode: () => this.setState({ mode: 'voice', draft: '' }),
+      onDraft: this.onDraft, onSend: this.onSend, draft: s.draft || '',
+      holding: s.holding, notHolding: !s.holding,
+      barStyle: 'width:100%;box-sizing:border-box;border:0;border-radius:24px;padding:20px;min-height:72px;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;transition:transform .1s ease,background .15s ease,box-shadow .1s ease;'
+        + (s.holding ? 'background:#1E8C6E;box-shadow:0 0 0 6px rgba(30,140,110,.16);transform:scale(.99);' : 'background:#fff;box-shadow:0 1px 3px rgba(42,39,35,.1);'),
+      barLabel: s.holding ? (s.draft ? s.draft : '聽住你講…') : '按住講嘢',
+      barLabelStyle: 'font:700 21px "Noto Sans HK",sans-serif;color:' + (s.holding ? '#fff' : '#2A2723'),
+      // sub-hint lives INSIDE the pill: the pinned block must stay 14+72+34=120px,
+      // under the thread scroller's 128px bottom reserve.
+      barSub: s.holding ? '· 放手就送出' : '· 點一下打字',
+      barSubStyle: 'font:400 16px "Noto Sans HK",sans-serif;white-space:nowrap;color:' + (s.holding ? 'rgba(255,255,255,.8)' : '#A5A29A'),
+      sendStyle: 'width:56px;height:56px;border-radius:28px;border:0;cursor:pointer;flex:none;font:700 19px "Noto Sans HK",sans-serif;color:#fff;background:#1E8C6E;box-shadow:0 3px 0 #14705A',
+
+      notifOpen: s.notif !== 'done' && s.phase !== 'idle',
+      notifDone: s.notif === 'done',
+      notifDoneLabel: d1left > 0 ? '今日嘅藥：仲有 ' + d1left + ' 次' : '今日嘅藥：食晒',
+      onOpenNotif: this.onOpenNotif,
+      chatPreview: s.phase === 'end' ? '講完晒 · 有問題就問我' : (s.phase === 'idle' ? '未講過' : '講到一半'),
+
+      olderOpen: s.olderOpen, olderChev: s.olderOpen ? '⌃' : '⌄',
+      onToggleOlder: () => this.setState(x => ({ olderOpen: !x.olderOpen })),
+
+      doses: doses,
+      warnOpen: s.warnOpen, warnChev: s.warnOpen ? '⌃' : '⌄',
+      onToggleWarn: () => this.setState(x => ({ warnOpen: !x.warnOpen })),
+      onSayWarn: this.onSayWarn,
+      onOpenAppt: () => this.setState({ sheet: 'appt' }),
+      apptOpen: s.sheet === 'appt',
+      pickOpen: s.sheet === 'pick',
+      onOpenPick: this.onOpenPick,
+      onUsePicked: this.onUsePicked,
+      photos: PHOTOS.map((d, i) => {
+        const on = (s.picked || []).indexOf(i) >= 0;
+        return {
+          date: d, on: on, onPick: () => this.togglePick(i),
+          style: 'position:relative;border:0;height:104px;border-radius:14px;background:#F1EDE4;padding:0;overflow:hidden;transition:opacity .15s ease;'
+            + (on ? 'box-shadow:inset 0 0 0 3px #1E8C6E;cursor:pointer;' : 'box-shadow:inset 0 0 0 1px #E4DFD4;')
+            + (!on && (s.picked || []).length >= MAX_PAGES ? 'opacity:.4;cursor:default;' : 'cursor:pointer;'),
+          tickStyle: 'position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:13px;display:grid;place-items:center;'
+            + (on ? 'background:#1E8C6E;' : 'background:rgba(255,255,255,.82);box-shadow:inset 0 0 0 1.5px #D6D0C4;')
+        };
+      }),
+      useStyle: 'border:0;width:100%;margin-top:20px;border-radius:18px;padding:20px;font:700 20px "Noto Sans HK",sans-serif;cursor:pointer;min-height:48px;'
+        + ((s.picked || []).length
+          ? 'background:#1E8C6E;color:#fff;box-shadow:0 4px 0 #14705A;'
+          : 'background:#F1EDE4;color:#B4B0A7;box-shadow:none;cursor:default;'),
+      useLabel: (s.picked || []).length ? '用揀好嘅 ' + s.picked.length + ' 張' : '揀最少一張',
+      pickSub: (s.picked || []).length >= MAX_PAGES ? '揀夠 6 張喇' : '出院紙嘅相或者 PDF 都可以 · 最多 6 張',
+      langOpen: s.sheet === 'lang',
+      onOpenLang: () => this.setState({ sheet: 'lang' }),
+      onCloseSheet: () => this.setState({ sheet: null }),
+      langShort: LANGS[s.lang].k,
+      langs: LANGS.map((l, i) => ({
+        name: l.name, on: s.lang === i,
+        onPick: () => this.setState({ lang: i, sheet: null }),
+        style: 'border:0;width:100%;border-radius:16px;padding:20px;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:48px;'
+          + (s.lang === i ? 'background:#E4F1EC;color:#14705A;' : 'background:#fff;color:#2A2723;box-shadow:0 1px 3px rgba(42,39,35,.08);')
+      })),
+
+      tab1: s.route === 'home' || s.route === 'homeEmpty' ? '#1E8C6E' : '#A5A29A',
+      tab2: s.route === 'chat' ? '#1E8C6E' : '#A5A29A',
+      tab3: s.route === 'track' ? '#1E8C6E' : '#A5A29A'
+    };
+  }
+}
+</script>
+</body>
+</html>

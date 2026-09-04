@@ -187,6 +187,20 @@ describe("POST /api/read — success", () => {
     expect(response.status).toBe(200);
     expect(providerMock.readSheetStream.mock.calls[0][0]).toHaveLength(2);
   });
+
+  /**
+   * The whole stack. A Hong Kong patient is discharged carrying 出院紙, 覆診紙, 繳費單, 病假紙,
+   * 抽血紙 and 治療處方 (docs/real-sheet-evidence.md), and the follow-up date is printed on a
+   * different page from the medicines — so six pages in one read is the ordinary case, not an
+   * edge case, and every page must reach the model.
+   */
+  it("accepts six pages, and passes every one of them to the model", async () => {
+    respondWith(fixture());
+    const stack = Array.from({ length: 6 }, () => IMAGE);
+    const response = await POST(post({ images: stack }));
+    expect(response.status).toBe(200);
+    expect(providerMock.readSheetStream.mock.calls[0][0]).toHaveLength(6);
+  });
 });
 
 describe("POST /api/read — request validation", () => {
@@ -209,7 +223,10 @@ describe("POST /api/read — request validation", () => {
 
   it.each([
     ["no images", { images: [] }],
-    ["three images", { images: [IMAGE, IMAGE, IMAGE] }],
+    // Seven. Six is a whole Hong Kong discharge stack and is accepted; the seventh is refused
+    // here so that `components/Capture.tsx` has to refuse it on screen rather than post it and
+    // discover the ceiling after the user has done the work (tests/unit/page-limit.test.ts).
+    ["seven images", { images: [IMAGE, IMAGE, IMAGE, IMAGE, IMAGE, IMAGE, IMAGE] }],
     ["an unsupported media type", { images: [{ mediaType: "image/gif", base64: "x" }] }],
     ["an empty base64 string", { images: [{ mediaType: "image/jpeg", base64: "" }] }],
     ["an extra field", { images: [IMAGE], dialect: "yue" }],

@@ -119,6 +119,51 @@ function warningTemplate(facts: TemplateFacts): Speakable {
   return NO_FACTS;
 }
 
+/**
+ * The fallback for a medicine the page has withdrawn.
+ *
+ * This exists because of a live failure, not a hypothetical one. On a sheet with a
+ * 「停用药物（出院后不再服用）」 block, the model writes `spoken` text for those entries that reads
+ * like a live dose — "Digoxin 0.25mg 每日" — and the numeric-target rule in
+ * `lib/rules/banned-terms.ts` rightly rejects it. Roughly one run in three on that fixture. The
+ * filter was doing its job; the fallback was the weak link, because the generic "look at the
+ * sheet" sentence dropped the drug's name, and the one thing the family must not lose is that the
+ * page mentions this drug at all.
+ *
+ * So: the name and the strength verbatim, and what the PAGE says about it — never an instruction
+ * from the app. 「張紙寫唔使再食」, never 「唔好食」. And deliberately **no frequency, no amount and
+ * no duration**: the dose clause is exactly what tripped the filter, and reintroducing it here
+ * would put the rejected sentence back on the screen through the back door.
+ *
+ * `status` distinguishes the two non-current kinds the schema defines. A caller that only knows
+ * `card.stopped === true` and carries no status gets the stopped wording, which is the safe
+ * default: it claims only that the page says the drug is finished.
+ */
+export function stoppedMedicineTemplate(facts: TemplateFacts): Speakable {
+  const name = fact(facts.name);
+  if (name === null) return NO_FACTS;
+  const strength = fact(facts.strength);
+  const head = join([name, strength]);
+  const headEn = joinEn([name, strength]);
+
+  // "changed" means the stay altered the dose and the page lists the entry apart from the
+  // discharge list. Saying it is finished would overstate that, so it gets its own sentence,
+  // which still carries no dose of its own.
+  if (fact(facts.status) === "changed") {
+    return {
+      yue: `張紙將呢隻藥另外列開，唔喺出院之後要食嗰批入面：${head}。`,
+      cmn: `纸上把这个药另外列开，不在出院之后要吃的那批里面：${head}。`,
+      en: `The sheet lists ${headEn} apart from the medicines to take after going home.`,
+    };
+  }
+
+  return {
+    yue: `張紙寫住呢隻藥唔使再食：${head}。`,
+    cmn: `纸上写着这个药不用再吃：${head}。`,
+    en: `The sheet lists ${headEn} as a medicine that is no longer to be taken.`,
+  };
+}
+
 function medicineTemplate(facts: TemplateFacts): Speakable {
   const name = fact(facts.name);
   const strength = fact(facts.strength);
@@ -126,6 +171,12 @@ function medicineTemplate(facts: TemplateFacts): Speakable {
   const frequency = fact(facts.frequency);
   const duration = fact(facts.duration);
   if (name === null) return NO_FACTS;
+
+  // A medicine the page has stopped or changed is never described by the sentences below: they
+  // state a dose to take, and this one is not one. `lib/rules/card-order.ts` copies `status` into
+  // `facts` precisely so this branch can be reached from a template with no card in hand.
+  const status = fact(facts.status);
+  if (status === "stopped" || status === "changed") return stoppedMedicineTemplate(facts);
 
   // Name, strength and amount are always separated by "，" — never butt a strength ("5mg") up
   // against a frequency ("每日一次"), or the pair would read as a rate and trip the filter.

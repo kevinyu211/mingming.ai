@@ -77,6 +77,7 @@ const READING: SheetReading = {
       amount: "1 tab",
       frequency: "daily",
       duration: null,
+      status: "current",
       spoken: SPEAKABLE,
       source: SOURCE,
     },
@@ -646,6 +647,44 @@ describe("frozen system prompts", () => {
     expect(READ_SYSTEM).toMatch(/never translated, transliterated or re-spelled/);
     expect(ASK_SYSTEM).toMatch(/never translated or transliterated/);
     expect(PHRASE_SYSTEM).toMatch(/verbatim in each of them/);
+  });
+
+  /**
+   * The four instructions that answer the four failures in tests/eval/stress.md. Each is here
+   * because the schema alone cannot carry it: the field exists, and the prompt is the only thing
+   * that says how to fill it.
+   */
+  describe("READ_SYSTEM answers the stress findings", () => {
+    it("says where a medicine's status comes from, and names the headings", () => {
+      expect(READ_SYSTEM).toContain("MEDICINE STATUS");
+      expect(READ_SYSTEM).toMatch(/from the page's own headings/i);
+      for (const heading of ["停用药物", "出院后不再服用", "Discontinued", "not to be taken"]) {
+        expect(READ_SYSTEM, `no heading example "${heading}"`).toContain(heading);
+      }
+      // The clause that stops the same drug coming back twice when the dose was changed.
+      expect(READ_SYSTEM).toMatch(/never returned as a second medicine/);
+    });
+
+    it("says an unresolvable character makes the whole field unreadable", () => {
+      expect(READ_SYSTEM).toMatch(/UNCERTAIN/);
+      expect(READ_SYSTEM).toMatch(/makes the WHOLE field unreadable/);
+      expect(READ_SYSTEM).toMatch(/rather than choosing the most likely reading/);
+      // and that the flag names which value it costs, not just "somewhere on the page".
+      expect(READ_SYSTEM).toMatch(/followUp\[0\]\.when/);
+    });
+
+    it("says the quote is a copy and gives the line that was rewritten", () => {
+      expect(READ_SYSTEM).toMatch(/character-for-character copy/);
+      expect(READ_SYSTEM).toContain("Breathless at rest");
+      expect(READ_SYSTEM).toMatch(/never translate/i);
+      expect(READ_SYSTEM).toMatch(/findable in that same medicine's own/);
+    });
+
+    it("says the whole instruction clause is one frequency", () => {
+      expect(READ_SYSTEM).toContain("每日一次，早餐后服");
+      expect(READ_SYSTEM).toContain("daily, 30 min before breakfast");
+      expect(READ_SYSTEM).toMatch(/ONE verbatim string/);
+    });
   });
 
   it.each(prompts)("%s carries nothing that would break the prompt cache", (_name, prompt) => {

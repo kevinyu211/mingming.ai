@@ -27,14 +27,16 @@ const warning = (n: number): WarningSign => ({
   source: src("Warning Signs", n, `fever ${n}`),
 });
 
-const medicine = (n: number): Medicine => ({
+const medicine = (n: number, over: Partial<Medicine> = {}): Medicine => ({
   name: `Amoxicillin ${n}`,
   strength: "500 mg",
   amount: "1 cap",
   frequency: n === 0 ? null : "TDS",
   duration: "5 days",
+  status: "current",
   spoken: sp(`食Amoxicillin ${n}`, `吃Amoxicillin ${n}`),
   source: src("Discharge Medication(s)", n, `Amoxicillin ${n} 500mg`),
+  ...over,
 });
 
 const followUp = (n: number): FollowUpItem => ({
@@ -51,8 +53,13 @@ const textLine = (text: string): TextLine => ({
   source: src("Advice", 0, text),
 });
 
-const unreadable = (n: number, description: string): UnreadableRegion => ({
+const unreadable = (
+  n: number,
+  description: string,
+  field: string | null = null,
+): UnreadableRegion => ({
   section: `Section ${n}`,
+  field,
   description,
   source: src(`Section ${n}`, null, ""),
 });
@@ -219,7 +226,54 @@ describe("card bodies and provenance", () => {
       amount: "1 cap",
       frequency: null,
       duration: "5 days",
+      status: "current",
     });
+    // Nothing marks an ordinary medicine, so an existing card is byte-identical to before.
+    expect(card?.stopped).toBeUndefined();
+  });
+
+  /**
+   * The sheet in tests/eval/stress.md prints 「停用药物（出院后不再服用）」 above two real dose
+   * lines. Dropping them would hide from the family that the page names those drugs at all; the
+   * card is what tells them, and the flag is what stops it being rendered as a dose that is due.
+   */
+  it("still shows a medicine the page has stopped, flagged and never as a dose to take", () => {
+    const digoxin = medicine(0, {
+      name: "Digoxin",
+      strength: "0.25mg",
+      frequency: "每日一次",
+      status: "stopped",
+      source: src("停用药物（出院后不再服用）", 0, "Digoxin 0.25mg，每日一次，已于住院第2天停用。"),
+    });
+    const cards = buildCards(reading({ medicines: [medicine(1), digoxin] }));
+    const stopped = cards.find((c) => c.id === "medicine-1");
+
+    expect(stopped?.type).toBe("medicine");
+    expect(stopped?.stopped).toBe(true);
+    expect(stopped?.facts?.status).toBe("stopped");
+    // The printed fields are still verbatim — the card reports the page, it does not censor it.
+    expect(stopped?.facts?.frequency).toBe("每日一次");
+    expect(stopped?.source?.section).toBe("停用药物（出院后不再服用）");
+    // and the ordinary one beside it is untouched.
+    expect(cards.find((c) => c.id === "medicine-0")?.stopped).toBeUndefined();
+  });
+
+  it("flags a changed dose the same way", () => {
+    const cards = buildCards(reading({ medicines: [medicine(1, { status: "changed" })] }));
+    const card = cards.find((c) => c.type === "medicine");
+    expect(card?.stopped).toBe(true);
+    expect(card?.facts?.status).toBe("changed");
+  });
+
+  it("puts the unreadable field path in facts and never in the spoken body", () => {
+    const cards = buildCards(
+      reading({ unreadable: [unreadable(0, "拇指遮住咗", "followUp[0].when")] }),
+    );
+    const card = cards.find((c) => c.type === "unreadable");
+    expect(card?.facts?.field).toBe("followUp[0].when");
+    for (const text of [card?.body.yue, card?.body.cmn, card?.body.en]) {
+      expect(text).not.toContain("followUp[0].when");
+    }
   });
 
   it("wraps an unreadable region in rule wording and flags the model's description", () => {
@@ -255,6 +309,9 @@ describe("rule-generated wording", () => {
     ];
     const digitFreeRegion: UnreadableRegion = {
       section: "出院醫囑",
+      // A field path such as "medicines[5].duration" has digits in it, which is exactly why
+      // buildCards keeps `field` out of the rule-written body and puts it in `facts` instead.
+      field: null,
       description: "",
       source: src("出院醫囑", null, ""),
     };

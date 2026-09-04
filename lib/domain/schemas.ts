@@ -35,12 +35,36 @@ export const WarningSignSchema = z.strictObject({
 });
 export type WarningSign = z.infer<typeof WarningSignSchema>;
 
+/**
+ * What the PAGE says about a medicine, read off its own headings — never inferred from knowledge
+ * of the drug.
+ *
+ * This exists because a sheet that prints a 「停用药物（出院后不再服用）」 or
+ * "Medicines Stopped … (not to be taken)" block was previously indistinguishable, once typed, from
+ * the discharge list: the words survived only in `spoken`, and the plan scheduled a drug the
+ * hospital had withdrawn (tests/eval/stress.md, "The worst single miss"). A field is the only
+ * thing that can carry that across the rules boundary, so it is required, not optional.
+ *
+ * Only `current` is a dose to take. `lib/rules/plan-from-reading.ts` schedules nothing else, and
+ * `lib/rules/card-order.ts` flags the rest so the UI can show them as ended rather than as due.
+ */
+export const MedicineStatusSchema = z.enum(["current", "stopped", "changed"]);
+export type MedicineStatus = z.infer<typeof MedicineStatusSchema>;
+
 export const MedicineSchema = z.strictObject({
   name: z.string().describe("Verbatim, script untouched"),
   strength: z.string().nullable(),
   amount: z.string().nullable(),
-  frequency: z.string().nullable().describe("Verbatim; null when not printed"),
+  frequency: z
+    .string()
+    .nullable()
+    .describe(
+      "The whole printed instruction as one verbatim string, meal timing and route included; null when not printed",
+    ),
   duration: z.string().nullable(),
+  status: MedicineStatusSchema.describe(
+    'From the page\'s own heading: "stopped" under a discontinued / not-to-be-taken heading, "changed" for a dose the stay altered and the page lists apart from the discharge list, "current" otherwise. Only "current" is scheduled.',
+  ),
   spoken: SpeakableSchema,
   source: SourceReferenceSchema,
 });
@@ -78,8 +102,22 @@ export const DietLineWithTypeSchema = DietLineSchema.extend({
 });
 export type DietLineWithType = z.infer<typeof DietLineWithTypeSchema>;
 
+/**
+ * A gap the reader admits to. Two kinds count and both land here: something the page HIDES (a
+ * thumb, a fold, glare, a cut edge) and something the page shows but does not RESOLVE (a blurred
+ * digit, a smudged letter, a date whose day could be read two ways). The second is why `field`
+ * exists: the covered case was already handled honestly, but an ambiguous character was being
+ * settled silently into a confident value, and "part of the page is hidden" never told anyone
+ * which value to go and check (tests/eval/stress.md).
+ */
 export const UnreadableRegionSchema = z.strictObject({
   section: z.string(),
+  field: z
+    .string()
+    .nullable()
+    .describe(
+      'The one field this gap costs, named as it appears in this schema ("followUp[0].when", "medicines[5].duration"), or null when a whole region is affected and no single field can be named',
+    ),
   description: z.string(),
   source: SourceReferenceSchema,
 });
@@ -144,6 +182,20 @@ export const CardSchema = z.strictObject({
   aiGenerated: z.boolean(),
   /** Typed facts for the phrase route, e.g. a Medicine's fields. Never contains profile data. */
   facts: z.record(z.string(), z.union([z.string(), z.null()])).optional(),
+  /**
+   * Set on a medicine card whose `status` is not `current`. The card is still shown — the family
+   * needs to know the page names the drug and says it is finished — but it must never be rendered
+   * as a dose that is due, and `draftPlan` never schedules it. Absent means an ordinary card.
+   */
+  stopped: z.boolean().optional(),
+  /**
+   * Set by `lib/server/reading-pipeline.ts` when the card's own typed fields could not be found in
+   * its own `source.quote` — the two disagree, so one of them was rewritten between the page and
+   * the reply. The card is kept (dropping a medicine is worse than showing a doubtful one) and
+   * marked, so the UI can tell the reader this is the line to check against the paper. Absent
+   * means the card agrees with the line it stands on.
+   */
+  unverified: z.boolean().optional(),
 });
 export type Card = z.infer<typeof CardSchema>;
 

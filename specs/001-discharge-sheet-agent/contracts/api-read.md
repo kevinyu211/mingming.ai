@@ -15,7 +15,22 @@ and filtered by rules before it is returned.
 }
 ```
 
-- 1 to 2 images, each downscaled client-side (max 1600 px long edge). Request body limit 8 MB.
+- 1 to 6 images, each downscaled client-side (max 1600 px long edge). Request body limit 8 MB.
+
+  Six, not two, because a Hong Kong patient is discharged with a stack rather than a sheet. The
+  Hospital Authority's own HKWC discharge checklist tells the patient to carry 出院紙, 覆診紙,
+  繳費單, 病假紙, 抽血紙 and 治療處方 out of the ward, and the follow-up date is printed on a
+  different page from the medicines (`docs/real-sheet-evidence.md`). Reading two pages of that
+  reads a third of the discharge.
+
+  The ceiling is `MAX_PAGES` in both `app/api/read/route.ts` and `components/Capture.tsx`, pinned
+  equal by `tests/unit/page-limit.test.ts`. A client that accepted more pages than the route does
+  would silently truncate a medical document, which the capture screen must never do — it refuses
+  the seventh page out loud instead.
+
+  At 1600 px and quality 0.85 a page lands at roughly 200–400 KB, so six encode to about
+  1.6–3.2 MB, well inside the 8 MB body limit. `maxDuration` is 300 s: a single dense page measured
+  45–105 s in the live stress runs, so a full stack needs the headroom.
 - No other fields. The profile, dialect and any identifiers are never sent (Principle V).
 
 ## Response

@@ -43,6 +43,7 @@ const READING: SheetReading = {
       amount: "1 tab",
       frequency: "nocte",
       duration: null,
+      status: "current",
       spoken: ANSWER,
       source: SOURCE,
     },

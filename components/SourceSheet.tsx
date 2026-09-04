@@ -7,6 +7,13 @@
  * So this is part of the card anatomy, not a menu item, and it shows the quote **verbatim**:
  * English stays English, simplified stays simplified, nothing is run through `toScript` and
  * nothing is rephrased. Close is the only action — there is nothing to edit about the page.
+ *
+ * v2: restyled onto the new tokens and shaped like the other bottom sheets. Behaviour is
+ * deliberately untouched — this component is how principle IV stays visible, so the quote, its
+ * section and its line number are still the whole content, and nothing here filters or trims them.
+ * The quote itself went UP a step in contrast (--ink on --neutral-2, 13.41:1) and the section/line
+ * meta went from 12px to 15px: it names which line you are looking at, so it is information, not
+ * furniture, and 12px grey is not something a seventy-year-old reads.
  */
 import { useCallback, useEffect, useRef, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
@@ -56,26 +63,28 @@ export default function SourceSheet({ source, cardTitle, onClose }: SourceSheetP
         type="button"
         aria-label={t("source.close")}
         onClick={onClose}
-        className="absolute inset-0 bg-ink/40"
+        className="absolute inset-0 bg-[rgba(20,17,14,0.34)]"
       />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="source-sheet-title"
-        style={{ boxShadow: "0 -10px 34px color-mix(in srgb, var(--ink) 20%, transparent)" }}
-        className="relative max-h-[80vh] overflow-y-auto rounded-t-[26px] bg-card px-[22px] pt-3 pb-[calc(1.875rem+env(safe-area-inset-bottom))]"
+        className="animate-sheet-up relative max-h-[80vh] overflow-y-auto rounded-t-[26px] bg-ground px-[22px] pt-3.5 pb-[calc(1.875rem+env(safe-area-inset-bottom))] shadow-sheet"
       >
-        <div
+        <span
           aria-hidden="true"
-          className="mx-auto mb-[18px] h-[5px] w-10 rounded-full bg-card-border"
+          className="mx-auto mb-[22px] block h-[5px] w-11 rounded-full bg-[color-mix(in_srgb,var(--ink)_16%,transparent)]"
         />
 
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 id="source-sheet-title" className="text-card-title font-bold text-ink">
+            <h2
+              id="source-sheet-title"
+              className="text-[24px] leading-[1.35] font-bold text-ink"
+            >
               {t("source.title")}
             </h2>
-            <p className="mt-0.5 text-meta text-muted">{cardTitle}</p>
+            <p className="mt-1 text-[17px] leading-[1.5] text-muted">{cardTitle}</p>
           </div>
           <button
             ref={closeRef}
@@ -84,15 +93,19 @@ export default function SourceSheet({ source, cardTitle, onClose }: SourceSheetP
             aria-label={t("source.close")}
             className="tap -mr-[7px] shrink-0"
           >
-            <span className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-panel text-muted">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral text-muted">
               <CrossMark />
             </span>
           </button>
         </div>
 
-        {/* Verbatim. Never converted, never translated, never trimmed of its own wording. */}
-        <blockquote className="mt-[18px] rounded-[14px] border-l-[3px] border-accent bg-soft p-[18px]">
-          <dl className="flex flex-wrap items-baseline gap-x-1.5 text-[12px] tracking-[0.2px] text-muted">
+        {/*
+          Verbatim. Never converted, never translated, never trimmed of its own wording.
+          `--neutral-2` is the same fill as the 「張紙寫：」 quote block on the dose cards, on
+          purpose: quoted page text looks like quoted page text everywhere in the app.
+        */}
+        <blockquote className="mt-[18px] rounded-[16px] border-l-[3px] border-jade bg-neutral-2 p-[18px]">
+          <dl className="flex flex-wrap items-baseline gap-x-1.5 text-meta text-muted">
             <dt className="sr-only">{t("source.section")}</dt>
             <dd className="break-words">{source.section || "—"}</dd>
             <dt className="before:mr-1.5 before:content-['·']">{t("source.line")}</dt>

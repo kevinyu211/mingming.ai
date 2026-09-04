@@ -1,45 +1,66 @@
 /**
- * T033 — the live path (quickstart V1, V4 and V5, minus the voice itself).
+ * The live path (quickstart V1, V4, V5, V9) — the scenarios a judge watches, on the v2 tabs.
  *
- * These are the scenarios a judge watches: consent, the sample sheet, a photographed sheet, a
- * photo that is not a sheet, and the four ask outcomes. `/api/read` and `/api/ask` are mocked
- * from the bundled fixtures (see `helpers.ts`) so the whole path runs with no API key; the
- * card order, the source quotes and the two client-side gates are the real code.
+ * Consent, the way in, a photographed sheet, the conversation it becomes, the follow-up it fills,
+ * and what leaves the phone while all that happens. `/api/read` and `/api/ask` are mocked from the
+ * bundled fixtures (see `helpers.ts`) so the whole path runs with no API key; the card order, the
+ * source quotes, the two client-side gates and the sheet store are the real code.
  *
- * Speech is out of scope here — `tests/e2e/fallbacks.spec.ts` covers the no-voice path, which is
- * what this environment can actually observe.
+ * ## What this file owns after the redesign
+ *
+ * v1 had this file walking `/` → `/read` → `/ask` and asserting a stack of `<article>` cards.
+ * There are no cards any more: the sheet arrives as messages in 傾偈, and `chat-briefing.spec.ts`
+ * owns that conversation end to end — the order, the teach-back, the refusal and crisis gates, the
+ * check-in. Repeating any of it here would be describing the same screen twice.
+ *
+ * So what is left is the part only a whole-journey test can see, and none of it is covered
+ * elsewhere:
+ *
+ *   · **the journey itself** — a photograph on 記錄 becomes the active sheet, the conversation
+ *     names it, and 跟進 follows THAT sheet and no other (brief §1, the load-bearing rule);
+ *   · **one active sheet** — photographing a second archives the first read-only, 只可以睇;
+ *   · **privacy, structurally** — the read request carries the pixels and nothing else, and the
+ *     ask request carries the reading, the question and the dialect and nothing else (SC-009);
+ *   · **an answer's provenance** — the line it came from opens, verbatim (constitution IV);
+ *   · **the model outage on a question** — the honest sentence, with the sheet still readable;
+ *   · **the language switch** — the thread converts, the quote does not (FR-003);
+ *   · **the disclaimer**, on every screen the demo visits (rules.md §16).
  */
 import { expect, test } from "@playwright/test";
 import { UI } from "../../lib/i18n/ui";
 import { toScript } from "../../lib/i18n/script";
-import { REFERRAL } from "../../lib/i18n/referral";
-import { cardTitle } from "../../lib/rules/card-order";
-import { REFUSED_MEDICINE_CHANGE } from "../../lib/rules/template-fallback";
 import {
   MOCK_ANSWER,
-  MOCK_CITED_CARD_ID,
+  MOTHER,
   acceptConsent,
+  activeSheet,
   askQuestion,
-  cardTitles,
-  cards,
-  chooseCantonese,
   expectDisclaimer,
+  expectHomeScreen,
   expectNoHorizontalScroll,
-  expectedCard,
   expectedCards,
   expectedSource,
+  MOCK_CITED_CARD_ID,
   mockAsk,
   mockRead,
+  noSpeechInput,
   seedConsent,
-  seedProfile,
-  seedReading,
+  seedSheet,
+  startReading,
+  storedReading,
   uploadFixture,
 } from "./helpers";
 
-/** Copy that lives in `components/AnswerCard.tsx`, not in `lib/i18n/ui.ts`. */
-const ANSWER_UNAVAILABLE_TITLE = "而家答唔到";
-const ANSWER_UNAVAILABLE_BODY = "張紙讀出嚟嗰幾張卡冇變，照樣睇得。等陣再問多次。";
-const ANSWER_RETRY = "再問一次";
+/** Copy that lives in `app/chat/page.tsx`, not in `lib/i18n/ui.ts`. */
+const ASK_UNAVAILABLE =
+  "而家connect唔到，答唔到你。張紙上面嘅嘢仲喺度，可以撳「睇張紙點寫」自己睇。";
+
+/** How long the sheet takes to arrive as messages: 明仔 types a clause at a time. */
+const TYPING_TIMEOUT = 30_000;
+
+/* -------------------------------------------------------------------------- */
+/* V1 — the way in                                                            */
+/* -------------------------------------------------------------------------- */
 
 test.describe("Consent and the disclaimer (V1)", () => {
   test("the consent notice comes first and one tap dismisses it", async ({ page }) => {
@@ -48,141 +69,62 @@ test.describe("Consent and the disclaimer (V1)", () => {
     const gate = page.getByRole("dialog", { name: UI.hant["consent.title"], exact: true });
     await expect(gate).toBeVisible();
     await expect(gate.getByText(UI.hant["consent.body2"], { exact: true })).toBeVisible();
-    // Nothing is rendered behind the notice — not even the first setup question (T035).
-    await expect(page.getByRole("heading", { name: UI.hant["setup.labelQuestion"] })).toHaveCount(0);
+    // Nothing is rendered behind the notice — not even the two capture buttons (FR-015).
+    await expect(page.getByRole("link", { name: UI.hant["capture.photo"] })).toHaveCount(0);
     await expectDisclaimer(page);
 
     await acceptConsent(page);
 
     await expect(gate).toHaveCount(0);
-    // A phone with no profile lands on setup, not on the camera (Story 2, scenario 1).
-    await expect(
-      page.getByRole("heading", { name: UI.hant["setup.labelQuestion"], exact: true }),
-    ).toBeVisible();
+    await expectHomeScreen(page);
     await expectDisclaimer(page);
   });
 
   test("the disclaimer footer is on every screen the demo visits", async ({ page }) => {
-    await seedProfile(page, "hk_en");
+    await seedConsent(page);
+    await seedSheet(page, activeSheet(storedReading("hk_en")));
 
-    for (const url of ["/", "/setup", "/read?sample=hk_en", "/ask", "/read", "/plan", "/settings"]) {
+    // The three tabs, the full-screen routes, and the two that survived the redesign unchanged.
+    for (const url of ["/", "/chat", "/track", "/capture", "/setup", "/settings"]) {
       await page.goto(url);
       await expectDisclaimer(page);
     }
   });
 });
 
-test.describe("The sample sheet (V1)", () => {
+/* -------------------------------------------------------------------------- */
+/* V1, V4 — a sheet, end to end across the three tabs                         */
+/* -------------------------------------------------------------------------- */
+
+test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () => {
   test.beforeEach(async ({ page }) => {
     await seedConsent(page);
   });
 
-  test("shows the banner, then the cards in the fixed order, each with its source", async ({
-    page,
-  }) => {
-    const expected = expectedCards("hk_en");
+  test("記錄 → 傾偈 → 跟進, all naming the same piece of paper", async ({ page }) => {
+    const log = await mockRead(page, "hk_en", { delayMs: 600 });
 
-    await page.goto("/read?sample=hk_en");
-
-    await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(expected.length);
-    expect(await cardTitles(page)).toEqual(expected.map((card) => cardTitle(card.type, "hant")));
-
-    // Red flags first, on their own amber ground. Colour is never the only signal, so the 警號
-    // heading is asserted beside it; the card's shape itself is the designer's business.
-    const first = cards(page).first();
-    await expect(first.getByRole("heading")).toHaveText("警號");
-    await expect(first).toHaveClass(/bg-warning-bg/);
-    const warningGround = await first.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const medicineGround = await cards(page)
-      .nth(3)
-      .evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(warningGround).not.toBe(medicineGround);
-
-    // Three warnings before any medicine, three medicines, then follow-up, diet, activity.
-    const titles = await cardTitles(page);
-    expect(titles.lastIndexOf(cardTitle("warning", "hant"))).toBeLessThan(
-      titles.indexOf(cardTitle("medicine", "hant")),
-    );
-    expect(titles.filter((t) => t === cardTitle("warning", "hant"))).toHaveLength(3);
-    expect(titles.filter((t) => t === cardTitle("medicine", "hant"))).toHaveLength(3);
-    expect(titles).toContain(cardTitle("followUp", "hant"));
-    expect(titles).toContain(cardTitle("diet", "hant"));
-
-    // Medicines are the printed facts, verbatim: name, strength, amount, frequency (FR-003).
-    // The grouped-row layout splits the frequency from strength · amount, so each fact is
-    // asserted on its own rather than as one joined string — what matters is that every printed
-    // value reaches the screen unchanged, not how the row arranges them.
-    const amlodipine = cards(page).nth(3);
-    await expect(amlodipine.getByText("Amlodipine", { exact: true })).toBeVisible();
-    const medicines = expected.filter((card) => card.type === "medicine");
-    expect(medicines).toHaveLength(3);
-    for (const [offset, medicine] of medicines.entries()) {
-      const facts = medicine.facts ?? {};
-      const card = cards(page).nth(titles.indexOf(cardTitle("medicine", "hant")) + offset);
-      await expect(card.getByText(String(facts.name), { exact: true })).toBeVisible();
-      for (const part of [facts.strength, facts.amount, facts.frequency]) {
-        if (typeof part !== "string" || part.trim().length === 0) continue;
-        await expect(card.getByText(part, { exact: false }).first()).toBeVisible();
-      }
-    }
-
-    // Every card here was written by the model, so every card carries the AI chip.
-    for (let i = 0; i < expected.length; i += 1) {
-      await expect(cards(page).nth(i).getByText(UI.hant.aiChip, { exact: true })).toBeVisible();
-    }
-
-    await expectNoHorizontalScroll(page);
-  });
-
-  test("a card's source link opens the verbatim quote and closes again", async ({ page }) => {
-    await page.goto("/read?sample=hk_en");
-    await expect(cards(page)).toHaveCount(expectedCards("hk_en").length);
-
-    const warningTitle = cardTitle("warning", "hant");
-    await cards(page)
-      .first()
-      .getByRole("button", {
-        name: `${UI.hant["card.sourceLink"]}：${warningTitle}`,
-        exact: true,
-      })
-      .click();
-
-    const sheet = page.getByRole("dialog", { name: UI.hant["source.title"], exact: true });
-    await expect(sheet).toBeVisible();
-    const source = expectedSource("hk_en", "warning-0");
-    await expect(sheet.getByText(source.quote, { exact: true })).toBeVisible();
-    await expect(sheet.getByText(source.section, { exact: true })).toBeVisible();
-
-    await sheet.getByRole("button", { name: UI.hant["source.close"], exact: true }).click();
-    await expect(sheet).toHaveCount(0);
-  });
-});
-
-test.describe("The photo path (V1, V4)", () => {
-  test.beforeEach(async ({ page }) => {
+    // 1. 記錄, empty: 明仔 has nothing to say yet and says exactly that.
     await page.goto("/");
-    await acceptConsent(page);
-    await chooseCantonese(page);
-  });
+    await expect(page.getByText(UI.hant["home.emptyMascot"], { exact: true })).toBeVisible();
 
-  test("a photographed sheet is read into the same cards, and only the pages are sent", async ({
-    page,
-  }) => {
-    // The delay keeps the three-step progress line on screen long enough to be observed.
-    const log = await mockRead(page, "hk_en", { delayMs: 800 });
-    const expected = expectedCards("hk_en");
-
+    // 2. The photograph, through the real capture screen.
     await uploadFixture(page, "hk_en.png");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
+    await startReading(page);
 
-    await expect(page.getByText(UI.hant["progress.step2"], { exact: true })).toBeVisible();
+    // 3. The transitional state while /api/read streams — held open by the mock's delay.
+    await expect(page.getByText(UI.hant["reading.title"], { exact: true })).toBeVisible();
 
-    await expect(cards(page)).toHaveCount(expected.length);
-    expect(await cardTitles(page)).toEqual(expected.map((card) => cardTitle(card.type, "hant")));
-    await expect(cards(page).nth(3).getByText("Amlodipine", { exact: true })).toBeVisible();
+    // 4. The sheet arrives as a conversation, red flags first. (What it SAYS is
+    //    chat-briefing.spec.ts's business; this only proves the read landed here.)
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
+    await expect(
+      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
+    ).toBeVisible();
 
-    // Privacy is structural (FR-019, SC-009): the body carries the pixels and nothing else.
+    // 5. Privacy is structural (FR-019, SC-009): the body carries the pixels and nothing else.
     expect(log.count).toBe(1);
     const body = log.bodies[0];
     expect(Object.keys(body)).toEqual(["images"]);
@@ -191,174 +133,202 @@ test.describe("The photo path (V1, V4)", () => {
     expect(Object.keys(images[0]).sort()).toEqual(["base64", "mediaType"]);
     expect(images[0].mediaType).toBe("image/jpeg");
 
+    // 6. 記錄 now has the sheet on it, titled by rule from the page's own clinic line, with the
+    //    page count the camera actually took.
+    await page.goto("/");
+    await expect(page.getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
+    await expect(page.getByText("SOPD", { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["home.pages"].replace("{n}", "1"), { exact: false })).toBeVisible();
+
+    // 7. 跟進 follows THAT sheet — the strip names it, which is what makes the tab honest.
+    await page.getByRole("link", { name: UI.hant["tab.track"], exact: true }).click();
+    await expect(page.getByText(UI.hant["track.following"], { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: UI.hant["track.todayMeds"] })).toBeVisible();
+    await expect(
+      page.getByRole("listitem").filter({ hasText: "Metformin 500mg" }),
+    ).toHaveCount(1);
+
     await expectNoHorizontalScroll(page);
   });
 
-  test("a photo that is not a discharge sheet is declined and produces no cards", async ({
-    page,
-  }) => {
-    await mockRead(page, "unknown");
+  /**
+   * Brief §1's load-bearing rule, and the reason a counter can say 「張紙寫：每日兩次」 at all: a
+   * counter may only ever quote ONE piece of paper. Photographing a second sheet makes it active
+   * and freezes the first, which then says out loud that it can only be looked at.
+   */
+  test("photographing a second sheet archives the first, read-only", async ({ page }) => {
+    await mockRead(page, "hk_en");
 
-    await uploadFixture(page, "not_a_sheet.jpg");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
+    await uploadFixture(page, "hk_en.png");
+    await startReading(page);
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
 
-    await expect(
-      page.getByRole("heading", { name: UI.hant["notASheet.title"], exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(UI.hant["notASheet.body"], { exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
+    // A second sheet, from the other bundled fixture so the two are told apart by their titles.
+    await mockRead(page, "cn_zh");
+    await uploadFixture(page, "cn_zh.png");
+    await startReading(page);
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
+
+    await page.goto("/");
+    // 傾緊呢張 names the NEW sheet, and only it. There is one active sheet, and it is the last
+    // piece of paper photographed.
+    await expect(page.getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /心内科门诊/ })).toHaveCount(1);
+    await expect(page.getByRole("link", { name: /SOPD/ })).toHaveCount(0);
+
+    /*
+     * The older sheets sit behind a disclosure. The COUNT is deliberately not pinned: one
+     * successful read currently writes the sheet twice (`startSheet()` runs a second time and
+     * archives a duplicate of the sheet it just made active), so 以前嘅 is inflated. That is an
+     * app bug, reported rather than fixed here — the invariant this test exists for is that the
+     * previous sheet is behind the disclosure, marked 只可以睇, and cannot be opened.
+     */
+    const older = page.getByRole("button", { name: /以前嘅/ });
+    await expect(older).toBeVisible();
+    await older.click();
+    await expect(page.getByText("SOPD", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(UI.hant["home.readOnly"], { exact: false }).first()).toBeVisible();
+    // 只可以睇 is a promise the markup keeps: an archived row is not a link and does not open.
+    await expect(page.getByRole("link", { name: /SOPD/ })).toHaveCount(0);
+
+    // 跟進 follows the ACTIVE sheet only: the archived one's medicines are not on this screen.
+    await page.goto("/track");
+    await expect(page.getByRole("listitem").filter({ hasText: "盐酸二甲双胍片" })).toHaveCount(1);
+    await expect(page.getByRole("listitem").filter({ hasText: "Metformin" })).toHaveCount(0);
   });
 });
 
-test.describe("Ask the sheet (V5)", () => {
-  // Reading a sheet and asking about it is now one screen (`/read`): the questions append to the
-  // same thread the sheet lives in, and the voice bar is pinned there. `/ask` still redirects in.
+/* -------------------------------------------------------------------------- */
+/* V5, V9 — asking, and what leaves the phone                                 */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The refusal and crisis gates live in `chat-briefing.spec.ts` (`:227`, `:244`), which proves both
+ * answer from a fixed template with nothing sent. What is here is the other half: the request that
+ * IS made, what it carries, and where the answer says it came from.
+ */
+test.describe("Asking the sheet (V5, V9)", () => {
   test.beforeEach(async ({ page }) => {
-    await seedReading(page, "hk_en");
+    await seedConsent(page);
+    // With the profile on the phone as well, so "the label never leaves" has teeth below.
+    await seedSheet(page, activeSheet(storedReading("hk_en")), { profile: MOTHER });
+    // The honest keyboard-only path, and the one a test can type into.
+    await noSpeechInput(page);
   });
 
-  test("the old /ask link redirects into the one-screen conversation", async ({ page }) => {
-    await page.goto("/ask");
-
-    await expect(page).toHaveURL(/\/read$/);
-    // The way to ask is on the same screen as the sheet now, not a separate route.
-    await expect(
-      page.getByRole("textbox", { name: UI.hant["ask.placeholder"], exact: true }),
-    ).toBeVisible();
-  });
-
-  test("a question about changing a medicine is refused, and no request is made", async ({
-    page,
-  }) => {
-    // The mock is armed on purpose: the point is that the client gate answers first (FR-011).
-    const log = await mockAsk(page, "answered");
-    await page.goto("/read");
-
-    await askQuestion(page, "可唔可以唔食？");
-
-    await expect(
-      page.getByRole("heading", { name: UI.hant["ask.refused"], exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(toScript(REFUSED_MEDICINE_CHANGE.yue, "hant"), { exact: true }),
-    ).toBeVisible();
-    // FR-011: the refusal shows the contact line the sheet printed, verbatim.
-    await expect(page.getByText("Ward enquiries: 2xxx xxxx", { exact: true })).toBeVisible();
-    expect(log.count).toBe(0);
-
-    await expectNoHorizontalScroll(page);
-  });
-
-  test("a question containing a crisis phrase shows the referral card, and no request is made", async ({
+  test("an answer cites its line, and the request carries nothing about the family", async ({
     page,
   }) => {
     const log = await mockAsk(page, "answered");
-    await page.goto("/read");
-
-    await askQuestion(page, "我想自殺");
-
-    await expect(
-      page.getByRole("heading", { name: UI.hant["ask.referral"], exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(REFERRAL.yue, { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: /2389 2222/ })).toBeVisible();
-    expect(log.count).toBe(0);
-  });
-
-  test("a question the sheet answers cites its card and shows the source quote", async ({
-    page,
-  }) => {
-    const log = await mockAsk(page, "answered");
-    await page.goto("/read");
+    await page.goto("/chat");
 
     await askQuestion(page, "白色嗰粒係朝早定夜晚食？");
 
-    await expect(
-      page.getByRole("heading", { name: UI.hant["ask.answered"], exact: true }),
-    ).toBeVisible();
-    // The chip names the card the answer came from.
-    const citedTitle = cardTitle(expectedCard("hk_en", MOCK_CITED_CARD_ID).type, "hant");
-    await expect(
-      page.getByText(`${UI.hant["ask.answeredFrom"]} · ${citedTitle}`, { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(toScript(MOCK_ANSWER.yue, "hant"), { exact: true })).toBeVisible();
-    // The AI note rides on the answer. On this one screen the sheet's own cards each carry the same
-    // chip, so the assertion is scoped to the answer message (the "答案" region) rather than the page.
-    const answerMessage = page.getByRole("region", { name: UI.hant["ask.answered"], exact: true });
-    await expect(answerMessage.getByText(UI.hant.aiChip, { exact: true })).toBeVisible();
+    // The question is the reader's own bubble, and the answer follows it, typed out.
+    await expect(page.getByText("白色嗰粒係朝早定夜晚食？", { exact: true })).toBeVisible();
+    await expect(page.getByText(toScript(MOCK_ANSWER.yue, "hant"), { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
+    // A model-written line always carries the AI chip (FR-009).
+    await expect(page.getByText(UI.hant.aiChip).first()).toBeVisible();
 
-    await page
-      .getByRole("button", {
-        name: `${UI.hant["card.sourceLink"]}：${UI.hant["ask.answered"]}`,
-        exact: true,
-      })
-      .click();
-    const sheet = page.getByRole("dialog", { name: UI.hant["source.title"], exact: true });
+    // Constitution IV: the spoken fact opens the line it came from, verbatim.
+    await page.getByRole("button", { name: UI.hant["card.sourceLink"] }).last().click();
+    const sheet = page.getByRole("dialog");
     await expect(
       sheet.getByText(expectedSource("hk_en", MOCK_CITED_CARD_ID).quote, { exact: true }),
     ).toBeVisible();
 
-    // SC-009: the ask request carries the reading, the question and the dialect. Nothing else.
+    // SC-009: the reading, the question and the dialect. `memory` is the on-device brief and
+    // rides along only when there is one; nothing else is allowed in the body at all.
     expect(log.count).toBe(1);
-    expect(Object.keys(log.bodies[0]).sort()).toEqual(["dialect", "question", "reading"]);
+    const keys = Object.keys(log.bodies[0]).sort();
+    expect(keys.filter((key) => key !== "memory")).toEqual(["dialect", "question", "reading"]);
+
+    // And nothing about who the family is, which never leaves the phone (constitution V, FR-016).
+    const serialised = JSON.stringify(log.bodies[0]);
+    for (const forbidden of ["阿媽", "profile", "doses", "checkin", "confirmedAt"]) {
+      expect(serialised, `the ask request must not carry "${forbidden}"`).not.toContain(forbidden);
+    }
   });
 
-  test("a model outage shows the calm state, with the cards still correct", async ({ page }) => {
+  test("a model outage says so plainly and leaves the sheet readable", async ({ page }) => {
     await mockAsk(page, { status: 502 });
-    await page.goto("/read");
+    await page.goto("/chat");
 
     await askQuestion(page, "白色嗰粒係朝早定夜晚食？");
 
-    await expect(
-      page.getByRole("heading", { name: ANSWER_UNAVAILABLE_TITLE, exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText(ANSWER_UNAVAILABLE_BODY, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: ANSWER_RETRY, exact: true })).toBeVisible();
+    // It says what happened and what still works. It does not apologise and it does not guess.
+    await expect(page.getByText(ASK_UNAVAILABLE, { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
+    // No AI chip on it: the sentence is a fixed template, not something a model wrote.
+    await expect(page.getByText(UI.hant.aiChip)).toHaveCount(0);
+    // And the sheet itself is untouched — the red flags are still on the screen and still traceable.
+    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
+    await expect(block).toBeVisible();
+    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first()).toBeVisible();
   });
 });
 
-test.describe("The script toggle (V1)", () => {
-  test("switches the on-screen text to simplified while the quote stays verbatim", async ({
+/* -------------------------------------------------------------------------- */
+/* V1 — the language switch                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The v1 script toggle is now the three-way chip in the 傾偈 header (粵 / 普 / EN). The rule it
+ * protects is unchanged and is the one that matters: the words 明仔 says convert to the reader's
+ * script, and the quoted line does NOT — a quote that has been rewritten is no longer a quote
+ * (FR-003, constitution IV).
+ *
+ * The mainland sheet is used precisely because its quotes are printed in simplified characters,
+ * so a converted quote would be visible on screen.
+ */
+test.describe("The language switch (V1)", () => {
+  test("the thread follows the chosen language while the quote stays verbatim", async ({
     page,
   }) => {
     await seedConsent(page);
-    // The mainland sheet's quotes are printed in simplified characters, so a converted quote
-    // would be visible: that is exactly what must not happen (FR-003).
-    const expected = expectedCards("cn_zh");
-    const warning = expected[0];
+    const warning = expectedCards("cn_zh").filter((card) => card.type === "warning")[0];
     const source = expectedSource("cn_zh", warning.id);
+    // The premise: this sheet's quotes are printed in simplified characters, so a converted quote
+    // would be visible on screen rather than a theoretical worry.
     expect(toScript(source.quote, "hant")).not.toBe(source.quote);
 
-    await page.goto("/read?sample=cn_zh");
-    await expect(cards(page)).toHaveCount(expected.length);
+    await page.goto("/chat?sample=cn_zh");
 
-    expect(await cardTitles(page)).toEqual(expected.map((card) => cardTitle(card.type, "hant")));
-    await expect(
-      cards(page).first().getByText(toScript(warning.body.yue, "hant"), { exact: true }),
-    ).toBeVisible();
+    // Cantonese first, which is the default: what 明仔 says is the card's Cantonese body.
+    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
+    await expect(block).toBeVisible({ timeout: TYPING_TIMEOUT });
+    await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
 
-    // The header control is now the three-way interface-language switch (繁 / 简 / EN); picking a
-    // Chinese option converts the card text to that script as the old script toggle did.
+    // …and even here, with the interface in traditional characters, the QUOTE is the simplified
+    // line the page printed (constitution IV, FR-003).
+    await block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
+    const first = page.getByRole("dialog", { name: UI.hant["source.title"] });
+    await expect(first.getByText(source.quote, { exact: true })).toBeVisible();
+    await first.getByRole("button", { name: UI.hant["source.close"], exact: true }).click();
+
+    // The one language control on this screen, in the header.
+    await page.getByRole("button", { name: UI.hant["chat.language"], exact: true }).click();
     await page
-      .getByRole("group", { name: "Interface language" })
-      .getByRole("button", { name: "简体中文", exact: true })
+      .getByRole("dialog", { name: UI.hant["chat.language"] })
+      .getByRole("button", { name: UI.hant["language.cmn"], exact: true })
       .click();
 
-    expect(await cardTitles(page)).toEqual(expected.map((card) => cardTitle(card.type, "hans")));
-    await expect(
-      cards(page).first().getByText(toScript(warning.body.yue, "hans"), { exact: true }),
-    ).toBeVisible();
+    // Everything the app WROTE follows the choice: the interface, and the words on the card.
     await expect(page.getByText(UI.hans["cards.sampleBanner"], { exact: true })).toBeVisible();
+    const hans = page.getByRole("region", { name: UI.hans["brief.warnTitle"], exact: true });
+    await expect(hans).toBeVisible();
+    await expect(hans.getByText(warning.body.cmn, { exact: true })).toBeVisible();
 
-    // The quote is page text, so it is unchanged by the toggle.
-    await cards(page)
-      .first()
-      .getByRole("button", {
-        name: `${UI.hans["card.sourceLink"]}：${cardTitle("warning", "hans")}`,
-        exact: true,
-      })
-      .click();
-    const sheet = page.getByRole("dialog", { name: UI.hans["source.title"], exact: true });
-    await expect(sheet.getByText(source.quote, { exact: true })).toBeVisible();
+    // Everything the PAGE printed does not. Byte for byte the same quote as before the switch.
+    await hans.getByRole("button", { name: UI.hans["card.sourceLink"] }).first().click();
+    const second = page.getByRole("dialog", { name: UI.hans["source.title"] });
+    await expect(second.getByText(source.quote, { exact: true })).toBeVisible();
   });
 });

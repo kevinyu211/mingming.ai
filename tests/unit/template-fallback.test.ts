@@ -157,6 +157,120 @@ describe("templateFor — medicine", () => {
   });
 });
 
+/**
+ * The stopped-medicine fallback, and why it exists.
+ *
+ * On the `mixed` stress fixture, one live run in three has the model write `spoken` text for the
+ * entries under 「停用药物（出院后不再服用）」 that reads like a live dose — "Digoxin 0.25mg 每日" —
+ * and the numeric-target rule catches it. That is the filter working. What was not working was
+ * what came next: the card fell back to a generic "look at the sheet" sentence and the drug's
+ * name disappeared, which is the one thing the family must not lose.
+ */
+describe("templateFor — a medicine the page has stopped", () => {
+  const DIGOXIN: TemplateFacts = {
+    name: "Digoxin",
+    strength: "0.25mg",
+    amount: "1 粒",
+    frequency: "每日一次",
+    duration: "14 日",
+    status: "stopped",
+  };
+
+  const GLIMEPIRIDE: TemplateFacts = {
+    name: "Glimepiride",
+    strength: "2mg",
+    amount: null,
+    frequency: "每日一次，早餐前服",
+    duration: null,
+    status: "stopped",
+  };
+
+  it("names the drug and its strength verbatim, in all three forms", () => {
+    for (const facts of [DIGOXIN, GLIMEPIRIDE]) {
+      const spoken = templateFor("medicine", facts);
+      for (const dialect of FORMS) {
+        expect(spoken[dialect]).toContain(facts.name as string);
+        expect(spoken[dialect]).toContain(facts.strength as string);
+      }
+    }
+  });
+
+  it("says the PAGE stopped it, and never tells the reader what to do", () => {
+    const spoken = templateFor("medicine", DIGOXIN);
+    expect(spoken.yue).toContain("張紙寫住");
+    expect(spoken.yue).toContain("唔使再食");
+    expect(spoken.cmn).toContain("纸上写着");
+    expect(spoken.cmn).toContain("不用再吃");
+    expect(spoken.en).toContain("The sheet lists");
+    expect(spoken.en).toContain("no longer to be taken");
+    // Never an instruction in the app's own voice.
+    for (const dialect of FORMS) {
+      for (const imperative of ["唔好食", "不要吃", "别吃", "stop taking", "do not take"]) {
+        expect(spoken[dialect].toLowerCase()).not.toContain(imperative.toLowerCase());
+      }
+    }
+  });
+
+  /**
+   * The dose clause is exactly what tripped the filter, so it must not come back through the
+   * fallback. A withdrawn drug is never spoken with a frequency, an amount or a duration.
+   */
+  it("carries no frequency, no amount and no duration at all", () => {
+    for (const facts of [DIGOXIN, GLIMEPIRIDE]) {
+      const spoken = templateFor("medicine", facts);
+      for (const dialect of FORMS) {
+        expect(spoken[dialect]).not.toContain("每日");
+        expect(spoken[dialect]).not.toContain("每天");
+        expect(spoken[dialect]).not.toContain("1 粒");
+        expect(spoken[dialect]).not.toContain("14 日");
+        expect(spoken[dialect]).not.toContain("早餐前服");
+      }
+    }
+  });
+
+  it("passes the banned-term filter on the exact strings that failed live", () => {
+    expectClean("medicine (stopped, Digoxin)", templateFor("medicine", DIGOXIN));
+    expectClean("medicine (stopped, Glimepiride)", templateFor("medicine", GLIMEPIRIDE));
+    expectClean(
+      "medicine (stopped) + caution",
+      (() => {
+        const spoken = templateFor("medicine", DIGOXIN);
+        return {
+          yue: `${spoken.yue}${CAUTION_SUFFIX.yue}`,
+          cmn: `${spoken.cmn}${CAUTION_SUFFIX.cmn}`,
+          en: `${spoken.en} ${CAUTION_SUFFIX.en}`,
+        };
+      })(),
+    );
+    // The rejected phrasing itself is caught — this is the shape the fallback replaces.
+    expect(checkText("Digoxin 0.25mg 每日").ok).toBe(false);
+  });
+
+  it("says something different, and no less honest, for a dose the stay changed", () => {
+    const spoken = templateFor("medicine", { ...DIGOXIN, status: "changed" });
+    expect(spoken.yue).toContain("Digoxin");
+    expect(spoken.yue).toContain("另外列開");
+    expect(spoken.cmn).toContain("另外列开");
+    expect(spoken.en).toContain("apart from the medicines");
+    // Still no dose clause, and still not a claim that the drug is finished.
+    expect(spoken.yue).not.toContain("每日");
+    expect(spoken.yue).not.toContain("唔使再食");
+    expectClean("medicine (changed)", spoken);
+  });
+
+  it("leaves an ordinary medicine exactly as it was", () => {
+    const plain = templateFor("medicine", FACTS.medicine);
+    expect(templateFor("medicine", { ...FACTS.medicine, status: "current" })).toEqual(plain);
+    expect(plain.yue).toContain("每日一次");
+  });
+
+  it("still says nothing at all when the page named no drug", () => {
+    const spoken = templateFor("medicine", { name: null, status: "stopped" });
+    expect(spoken.yue).toContain("讀唔到");
+    expectClean("medicine (stopped, unnamed)", spoken);
+  });
+});
+
 describe("templateFor — other card types", () => {
   it("warning repeats the symptom and the action from the sheet", () => {
     const spoken = templateFor("warning", FACTS.warning);

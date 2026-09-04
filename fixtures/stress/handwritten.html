@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discharge Prescription &amp; Follow-up Slip — Kowloon Bayside Hospital (synthetic stress fixture)</title>
+<style>
+  /* STRESS FIXTURE 3 of 4 — "handwritten".
+     A typeset form that a doctor has annotated by hand: the follow-up date is
+     written into a blank rule, two printed doses are struck through and replaced
+     in ink, and the "Doctor's remarks" box holds a deliberately illegible scrawl
+     (SVG strokes) that a reader must admit it cannot read. Handwriting uses the
+     macOS "Bradley Hand" / "Noteworthy" faces. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #fdfdfb; color: #111;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 17px; line-height: 1.35;
+    padding: 46px 56px 34px 56px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hdr { display: flex; justify-content: space-between; align-items: flex-end; }
+  .hosp { font-size: 23px; font-weight: bold; }
+  .hosp small { display: block; font-size: 13px; font-weight: normal; margin-top: 3px; color: #222; }
+  .doctype { font-size: 20px; font-weight: bold; letter-spacing: 1.2px; text-align: right; }
+  .doctype small { display: block; font-size: 12px; font-weight: normal; letter-spacing: .3px; margin-top: 3px; }
+  .rule { border-top: 2px solid #111; margin-top: 8px; }
+
+  .fields { margin-top: 14px; }
+  .fields .row { display: flex; margin-bottom: 7px; }
+  .fields .f { display: flex; align-items: baseline; }
+  .fields .k { font-weight: bold; margin-right: 7px; white-space: nowrap; }
+  .fields .v { border-bottom: 1px solid #111; min-width: 150px; padding: 0 8px 1px 8px; }
+  .fields .v.wide { min-width: 300px; }
+
+  h2 {
+    font-size: 15px; font-weight: bold; letter-spacing: .8px; text-transform: uppercase;
+    margin: 16px 0 5px 0; border-bottom: 1.5px solid #111; padding-bottom: 2px;
+  }
+  .ln { display: block; }
+
+  table.rx { width: 100%; border-collapse: collapse; }
+  table.rx th, table.rx td { border: 1px solid #111; padding: 7px 8px; vertical-align: middle; text-align: left; }
+  table.rx th { font-size: 12.5px; letter-spacing: .5px; text-transform: uppercase; background: #efefef; }
+  table.rx td.n { width: 26px; text-align: center; }
+  table.rx td.d { width: 250px; }
+  table.rx td.s { width: 150px; }
+  table.rx td.a { width: 120px; }
+  table.rx td.u { width: 130px; }
+  s { color: #111; }
+
+  .ink {
+    font-family: "Bradley Hand", "Noteworthy", "Marker Felt", cursive;
+    color: #1b3a9c; font-weight: 600;
+  }
+  .ink.big { font-size: 25px; }
+  .ink.dose { font-size: 23px; display: inline-block; transform: rotate(-2.2deg); }
+  .ink.freq { font-size: 22px; display: inline-block; transform: rotate(1.4deg); }
+  .strike { position: relative; display: inline-block; }
+  .strike::after {
+    content: ""; position: absolute; left: -3px; right: -3px; top: 52%;
+    border-top: 2px solid #1b3a9c; transform: rotate(-3.5deg);
+  }
+  .fudate { position: relative; display: inline-block; }
+  .fudate .ink { position: relative; top: 3px; transform: rotate(-1.6deg); display: inline-block; }
+
+  .alert { border: 2.5px solid #111; padding: 8px 11px 10px 11px; margin-top: 14px; }
+  .alert .t { font-weight: bold; letter-spacing: .8px; margin-bottom: 3px; }
+  .alert ol { margin: 0; padding-left: 22px; }
+  .alert .then { margin-top: 5px; font-weight: bold; }
+
+  .remarks { margin-top: 14px; border: 1px solid #111; height: 128px; position: relative; }
+  .remarks .cap { position: absolute; left: 9px; top: 6px; font-size: 12.5px; font-weight: bold; letter-spacing: .6px; }
+  .remarks svg { position: absolute; left: 24px; top: 26px; }
+
+  .sig { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; }
+  .sig .b { width: 520px; }
+  .sig .sl { border-bottom: 1px solid #111; height: 44px; position: relative; }
+  .sig .sl i { position: absolute; left: 12px; bottom: 1px; font-family: "Snell Roundhand", "Brush Script MT", cursive; font-style: normal; font-size: 32px; color: #1b3a9c; }
+  .small { font-size: 13px; }
+  .foot { margin-top: 20px; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #555; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hosp">KOWLOON BAYSIDE HOSPITAL
+    <small>Department of Orthopaedics &amp; Traumatology &nbsp;&middot;&nbsp; 9 Bayside Avenue, Kowloon</small>
+  </div>
+  <div class="doctype">DISCHARGE PRESCRIPTION &amp; FOLLOW-UP SLIP<small>Form OT-22 &nbsp;&middot;&nbsp; to be given to the patient</small></div>
+</div>
+<div class="rule"></div>
+
+<div class="fields">
+  <div class="row">
+    <div class="f" style="width:430px;"><span class="k">Name:</span><span class="v wide">LAU Mei Fong</span></div>
+    <div class="f" style="width:230px;"><span class="k">Sex / Age:</span><span class="v">F / 68</span></div>
+    <div class="f"><span class="k">Ward / Bed:</span><span class="v">6A / 22</span></div>
+  </div>
+  <div class="row">
+    <div class="f" style="width:430px;"><span class="k">Case no.:</span><span class="v wide">K4-XXXXXX</span></div>
+    <div class="f" style="width:230px;"><span class="k">Operation:</span><span class="v">Right TKR</span></div>
+    <div class="f"><span class="k">Discharge date:</span><span class="v">03-09-2026</span></div>
+  </div>
+  <div class="row">
+    <div class="f"><span class="k">Follow-up (Orthopaedic SOPD), date and time:</span>
+      <span class="v wide fudate"><span class="ink big">17/9/26&nbsp; 2:30 pm</span></span></div>
+    <div class="f" style="margin-left:26px;"><span class="k">Allergy:</span><span class="v">NKDA</span></div>
+  </div>
+</div>
+
+<h2>Discharge Medications</h2>
+<table class="rx">
+  <tr>
+    <th class="n">#</th><th class="d">Drug</th><th class="s">Strength</th><th class="a">Dose</th>
+    <th>Frequency</th><th class="u">Duration</th>
+  </tr>
+  <tr><td class="n">1</td><td class="d">Paracetamol</td><td class="s">500mg</td><td class="a">2 tabs</td><td>QID PRN pain</td><td class="u">x 5 days</td></tr>
+  <tr>
+    <td class="n">2</td><td class="d">Bisoprolol</td>
+    <td class="s"><span class="strike">5mg</span> &nbsp;<span class="ink dose">2.5mg</span></td>
+    <td class="a">1 tab</td><td>daily</td><td class="u"></td>
+  </tr>
+  <tr><td class="n">3</td><td class="d">Aspirin</td><td class="s">80mg</td><td class="a">1 tab</td><td>daily after breakfast</td><td class="u"></td></tr>
+  <tr><td class="n">4</td><td class="d">Gliclazide MR</td><td class="s">60mg</td><td class="a">1 tab</td><td>daily before breakfast</td><td class="u"></td></tr>
+  <tr>
+    <td class="n">5</td><td class="d">Tramadol</td><td class="s">50mg</td><td class="a">1 cap</td>
+    <td><span class="strike">TDS</span> &nbsp;<span class="ink freq">BD PRN</span></td><td class="u">x 5 days</td>
+  </tr>
+</table>
+
+<h2>Operation &amp; Progress</h2>
+<span class="ln">Right total knee replacement performed 27-08-2026 under spinal anaesthesia. Nil intra-operative complication, estimated blood loss 250 mL, tourniquet time 62 min.</span>
+<span class="ln">Post-operative course uneventful. Haemoglobin 10.4 on day 2, nil transfusion. Wound clean and dry, clips intact. Knee flexion 85 degrees on discharge.</span>
+<span class="ln">Mobilised day 1 with a frame under physiotherapy supervision. Walks 40 m independently with a frame on the day of discharge.</span>
+<span class="ln">Blood sugar 6.2 to 11.4 during the admission on the usual oral agent; nil hypoglycaemic episode recorded.</span>
+
+<h2>Medicines Stopped This Admission (not to be taken)</h2>
+<span class="ln">STOPPED: Diclofenac 50mg TDS PRN &mdash; stopped before the operation, not to be restarted.</span>
+<span class="ln">STOPPED: Glucosamine 500mg TDS &mdash; patient's own purchase, nil benefit, stopped.</span>
+
+<h2>Bring to Your Follow-up</h2>
+<span class="ln">This slip, all medicine boxes, and the physiotherapy exercise sheet.</span>
+<span class="ln">The blood sugar record book.</span>
+<span class="ln">Someone who can help with the walking frame on the day.</span>
+
+<div class="alert">
+  <div class="t">RETURN TO A&amp;E AT ONCE IF:</div>
+  <ol>
+    <li>Fever above 38 C</li>
+    <li>Redness, swelling or discharge from the wound</li>
+    <li>Calf pain, or the leg becomes hot and swollen</li>
+  </ol>
+  <div class="then">Attend A&amp;E. Do not wait for the follow-up appointment.</div>
+</div>
+
+<h2>Advice on Discharge</h2>
+<span class="ln">Diet: normal diet, less sugar. Drink plenty of water.</span>
+<span class="ln">Activity: partial weight bearing with a walking frame x 2 weeks, then review. Knee exercises as taught by the physiotherapist, 3 times a day.</span>
+<span class="ln">Wound: keep the dressing dry. District nurse to remove clips on 12-09-2026.</span>
+<span class="ln">Physiotherapy appointment: 08-09-2026 10:00, Rehabilitation Block 2/F.</span>
+<span class="ln">Ward 6A enquiries: 2xxx xxxx</span>
+
+<div class="remarks">
+  <div class="cap">DOCTOR'S REMARKS</div>
+  <svg width="900" height="92" viewBox="0 0 900 92" xmlns="http://www.w3.org/2000/svg">
+    <g fill="none" stroke="#1b3a9c" stroke-width="2.6" stroke-linecap="round">
+      <path d="M8 62 C 22 24, 34 22, 41 46 C 47 66, 58 66, 63 40 C 68 18, 80 22, 84 52 C 88 74, 99 66, 104 44"/>
+      <path d="M112 50 C 126 18, 141 60, 152 38 C 161 20, 168 58, 181 46 C 193 35, 197 64, 210 44"/>
+      <path d="M218 58 C 232 26, 243 70, 256 34 C 265 12, 271 62, 284 52"/>
+      <path d="M292 46 C 306 12, 318 68, 331 40 C 341 20, 349 60, 362 48 C 374 37, 379 62, 392 42"/>
+      <path d="M400 54 C 415 22, 428 66, 442 36 C 452 16, 459 60, 472 50"/>
+      <path d="M482 44 C 495 14, 509 64, 523 38 C 533 20, 540 58, 553 47 C 566 36, 570 62, 583 44"/>
+      <path d="M592 56 C 606 24, 619 68, 633 36 C 643 14, 650 58, 663 49"/>
+      <path d="M672 46 C 686 16, 700 66, 714 40 C 724 22, 731 60, 744 48"/>
+      <path d="M754 52 C 768 20, 782 64, 796 38 C 806 18, 813 58, 826 50 C 838 43, 846 58, 858 40"/>
+      <path d="M30 78 C 120 70, 240 84, 330 74"/>
+      <path d="M420 80 C 520 72, 640 86, 730 76"/>
+    </g>
+  </svg>
+</div>
+
+<div class="sig">
+  <div class="b">
+    <div class="small" style="font-weight:bold;margin-bottom:3px;">Doctor's name / signature</div>
+    <div class="sl"><i>W.H. Ng</i></div>
+    <div class="small" style="margin-top:3px;">Dr W. H. NG, MBBS (HK), FRCSEd &nbsp; Reg. No. M0XXXXX &nbsp; 03-09-2026</div>
+  </div>
+  <div class="small" style="text-align:right;">
+    Checked by nurse: <b>Ip K. L.</b><br>Medicines counselled: Yes<br>Printed 03-09-2026 11:07
+  </div>
+</div>
+
+<div class="foot">
+  <span>SYNTHETIC DEMO DOCUMENT &mdash; FICTIONAL PATIENT AND FICTIONAL HOSPITAL. NOT A REAL MEDICAL RECORD.</span>
+  <span>KBH-OT-STRESS-03</span>
+</div>
+
+</body>
+</html>

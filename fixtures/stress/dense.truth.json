@@ -1,0 +1,182 @@
+{
+  "id": "dense",
+  "file": "dense.png",
+  "mediaType": "image/png",
+  "authoredBy": "tests/eval/stress.ts author — this file is the answer key, written from fixtures/stress/dense.html, not from any model output",
+  "stresses": "two columns; 12.5px type at 1240px wide with 1.16 leading; a ruled 8-row medicine table holding two strengths of one ingredient (Furosemide 40mg and 20mg), three meal-timed lines, one taper and one PRN; plus a 'medicines stopped or changed (not to be taken)' block and a lab-heavy narrative column as over-extraction traps",
+  "expectedSheetType": "hk_en",
+  "medicines": [
+    {
+      "name": "Furosemide",
+      "strength": "40mg",
+      "amount": "1 tab",
+      "frequency": "every morning",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Furosemide",
+      "strength": "20mg",
+      "amount": "1 tab",
+      "frequency": "at midday (12:00)",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Apixaban",
+      "strength": "2.5mg",
+      "amount": "1 tab",
+      "frequency": "BD",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Metformin XR",
+      "strength": "750mg",
+      "amount": "1 tab",
+      "frequency": "daily with breakfast",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Pantoprazole",
+      "strength": "40mg",
+      "amount": "1 tab",
+      "frequency": "daily, 30 min before breakfast",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Ferrous fumarate",
+      "strength": "210mg",
+      "amount": "1 tab",
+      "frequency": "BD, 1 hr before food",
+      "duration": "x 3/12",
+      "status": "current"
+    },
+    {
+      "name": "Prednisolone",
+      "strength": "5mg",
+      "amount": "8 tabs then 4 tabs",
+      "frequency": "40mg daily x 3/7 then 20mg daily",
+      "duration": "x 10/7",
+      "status": "current"
+    },
+    {
+      "name": "GTN spray",
+      "strength": "400mcg",
+      "amount": "1-2 puffs SL",
+      "frequency": "PRN chest pain, max 3 doses",
+      "duration": null,
+      "status": "current"
+    }
+  ],
+  "stoppedMedicines": [
+    {
+      "name": "Diltiazem SR",
+      "strength": "90mg",
+      "amount": null,
+      "frequency": "daily",
+      "duration": null,
+      "status": "stopped"
+    },
+    {
+      "name": "Ibuprofen",
+      "strength": "400mg",
+      "amount": null,
+      "frequency": "TDS PRN",
+      "duration": null,
+      "status": "stopped"
+    },
+    {
+      "name": "Frusemide",
+      "strength": "20mg",
+      "amount": null,
+      "frequency": "BD",
+      "duration": null,
+      "status": "stopped"
+    },
+    {
+      "name": "Metformin XR",
+      "strength": "1000mg",
+      "amount": null,
+      "frequency": "daily",
+      "duration": null,
+      "status": "changed"
+    },
+    {
+      "name": "Apixaban",
+      "strength": "5mg",
+      "amount": null,
+      "frequency": "BD",
+      "duration": null,
+      "status": "changed"
+    },
+    {
+      "name": "Spironolactone",
+      "strength": "12.5mg",
+      "amount": null,
+      "frequency": "daily",
+      "duration": null,
+      "status": "stopped"
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "Heart Failure Clinic",
+      "when": "10-09-2026 09:15",
+      "tests": null
+    },
+    {
+      "clinic": "Renal SOPD",
+      "when": "6/52",
+      "tests": "RFT and potassium 3 days before"
+    },
+    {
+      "clinic": "Haematology Day Ward",
+      "when": "24-09-2026 14:00",
+      "tests": "Hb and ferritin"
+    }
+  ],
+  "dietLine": "Diet: no added salt; fluid restriction 1.2 L per day.",
+  "activityLine": "Activity: walk on the flat as able; no lifting over 5 kg x 6/52.",
+  "warningSigns": [
+    "Weight gain of more than 1.5 kg over 2 days, or new ankle swelling",
+    "Breathless at rest, or needing to sleep sitting up",
+    "Black stool, vomiting blood, or bleeding that will not stop",
+    "Chest pain not relieved by 3 doses of GTN spray"
+  ],
+  "warningAction": "Do not wait for the clinic appointment. Attend A&E or call 999.",
+  "hospitalContact": "Ward 11C enquiries: 2xxx xxxx (24 hrs)",
+  "unreadable": [],
+  "traps": {
+    "stoppedOrChangedBlock": [
+      "Diltiazem",
+      "Ibuprofen",
+      "Frusemide",
+      "frusemide",
+      "Spironolactone",
+      "1000mg",
+      "12.5mg",
+      "90mg",
+      "400mg"
+    ],
+    "narrativeLabsAndScores": [
+      "3120",
+      "eGFR 32",
+      "HbA1c 8.1",
+      "Ferritin 14",
+      "QTc 428",
+      "Braden 18",
+      "Barthel index 85",
+      "LVEF 32%",
+      "LVEF 34%"
+    ]
+  },
+  "notes": [
+    "Empty Duration cells are printed blank, not '-', so the truth value is null.",
+    "followUp[0] prints no test: 'bring all medicine boxes' is an instruction, not a test, so tests is null.",
+    "The stopped/changed block is headed '(not to be taken)', so none of those drugs is a discharge medicine.",
+    "Entries here are printed under a heading that says they are not to be taken after discharge. Returning one is correct so long as its `status` is not \"current\" and it never reaches the plan; returning one as \"current\" is the dangerous failure this sheet exists to catch."
+  ]
+}

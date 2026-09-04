@@ -74,6 +74,42 @@ export function safeTemplate(type: CardType, facts: TemplateFacts): Speakable {
 }
 
 /**
+ * Folded for comparison only: width and case normalised, every space dropped, so "47.5 mg" and
+ * "47.5mg" compare equal while a different spelling still does not. Nothing stored or shown is
+ * ever rewritten by this — it only decides whether a card agrees with its own quote.
+ */
+function fold(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+}
+
+/**
+ * The one traceability check a server can actually make (principle IV).
+ *
+ * Nothing here can see the photograph, so "does this quote match the page" is out of reach — that
+ * is the gap `tests/eval/stress.md` found, where a line printed "Breathless at rest" and came back
+ * quoted "Breathlessness at rest". What IS in reach is internal consistency: a medicine's `name`
+ * and `strength` are copied off the same printed line as its `quote`, so they have to be findable
+ * inside it. When they are not, one of the two was rewritten somewhere between the page and the
+ * reply, and the card no longer stands on the line it cites.
+ *
+ * A card that fails is kept, not dropped — losing a medicine is worse than showing a doubtful one
+ * — and marked `unverified` so the UI can say this is the line to check against the paper. Cards
+ * with no typed fields to cross-check (warnings, diet, activity) always pass: this asserts
+ * agreement where it can be asserted, and claims nothing where it cannot.
+ */
+export function verifiedAgainstQuote(card: Card): boolean {
+  if (card.type !== "medicine") return true;
+  const quote = fold(card.source?.quote ?? "");
+  // A medicine card with no quote has nothing to stand on, which is the thing being checked for.
+  if (quote.length === 0) return false;
+  return (["name", "strength"] as const).every((key) => {
+    const value = card.facts?.[key];
+    if (typeof value !== "string" || value.trim().length === 0) return true;
+    return quote.includes(fold(value));
+  });
+}
+
+/**
  * Runs the rules over one model reading.
  *
  * `provider` is narrowed to `phrase` so a test can pass `{ phrase: vi.fn() }` — and so it is
@@ -112,7 +148,9 @@ export async function runReadingPipeline(
 
   // Sequential on purpose: a hit is rare, and firing every repair at once would turn one bad
   // reading into a burst of model calls.
-  for (const card of buildCards(stored)) {
+  for (const built of buildCards(stored)) {
+    // Traceability first, so the mark survives whatever the banned-term repair does to the body.
+    const card = verifiedAgainstQuote(built) ? built : { ...built, unverified: true };
     const check = checkCard(card);
     if (check.ok) {
       cards.push(card);
@@ -158,8 +196,21 @@ async function repair(
   }
 
   filter.templated += 1;
+  // A stopped medicine now HAS a safe template. It used to fall through to `SEE_THE_SHEET`,
+  // because `templateFor("medicine", …)` states the name, the dose and the frequency as a plain
+  // sentence about what to take — "药名 Digoxin，0.25mg，每日一次。" — and the one clause saying
+  // the page had stopped it lived only in the model's own wording, which is what gets discarded
+  // here. Pointing at the paper was safe but lost the drug's name, and the live stress runs hit
+  // this on roughly one read in three: the model writes `spoken` text for a withdrawn drug that
+  // reads like a live dose ("0.25mg 每日"), the numeric-target rule rejects it, and the family
+  // ends up told to look at a sheet without being told what to look for.
+  //
+  // `lib/rules/card-order.ts` copies `status` into `facts`, so `templateFor` dispatches to
+  // `stoppedMedicineTemplate` on its own: the drug is named verbatim, the fact is attributed to
+  // the page, and no frequency, amount or duration is stated.
+  const body = safeTemplate(card.type, facts);
   // A template is rule-generated, so the AI label comes off with the AI text.
-  return { ...card, body: safeTemplate(card.type, facts), aiGenerated: false };
+  return { ...card, body, aiGenerated: false };
 }
 
 /**

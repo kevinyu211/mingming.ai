@@ -60,6 +60,7 @@
       "amount": null,
       "frequency": "每日一次",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "苯磺酸氨氯地平片 5mg，每日一次。張紙冇寫每次食幾多粒。",
         "cmn": "苯磺酸氨氯地平片 5mg，每天一次。这张纸没有写每次服几片。",
@@ -77,6 +78,7 @@
       "amount": null,
       "frequency": "每日两次 随餐",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "盐酸二甲双胍片 0.5g，每日兩次，隨餐食。張紙冇寫每次食幾多粒。",
         "cmn": "盐酸二甲双胍片 0.5g，每天两次，随餐服用。这张纸没有写每次服几片。",
@@ -94,6 +96,7 @@
       "amount": null,
       "frequency": "每晚一次",
       "duration": null,
+      "status": "current",
       "spoken": {
         "yue": "阿托伐他汀钙片 20mg，每晚一次。張紙冇寫每次食幾多粒。",
         "cmn": "阿托伐他汀钙片 20mg，每晚一次。这张纸没有写每次服几片。",

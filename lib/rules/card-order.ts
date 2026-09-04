@@ -124,7 +124,7 @@ export function buildCards(reading: SheetReading | StoredReading): Card[] {
   }
 
   reading.medicines.forEach((m, i) => {
-    cards.push({
+    const card: Card = {
       id: `medicine-${i}`,
       type: "medicine",
       body: m.spoken,
@@ -136,8 +136,17 @@ export function buildCards(reading: SheetReading | StoredReading): Card[] {
         amount: m.amount,
         frequency: m.frequency,
         duration: m.duration,
+        // Carried into `facts` as well as onto the card, because `facts` is what the phrase
+        // repair prompt and the fixed templates are given: a re-worded stopped medicine has to
+        // still be able to say that the page stopped it.
+        status: m.status,
       },
-    });
+    };
+    // A medicine the page has stopped or changed is still shown — a family that never hears the
+    // drug named cannot know it has been withdrawn — but it is flagged, so the UI can render it
+    // as ended rather than as due, and `draftPlan` schedules nothing that carries this flag.
+    if (m.status !== "current") card.stopped = true;
+    cards.push(card);
   });
 
   reading.followUp.forEach((f, i) => {
@@ -186,7 +195,9 @@ export function buildCards(reading: SheetReading | StoredReading): Card[] {
       source: u.source,
       // The wording is a rule template; only a non-empty description came from the model.
       aiGenerated: u.description.trim().length > 0,
-      facts: { section: u.section, description: u.description },
+      // `field` names the one value the gap costs ("followUp[0].when"). It stays out of the body:
+      // the body is rule-written text that must carry no digits at all, and a field path has them.
+      facts: { section: u.section, field: u.field, description: u.description },
     });
   });
 

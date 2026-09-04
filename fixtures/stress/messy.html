@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>dense.png photographed badly on a table</title>
+<style>
+  /* STRESS FIXTURE 2 of 4 — "messy": dense.png as a bad phone photo.
+     Rotated 8.2deg, slightly out of focus, a shadow gradient falling across the
+     right-hand third, and a thumb coming in over the right margin that covers the
+     Duration cells of medicine rows 6 and 7. Rendered at 1100x1500, JPEG q55, so
+     the type also carries mild compression artefacts.
+
+     Geometry, in dense.png page pixels scaled by --k (render.ts logs the row boxes):
+       medicine-table rows: header 1030-1051, then ~21px per row; row 6 (Ferrous
+       fumarate, "x 3/12") 1158-1180, row 7 (Prednisolone, "x 10/7") 1180-1201.
+       Duration column runs page x 1116-1200, so the thumb only has to cover
+       x >= 1116, y 1150-1205 to take those two values off the page while leaving
+       every drug name, strength, dose and frequency legible. */
+  :root {
+    --k: 0.72016;          /* 893 / 1240 */
+    --paper-w: 893px;
+    --paper-h: 1263px;     /* 893 * 1754/1240 */
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1100px; height: 1500px; overflow: hidden; position: relative;
+    background:
+      radial-gradient(ellipse at 20% 8%, rgba(255,238,204,0.50), rgba(255,238,204,0) 56%),
+      repeating-linear-gradient(93deg,
+        #8f8a80 0px, #99948a 9px, #857f76 17px, #928d83 26px, #9d988e 34px, #8a857c 43px),
+      #8f8a80;
+  }
+  /* table grain */
+  body::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(92deg, rgba(48,44,38,0.20) 0px, rgba(48,44,38,0) 4px, rgba(255,248,236,0.09) 7px, rgba(48,44,38,0) 12px);
+    filter: blur(1.2px);
+  }
+
+  .paper {
+    position: absolute;
+    width: var(--paper-w); height: var(--paper-h);
+    left: 104px; top: 118px;
+    transform: rotate(8.2deg);
+    box-shadow: 12px 20px 30px rgba(30,26,20,0.42), 2px 3px 6px rgba(30,26,20,0.30);
+    background: #fff;
+  }
+  .paper img {
+    display: block; width: 100%; height: 100%;
+    /* slightly out of focus, and the paper is not evenly lit */
+    filter: blur(0.75px) contrast(0.90) brightness(0.96);
+  }
+  .paper .lighting {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(102deg,
+      rgba(255,246,224,0.22) 0%, rgba(255,246,224,0.06) 30%,
+      rgba(36,28,16,0.05) 58%, rgba(36,28,16,0.18) 100%);
+  }
+
+  /* thumb over the right margin, covering the Duration cells of rows 6 and 7 */
+  .thumb {
+    position: absolute;
+    left: 770px; top: 775px; width: 340px; height: 150px;
+    border-radius: 48% 52% 50% 50% / 50% 50% 50% 50%;
+    transform: rotate(-4deg);
+    background:
+      radial-gradient(ellipse at 68% 30%, rgba(158,116,92,0.97) 0%, rgba(96,64,44,0.98) 44%, rgba(40,25,16,0.99) 82%);
+    box-shadow: -10px 6px 22px rgba(20,12,6,0.45);
+    filter: blur(2.2px);
+  }
+  .thumb::after { /* nail highlight, so it reads as a thumb rather than a blot */
+    content: ""; position: absolute; left: 52%; top: 24%;
+    width: 132px; height: 96px; border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+    background: radial-gradient(ellipse at 42% 34%, rgba(214,178,152,0.52), rgba(126,86,62,0.06) 72%);
+    transform: rotate(-9deg);
+  }
+
+  /* shadow gradient thrown across the right-hand third of the frame */
+  .castshadow {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(99deg,
+      rgba(24,16,6,0.00) 0%, rgba(24,16,6,0.00) 58%, rgba(24,16,6,0.15) 70%,
+      rgba(24,16,6,0.33) 85%, rgba(24,16,6,0.46) 100%);
+    filter: blur(7px);
+  }
+</style>
+</head>
+<body>
+  <div class="paper">
+    <img src="dense.png" alt="">
+    <div class="lighting"></div>
+    <div class="thumb"></div>
+  </div>
+  <div class="castshadow"></div>
+</body>
+</html>

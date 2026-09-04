@@ -30,6 +30,7 @@ import {
   saveProfile,
   saveUiLocale,
   subscribe,
+  type Profile,
   type Script,
 } from "@/lib/storage/local";
 
@@ -57,6 +58,29 @@ export interface LocaleContextValue {
 }
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
+
+/**
+ * Writes a language choice to the profile, creating one if there is none.
+ *
+ * These setters used to write only `if (profile)`, which was safe while `/setup` ran before
+ * anything else and every user therefore had a profile. In v2, 記錄 is the entry screen and
+ * `/setup` is never visited, so a fresh phone has no profile — and every language change was held
+ * in React state alone and lost on the next reload. Someone switching the app to English watched
+ * it revert to Cantonese the moment they navigated.
+ *
+ * The label stays empty. It is a relationship word (阿媽, 老豆), never a name, and nothing may
+ * invent one on the user's behalf — `lib/storage/local.ts` documents it as never a person's name,
+ * and an empty string is honestly "not set".
+ */
+function persist(patch: Partial<Pick<Profile, "dialect" | "script">>): void {
+  const profile = loadState().profile;
+  saveProfile({
+    label: profile?.label ?? "",
+    dialect: profile?.dialect ?? DEFAULT_DIALECT,
+    script: profile?.script ?? scriptForDialect(DEFAULT_DIALECT),
+    ...patch,
+  });
+}
 
 export function LocaleProvider({
   children,
@@ -88,17 +112,24 @@ export function LocaleProvider({
   }, [defaultDialect]);
 
   const setDialect = useCallback((next: Dialect) => {
-    const nextScript = scriptForDialect(next);
     setDialectState(next);
+    // English is not a written form of Chinese, so choosing it as the SPOKEN language must leave
+    // the card script alone. `scriptForDialect` is a yue/else binary and answers "hans" for "en" —
+    // which would quietly turn a Cantonese-reading family's traditional cards into simplified the
+    // moment they asked 明仔 to speak English. Harmless while it was held in memory; not once the
+    // choice is persisted.
+    if (next === "en") {
+      persist({ dialect: next });
+      return;
+    }
+    const nextScript = scriptForDialect(next);
     setScriptState(nextScript);
-    const profile = loadState().profile;
-    if (profile) saveProfile({ ...profile, dialect: next, script: nextScript });
+    persist({ dialect: next, script: nextScript });
   }, []);
 
   const setScript = useCallback((next: Script) => {
     setScriptState(next);
-    const profile = loadState().profile;
-    if (profile) saveProfile({ ...profile, script: next });
+    persist({ script: next });
   }, []);
 
   const setLocale = useCallback((next: UiLocale) => {
@@ -106,10 +137,7 @@ export function LocaleProvider({
     saveUiLocale(next);
     setScriptState((current) => {
       const nextScript = scriptForLocale(next, current);
-      if (nextScript !== current) {
-        const profile = loadState().profile;
-        if (profile) saveProfile({ ...profile, script: nextScript });
-      }
+      if (nextScript !== current) persist({ script: nextScript });
       return nextScript;
     });
   }, []);

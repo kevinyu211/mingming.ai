@@ -196,6 +196,7 @@ describe("diffReading", () => {
     const expected = loadExpected();
     expected.unreadable.push({
       section: "出院医嘱",
+      field: "activityLine.text",
       description: "thumb over the corner",
       source: { section: "出院医嘱", lineIndex: 7, quote: "" },
     });

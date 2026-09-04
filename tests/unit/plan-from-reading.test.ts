@@ -80,6 +80,7 @@ function medicine(parts: Partial<Medicine> = {}): Medicine {
     amount: "1 tab",
     frequency: "daily",
     duration: null,
+    status: "current",
     spoken: sp("Amlodipine"),
     source: src("1. Amlodipine 5mg 1 tab daily"),
     ...parts,
@@ -181,6 +182,59 @@ describe("draftPlan / what is included", () => {
       sheet({ medicines: [medicine(), medicine({ name: "Aspirin", frequency: null })] }),
     );
     expect(plan.items.map((item) => item.label)).toEqual(["Amlodipine 5mg"]);
+  });
+
+  /**
+   * The regression from tests/eval/stress.md, "The worst single miss", written out exactly as the
+   * run returned it: two drugs printed under 「停用药物（出院后不再服用） Discontinued — do not
+   * take」 came back as discharge medicines with a frequency, and the plan scheduled them. The
+   * spoken card said they were stopped; the typed record could not, because there was no field
+   * for it. Now there is, and the plan is the thing that has to honour it.
+   */
+  it("never schedules a medicine the page has stopped (stress.md, the worst single miss)", () => {
+    const plan = draftPlan(
+      sheet({
+        medicines: [
+          medicine({ name: "Metoprolol succinate 缓释片", strength: "47.5mg", frequency: "每日一次，早餐后服" }),
+          medicine({
+            name: "Digoxin",
+            strength: "0.25mg",
+            frequency: "每日一次",
+            status: "stopped",
+            source: src("Digoxin 0.25mg，每日一次，已于住院第2天停用。"),
+          }),
+          medicine({
+            name: "Glimepiride",
+            strength: "2mg",
+            frequency: "每日一次",
+            status: "stopped",
+            source: src("Glimepiride 2mg，每日一次，已于住院第4天停用，改为下方出院带药方案。"),
+          }),
+        ],
+      }),
+    );
+    expect(plan.items.map((item) => item.label)).toEqual(["Metoprolol succinate 缓释片 47.5mg"]);
+    const everything = JSON.stringify(plan);
+    expect(everything).not.toContain("Digoxin");
+    expect(everything).not.toContain("Glimepiride");
+  });
+
+  it("never schedules a dose the stay changed either", () => {
+    const plan = draftPlan(
+      sheet({ medicines: [medicine({ name: "Apixaban", strength: "5mg", status: "changed" })] }),
+    );
+    expect(plan.items).toEqual([]);
+  });
+
+  /**
+   * A reading stored before `status` existed has none. Skipping it is the deliberate direction:
+   * that list is exactly the one that may hold a withdrawn drug, and an empty medicine plan the
+   * user rebuilds by re-reading the sheet is a smaller harm than one stopped dose scheduled.
+   */
+  it("schedules nothing from a stored reading that predates the status field", () => {
+    const legacy = medicine();
+    delete (legacy as Partial<Medicine>).status;
+    expect(draftPlan(sheet({ medicines: [legacy] })).items).toEqual([]);
   });
 
   it("skips a medicine whose frequency is blank", () => {

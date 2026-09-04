@@ -8,6 +8,7 @@
  */
 import type { Dialect, StoredReading } from "@/lib/domain/schemas";
 import type { Memory } from "@/lib/memory/types";
+import type { SheetsState } from "@/lib/sheets/types";
 
 /** The one and only key. Bump the suffix if the shape ever changes incompatibly. */
 export const KEY = "fitornot.v1";
@@ -52,8 +53,27 @@ export interface StoredState {
   /** Interface language. Top-level, not on the profile, so it can be set before setup runs. */
   uiLocale?: UiLocale;
   profile?: Profile;
+  /**
+   * Superseded by `sheets.active.reading`. Kept in the type as a one-way migration path: a phone
+   * that stored a reading before the sheets block existed still has one here, and
+   * `lib/sheets/store.ts` turns it into the active sheet on first load. The sheets layer only ever
+   * READS these two; nothing writes them any more, and nothing may start depending on them again.
+   */
   reading?: StoredReading;
+  /** Superseded by `sheets.active.plan`. Same one-way migration path as `reading` above. */
   plan?: FollowUpPlan;
+  /**
+   * The one active sheet and the read-only history behind it (v2 build brief §5).
+   *
+   * It lives under this same key, like `memory`, so `deleteEverything()` below is still one
+   * `removeItem` — "you can wipe it" stays a single provable move rather than a list of places to
+   * remember. Every write goes through `saveState`, so `assertNoImageData` covers the thread and
+   * the archive exactly as it covers everything else: a sheet can never carry its own photograph.
+   *
+   * Optional because a fresh phone has no sheets, and because `emptyState()` must keep returning
+   * the two-field object the storage suite asserts byte for byte.
+   */
+  sheets?: SheetsState;
   /**
    * What the app remembers between sessions: the last few sheets read and the last few questions
    * asked (`lib/memory/`). It lives under this same key on purpose — `deleteEverything()` below
@@ -163,6 +183,15 @@ export function saveReading(reading: StoredReading): StoredState {
 
 export function savePlan(plan: FollowUpPlan): StoredState {
   return saveState({ plan });
+}
+
+/**
+ * Writes the sheets block. Goes through `saveState` like everything else, so the image guard runs
+ * over the whole of it — a thread message or an archived sheet that somehow carried a photograph
+ * would throw rather than persist. `lib/sheets/store.ts` is the only intended caller.
+ */
+export function saveSheets(sheets: SheetsState): StoredState {
+  return saveState({ sheets });
 }
 
 /**

@@ -4,6 +4,7 @@
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredReading } from "@/lib/domain/schemas";
+import type { Sheet } from "@/lib/sheets/types";
 import {
   KEY,
   deleteEverything,
@@ -11,6 +12,7 @@ import {
   savePlan,
   saveProfile,
   saveReading,
+  saveSheets,
   saveState,
   setConsented,
   subscribe,
@@ -180,6 +182,71 @@ describe("deleteEverything", () => {
     expect(memory.getItem(KEY)).toBeNull();
     expect(memory.length).toBe(0);
     expect(loadState()).toEqual({ version: 1, consentedAt: null });
+  });
+});
+
+/**
+ * The sheets block (v2 build brief §5). `lib/sheets/store.ts` owns the behaviour; what matters
+ * here is that adding it did not cost the two guarantees this file exists for — one key, and one
+ * image guard over everything written through it.
+ */
+describe("the sheets block", () => {
+  const sheet: Sheet = {
+    id: "sheet-1",
+    capturedAt: "2026-09-02T02:00:00.000Z",
+    pageCount: 2,
+    title: "出院紙",
+    reading,
+    plan: { items: [], followUpDate: null },
+    thread: [
+      {
+        id: "sheet-1-m0",
+        role: "agent",
+        text: "我睇完你張紙。",
+        at: "2026-09-02T02:00:01.000Z",
+        origin: "rule",
+      },
+    ],
+    doses: { m0: { key: "m0", taken: 1, day: "2026-09-02" } },
+    briefing: { phase: "end", step: 3 },
+    checkin: "pending",
+    archivedAt: null,
+  };
+
+  it("round-trips under the same single key as everything else", () => {
+    setConsented("2026-09-02T01:00:00.000Z");
+    saveSheets({ active: sheet, archive: [{ ...sheet, id: "sheet-0", archivedAt: "2026-09-02T02:00:00.000Z" }] });
+
+    const state = loadState();
+    expect(state.sheets?.active).toEqual(sheet);
+    expect(state.sheets?.archive).toHaveLength(1);
+    expect(state.consentedAt).toBe("2026-09-02T01:00:00.000Z");
+    expect(memory.length).toBe(1);
+    expect(memory.key(0)).toBe(KEY);
+  });
+
+  it("is absent on a fresh phone, so an empty state stays exactly two fields", () => {
+    expect(loadState()).toEqual({ version: 1, consentedAt: null });
+    expect(loadState().sheets).toBeUndefined();
+  });
+
+  it("is taken by deleteEverything along with the rest", () => {
+    saveSheets({ active: sheet, archive: [] });
+    deleteEverything();
+    expect(memory.getItem(KEY)).toBeNull();
+    expect(loadState().sheets).toBeUndefined();
+  });
+
+  it("is covered by the image guard, however deep inside a thread the data hides", () => {
+    const withImage = {
+      active: {
+        ...sheet,
+        thread: [{ ...sheet.thread[0], image: "iVBOR" }],
+      },
+      archive: [],
+    } as unknown as { active: Sheet; archive: Sheet[] };
+    expect(() => saveSheets(withImage)).toThrow(/image/i);
+    expect(memory.getItem(KEY)).toBeNull();
   });
 });
 

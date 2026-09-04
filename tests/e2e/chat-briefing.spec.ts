@@ -1,0 +1,528 @@
+/**
+ * `/chat` — the conversation with 明仔, end to end (v2 build brief §6).
+ *
+ * What is worth proving in a browser rather than in a unit test is the *sequence*: that the amber
+ * block reads itself before anything else is said, that nothing on the screen is a play button,
+ * that a refusal lands in the thread instead of on another screen, and that a question never
+ * reaches the network when a rule has already answered it.
+ *
+ * The read-failure cases at the bottom are the ones `tests/e2e/fallbacks.spec.ts` covered on the
+ * v1 `/read` screen. They are re-covered here because that screen is gone: `/read` redirects, and
+ * the pages the camera left behind are now read by `/chat`. The pages are seeded straight into
+ * `sessionStorage` — the same key `components/Capture.tsx` writes — so these cases stand up
+ * without the capture flow, which another agent is rebuilding in parallel.
+ *
+ * `/api/read` and `/api/ask` are mocked from the same fixtures the unit tests parse. `/api/tts`
+ * is left alone: it answers 503 for real here (`TTS_PROVIDER=browser`), and with no cloud voice
+ * and no device voice in headless Chrome, `speak()` returns `text-only` — which is exactly the
+ * state the screen has to keep working in.
+ */
+import { expect, test, type Page } from "@playwright/test";
+import { UI } from "../../lib/i18n/ui";
+import { expectedCards, expectedSource, mockAsk, mockRead, seedConsent } from "./helpers";
+
+/** `components/Capture.tsx`'s hand-off key. Not imported: that file is another agent's. */
+const PENDING_IMAGES_KEY = "fitornot.pending-images";
+
+/** Copy that lives in `components/DeclineState.tsx`, not in `lib/i18n/ui.ts`. */
+const INVALID_TITLE = "讀唔到呢張紙";
+
+/** Copy that lives in `components/chat/ChatBar.tsx`, word for word from the v1 voice bar. */
+const NO_MIC = "而家聽唔到你講嘢，打字問就得。";
+
+const cards = expectedCards("hk_en");
+const warnings = cards.filter((c) => c.type === "warning");
+const pieces = cards.filter((c) => c.type !== "warning" && c.type !== "noWarnings");
+
+/** How long the whole briefing takes to type itself out: 6 pieces at ~360 ms a clause. */
+const BRIEFING_TIMEOUT = 180_000;
+
+/**
+ * Puts one real JPEG into the hand-off slot, as if the camera had just downscaled a page.
+ *
+ * A real encode rather than a stub string: the 413 path re-decodes these bytes and re-encodes
+ * them smaller, so a placeholder would make the retry silently not happen and the test would
+ * pass for the wrong reason.
+ */
+async function seedPendingPage(page: Page, count = 1): Promise<void> {
+  await page.goto("/settings");
+  await page.evaluate(
+    ({ key, n }) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1600;
+      canvas.height = 1200;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("no 2d context");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#000000";
+      ctx.font = "64px sans-serif";
+      ctx.fillText("DISCHARGE SUMMARY", 60, 160);
+      const base64 = canvas.toDataURL("image/jpeg", 0.85).split(",")[1];
+      const pages = Array.from({ length: n }, () => ({ mediaType: "image/jpeg", base64 }));
+      window.sessionStorage.setItem(key, JSON.stringify(pages));
+    },
+    { key: PENDING_IMAGES_KEY, n: count },
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* The briefing                                                               */
+/* -------------------------------------------------------------------------- */
+
+test.describe("The sheet arrives as a conversation, red flags first", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedConsent(page);
+  });
+
+  test("opens with the fixed intro, then the amber block, then 明唔明？", async ({ page }) => {
+    await page.goto("/chat?sample=hk_en");
+
+    // 1. The intro is a fixed template, not a model turn.
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    // 2. The warning block renders and is never behind a tap (constitution II).
+    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
+    await expect(block).toBeVisible();
+    for (const warning of warnings) {
+      await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
+    }
+
+    // Every red flag traces to its own line on the page (constitution IV).
+    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
+      warnings.length,
+    );
+
+    // 3. Teach-back, one piece at a time.
+    const ask = page.getByRole("region", { name: UI.hant["brief.understandQuestion"], exact: true });
+    await expect(ask).toBeVisible();
+    await expect(ask.getByRole("button", { name: UI.hant["brief.repeat"] })).toBeVisible();
+    await expect(ask.getByRole("button", { name: UI.hant["brief.understand"] })).toBeVisible();
+    // Nothing counts down before the first piece has been said.
+    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "6"))).toHaveCount(0);
+  });
+
+  test("nothing on the screen is a play button", async ({ page }) => {
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    // The v1 controls are gone: 明仔 speaks on his own and the only voice control is the toggle.
+    for (const gone of ["cards.playAll", "cards.play", "cards.stop"] as const) {
+      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
+    }
+    await expect(
+      page.getByRole("button", { name: UI.hant["chat.muteSpeaker"], exact: true }),
+    ).toBeVisible();
+  });
+
+  test("明白 walks the whole sheet and ends with 講完晒", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
+    await page.goto("/chat?sample=hk_en");
+
+    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
+    await expect(understand).toBeVisible();
+
+    for (let i = 0; i < pieces.length; i += 1) {
+      await understand.click();
+      // The piece lands in the thread as its own message, in the card's own words.
+      await expect(page.getByText(pieces[i].body.yue, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
+      if (i < pieces.length - 1) await expect(understand).toBeVisible({ timeout: 30_000 });
+    }
+
+    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(understand).toHaveCount(0);
+
+    // The 睇「跟進」 offer appears exactly once, under the last medicine.
+    await expect(page.getByRole("button", { name: UI.hant["brief.trackLink"] })).toHaveCount(1);
+  });
+
+  test("a spoken fact opens the line it came from", async ({ page }) => {
+    await page.goto("/chat?sample=hk_en");
+    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
+    await expect(block).toBeVisible();
+
+    await block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
+
+    const sheet = page.getByRole("dialog");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("heading", { name: UI.hant["source.title"] })).toBeVisible();
+    // Verbatim page text: never converted, never translated, never trimmed.
+    await expect(sheet.getByText(expectedSource("hk_en", "warning-0").quote)).toBeVisible();
+  });
+
+  test("the briefing resumes where it stopped after a reload", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
+    await page.goto("/chat?sample=hk_en");
+
+    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
+    await expect(understand).toBeVisible();
+    await understand.click();
+    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "5"))).toBeVisible();
+
+    await page.reload();
+
+    // The piece already said is still in the thread, and the briefing is waiting at the same place
+    // rather than starting over.
+    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "5"))).toBeVisible();
+    await expect(page.getByText(pieces[1].body.yue, { exact: true })).toHaveCount(0);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The bar and the questions                                                  */
+/* -------------------------------------------------------------------------- */
+
+test.describe("Questions go into the same thread", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedConsent(page);
+    // Headless Chrome has no SpeechRecognition, which is the honest keyboard-only path and also
+    // the one a test can drive.
+    await page.addInitScript(() => {
+      const globalWindow = window as unknown as Record<string, unknown>;
+      delete globalWindow.SpeechRecognition;
+      delete globalWindow.webkitSpeechRecognition;
+      delete globalWindow.MediaRecorder;
+    });
+  });
+
+  test("with no microphone the bar is a keyboard and says so", async ({ page }) => {
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(NO_MIC, { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: UI.hant["bar.hold"] }),
+    ).toHaveCount(0);
+  });
+
+  test("an answer arrives as a message, with the line it came from", async ({ page }) => {
+    const log = await mockAsk(page, "answered");
+    await page.goto("/chat?sample=hk_en");
+    // Wait for 明仔 to finish his opening line, so the thread order is the one a reader sees.
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
+    await field.fill("白色嗰粒係朝早定夜晚食？");
+    await page.getByRole("button", { name: UI.hant["bar.send"], exact: true }).click();
+
+    // The question is in the thread as the reader's own bubble…
+    await expect(page.getByText("白色嗰粒係朝早定夜晚食？", { exact: true })).toBeVisible();
+    // …and the answer follows it, typed out, with the AI label a model-written line must carry.
+    await expect(
+      page.getByText("張紙寫住 Amlodipine 5mg 每日一次，冇分朝早定夜晚。", { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(UI.hant["aiChip"]).first()).toBeVisible();
+    expect(log.count).toBe(1);
+  });
+
+  test("a question about changing a medicine is refused in the thread, with no model call", async ({
+    page,
+  }) => {
+    const log = await mockAsk(page, "answered");
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
+    await field.fill("可唔可以食多啲？");
+    await page.getByRole("button", { name: UI.hant["bar.send"], exact: true }).click();
+
+    // Styled by outcome, in the thread — not a separate screen (brief §6).
+    await expect(page.getByRole("heading", { name: UI.hant["ask.refused"] })).toBeVisible();
+    // The gate runs before any network call, so nothing was sent (constitution III, FR-011).
+    expect(log.count).toBe(0);
+  });
+
+  test("a crisis question answers from the fixed list and sends nothing", async ({ page }) => {
+    const log = await mockAsk(page, "answered");
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
+    await field.fill("我想死");
+    await page.getByRole("button", { name: UI.hant["bar.send"], exact: true }).click();
+
+    await expect(page.getByRole("heading", { name: UI.hant["ask.referral"] })).toBeVisible();
+    // The referral keeps its resource list.
+    await expect(page.getByRole("link", { name: UI.hant["ask.referralCall"] }).first()).toBeVisible();
+    expect(log.count).toBe(0);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Redirects and the read failure paths                                       */
+/* -------------------------------------------------------------------------- */
+
+test.describe("The old routes still land somewhere sensible", () => {
+  test("/read and /ask redirect into the conversation", async ({ page }) => {
+    await seedConsent(page);
+
+    await page.goto("/read?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    await page.goto("/ask");
+    // No sheet parameter this time, but one is already active, so the conversation is still here.
+    await expect(page).toHaveURL(/\/chat$/);
+  });
+});
+
+test.describe("The reading service is down or refuses, on /chat", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedConsent(page);
+  });
+
+  test("502 offers the bundled sample sheet, and the sample reads", async ({ page }) => {
+    await mockRead(page, { status: 502 });
+    await seedPendingPage(page);
+    await page.goto("/chat");
+
+    await expect(
+      page.getByRole("heading", { name: UI.hant["fallback.modelUnavailable"], exact: true }),
+    ).toBeVisible();
+
+    // One tap out (SC-007): the sample is bundled, so it works with the route still failing.
+    await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
+    await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+  });
+
+  test("422 shows the couldn't-read state", async ({ page }) => {
+    await mockRead(page, { status: 422 });
+    await seedPendingPage(page);
+    await page.goto("/chat");
+
+    await expect(page.getByRole("heading", { name: INVALID_TITLE, exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }),
+    ).toBeVisible();
+  });
+
+  test("413 re-downscales and retries exactly once", async ({ page }) => {
+    const log = await mockRead(page, { status: 413 });
+    await seedPendingPage(page);
+    await page.goto("/chat");
+
+    await expect(page.getByRole("heading", { name: INVALID_TITLE, exact: true })).toBeVisible();
+    // contracts/api-read.md: the original pages, then the smaller re-encode. Never a third.
+    expect(log.count).toBe(2);
+  });
+
+  test("a photo that is not a discharge sheet is declined, not summarised", async ({ page }) => {
+    await mockRead(page, "unknown");
+    await seedPendingPage(page);
+    await page.goto("/chat");
+
+    await expect(
+      page.getByRole("heading", { name: UI.hant["notASheet.title"], exact: true }),
+    ).toBeVisible();
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The daily check-in                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The one place a number about a medicine reaches the screen, and therefore the one place this
+ * product can do real harm. Three things are asserted that the design canvas gets wrong:
+ *
+ *   · the question quotes the printed frequency VERBATIM and names no time of day;
+ *   · 食咗 counts *times left today*, never 「夜晚仲有一次」;
+ *   · 未食 quotes the page back and stops — no instruction, and no promise of a second ask,
+ *     because there are no notifications in this product.
+ *
+ * All three medicines on the Hong Kong sheet are countable — "daily", "BD with meals" and
+ * "nocte" each state a number of doses a day, so each gets a counter. What none of them may ever
+ * produce is a time: `remaining()` returns an integer, and the card prints the clause verbatim
+ * beside it. A clause that states an interval rather than a count (「每四小時一次」) or a ceiling
+ * ("up to 4 times a day") still gets no counter at all.
+ *
+ * The check-in asks about the FIRST countable medicine in the order the page lists them, which is
+ * why the name and clause below are the first row of the medicines table rather than a chosen one.
+ */
+test.describe("The check-in counts times, never clock times", () => {
+  const NAME = "Amlodipine 5mg";
+  const PRINTED = "daily";
+  const QUESTION = UI.hant["checkin.question"]
+    .replace("{name}", NAME)
+    .replace("{printed}", PRINTED);
+
+  test("asks after the briefing, quotes the page, and counts down", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
+    await seedConsent(page);
+    await page.goto("/chat?sample=hk_en");
+
+    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
+    await expect(understand).toBeVisible();
+    for (let i = 0; i < pieces.length; i += 1) {
+      await expect(understand).toBeVisible({ timeout: 30_000 });
+      await understand.click();
+      await expect(page.getByText(pieces[i].body.yue, { exact: true })).toBeVisible({
+        timeout: 30_000,
+      });
+    }
+    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Only now does the in-app check-in become available (brief §6).
+    await expect
+      .poll(async () =>
+        page.evaluate(
+          () =>
+            (JSON.parse(window.localStorage.getItem("fitornot.v1") ?? "{}") as {
+              sheets?: { active?: { checkin?: string } };
+            }).sheets?.active?.checkin ?? null,
+        ),
+      )
+      .toBe("pending");
+    // (poll: the phase change and the check-in flag land in the same write.)
+
+    // 未食 first: it must quote the page and say nothing else.
+    await page.goto("/chat?checkin=1");
+    await expect(page.getByText(QUESTION, { exact: true })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: UI.hant["checkin.notYet"], exact: true }).click();
+    await expect(
+      page.getByText(UI.hant["checkin.notYetReply"].replace("{printed}", PRINTED), { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+    // The canvas's 「記得飯後食一粒。我陣間再問你。」 is an instruction and a promise of a
+    // notification that cannot exist. Neither may appear.
+    await expect(page.getByText("我陣間再問你")).toHaveCount(0);
+    await expect(page.getByText("記得飯後食一粒")).toHaveCount(0);
+
+    // 食咗 on the other branch: one dose down, counted in times, never in hours.
+    await page.evaluate(() => {
+      const raw = JSON.parse(window.localStorage.getItem("fitornot.v1") ?? "{}") as {
+        sheets?: { active?: { checkin?: string } };
+      };
+      if (raw.sheets?.active) raw.sheets.active.checkin = "open";
+      window.localStorage.setItem("fitornot.v1", JSON.stringify(raw));
+    });
+    await page.goto("/chat");
+    await expect(page.getByText(QUESTION, { exact: true }).last()).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: UI.hant["checkin.took"], exact: true }).click();
+    // Amlodipine prints "daily" — one dose a day — so the single 食咗 finishes it and the reply is
+    // the all-done one. Both branches still count in TIMES: `checkin.tookReply` says 「今日仲有 N
+    // 次」 and never an hour, and neither string may name a part of the day.
+    await expect(
+      page.getByText(UI.hant["checkin.tookReplyAll"], { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+    for (const clock of ["夜晚仲有", "夜晚", "朝早", "晚上", "上午", "下午"]) {
+      await expect(page.getByText(clock)).toHaveCount(0);
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The bar as a gesture, and the one voice control                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A stand-in for `SpeechRecognition`, so the hold gesture can be driven end to end. Headless
+ * Chrome ships none, which is a real state the bar handles (the keyboard-only tests above) but
+ * makes the gesture itself untestable — and the gesture is the whole bottom of the screen.
+ */
+async function stubRecognition(page: Page, transcript: string): Promise<void> {
+  await page.addInitScript((said: string) => {
+    class FakeRecognition {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      maxAlternatives = 1;
+      onresult: ((event: unknown) => void) | null = null;
+      onerror: ((event: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      private heard = false;
+
+      start(): void {
+        window.setTimeout(() => {
+          const result = Object.assign([{ transcript: said }], { isFinal: true });
+          this.heard = true;
+          this.onresult?.({ resultIndex: 0, results: [result] });
+        }, 60);
+      }
+      stop(): void {
+        window.setTimeout(() => this.onend?.(), 10);
+      }
+      abort(): void {
+        this.heard = false;
+        window.setTimeout(() => this.onend?.(), 10);
+      }
+    }
+    (window as unknown as Record<string, unknown>).SpeechRecognition = FakeRecognition;
+    delete (window as unknown as Record<string, unknown>).MediaRecorder;
+  }, transcript);
+}
+
+test.describe("The bar is one control: hold to talk, tap to type", () => {
+  test("holding past the threshold listens, and letting go sends", async ({ page }) => {
+    const log = await mockAsk(page, "answered");
+    await seedConsent(page);
+    await stubRecognition(page, "覆診要帶咩？");
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+
+    const bar = page.getByRole("button", { name: UI.hant["bar.hold"] });
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    // Past 220 ms the microphone opens and the bar says what it is doing.
+    await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible();
+    await page.mouse.up();
+
+    await expect(page.getByText("覆診要帶咩？", { exact: true })).toBeVisible();
+    expect(log.count).toBe(1);
+  });
+
+  test("a tap under the threshold opens the keyboard instead", async ({ page }) => {
+    await seedConsent(page);
+    await stubRecognition(page, "覆診要帶咩？");
+    await page.goto("/chat?sample=hk_en");
+
+    const bar = page.getByRole("button", { name: UI.hant["bar.hold"] });
+    await bar.click();
+    await expect(
+      page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true }),
+    ).toBeFocused();
+    // Nothing was heard and nothing was sent.
+    await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toHaveCount(0);
+  });
+});
+
+test.describe("The speaker toggle is the only voice control", () => {
+  test("silencing stops the sound and the text keeps typing", async ({ page }) => {
+    await seedConsent(page);
+    await page.goto("/chat?sample=hk_en");
+
+    // The 讀住 indicator is status: it is there while there is sound, and it is not a button.
+    const reading = page.getByText(UI.hant["chat.reading"], { exact: true });
+    await expect(reading.first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: UI.hant["chat.reading"] })).toHaveCount(0);
+
+    await page.getByRole("button", { name: UI.hant["chat.muteSpeaker"], exact: true }).click();
+    await expect(reading).toHaveCount(0);
+    // The label flips to the way back, and the words carry on arriving.
+    await expect(
+      page.getByRole("button", { name: UI.hant["chat.unmuteSpeaker"], exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(
+      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+  });
+});

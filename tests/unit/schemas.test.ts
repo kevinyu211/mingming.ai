@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import {
+  MedicineSchema,
   SheetReadingSchema,
   SpeakableSchema,
+  UnreadableRegionSchema,
   sheetReadingJsonSchema,
   askResultJsonSchema,
   AskResultSchema,
@@ -94,6 +96,42 @@ describe("SheetReading schema", () => {
     expect(SheetReadingSchema.safeParse(bad).success).toBe(false);
   });
 
+  /**
+   * `status` is required, not optional, and that is the point of it. A sheet's "not to be taken"
+   * block was previously indistinguishable from its discharge list once typed, so the plan
+   * scheduled a withdrawn drug (tests/eval/stress.md). An optional field would let the model go
+   * on being silent about it.
+   */
+  it("requires a status on every medicine and takes only the three the page can say", () => {
+    const base = {
+      name: "Digoxin",
+      strength: "0.25mg",
+      amount: null,
+      frequency: "每日一次",
+      duration: null,
+      spoken: { yue: "y", cmn: "c", en: "e" },
+      source: { section: "停用药物", lineIndex: 0, quote: "Digoxin 0.25mg，每日一次" },
+    };
+    expect(MedicineSchema.safeParse(base).success, "status must not be optional").toBe(false);
+    for (const status of ["current", "stopped", "changed"]) {
+      expect(MedicineSchema.safeParse({ ...base, status }).success, status).toBe(true);
+    }
+    for (const status of ["discontinued", "held", "", null, true]) {
+      expect(MedicineSchema.safeParse({ ...base, status }).success, String(status)).toBe(false);
+    }
+  });
+
+  it("requires a field on every unreadable region, nullable for a whole-region gap", () => {
+    const base = {
+      section: "Discharge Medications",
+      description: "a thumb covers the Duration column",
+      source: { section: "Discharge Medications", lineIndex: null, quote: "" },
+    };
+    expect(UnreadableRegionSchema.safeParse(base).success, "field must not be optional").toBe(false);
+    expect(UnreadableRegionSchema.safeParse({ ...base, field: "medicines[5].duration" }).success).toBe(true);
+    expect(UnreadableRegionSchema.safeParse({ ...base, field: null }).success).toBe(true);
+  });
+
   it("rejects a diagnosis-shaped field (there is nowhere to put one)", () => {
     const reading = {
       sheetType: "unknown",
@@ -164,6 +202,31 @@ describe("JSON schema export for structured outputs", () => {
 
     expect(contract.$defs.Speakable.required.slice().sort()).toEqual(["cmn", "en", "yue"]);
     expect(Object.keys(contract.$defs.Speakable.properties).sort()).toEqual(["cmn", "en", "yue"]);
+  });
+
+  /**
+   * The checked-in contract is what a second implementation would read. It has to name the two
+   * fields the safety rules now depend on, or a client could satisfy the contract and still hand
+   * `draftPlan` a stopped medicine with nothing to tell it apart.
+   */
+  it("the checked-in contract requires Medicine.status and UnreadableRegion.field", () => {
+    type Def = { required: string[]; properties: Record<string, { enum?: string[] }> };
+    const contract = JSON.parse(
+      readFileSync(
+        path.resolve(__dirname, "../../specs/001-discharge-sheet-agent/contracts/sheet-reading.schema.json"),
+        "utf8",
+      ),
+    ) as { $defs: { Medicine: Def; UnreadableRegion: Def } };
+
+    expect(contract.$defs.Medicine.required).toContain("status");
+    expect(contract.$defs.Medicine.properties.status.enum).toEqual(["current", "stopped", "changed"]);
+    expect(contract.$defs.UnreadableRegion.required).toContain("field");
+
+    // and the exported schema the model is actually held to agrees with it.
+    const exported = sheetReadingJsonSchema() as {
+      properties: { medicines: { items: { required: string[] } } };
+    };
+    expect(exported.properties.medicines.items.required).toContain("status");
   });
 
   it("AskResult requires grounded, citedCardId and answer", () => {

@@ -1,0 +1,133 @@
+{
+  "id": "mixed",
+  "file": "mixed.png",
+  "mediaType": "image/png",
+  "authoredBy": "answer key written from fixtures/stress/mixed.html, not from any model output",
+  "stresses": "bilingual sheet: English drug names inside Chinese instruction lines, bilingual section headings, a ruled laboratory-results table sitting directly above the medicines, and a '停用药物（出院后不再服用）' block — both of which are traps for a reader that hoovers up unrelated numbers",
+  "expectedSheetType": "cn_zh",
+  "medicines": [
+    {
+      "name": "Metoprolol succinate 缓释片",
+      "strength": "47.5mg",
+      "amount": null,
+      "frequency": "每日一次，早餐后服",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Rivaroxaban",
+      "strength": "15mg",
+      "amount": null,
+      "frequency": "每日一次，晚餐时服",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Empagliflozin",
+      "strength": "10mg",
+      "amount": null,
+      "frequency": "每日一次，早晨服",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Spironolactone",
+      "strength": "20mg",
+      "amount": null,
+      "frequency": "每日一次，早餐后服",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Insulin glargine",
+      "strength": "100IU/mL",
+      "amount": "12单位",
+      "frequency": "每晚睡前皮下注射",
+      "duration": null,
+      "status": "current"
+    }
+  ],
+  "stoppedMedicines": [
+    {
+      "name": "Digoxin",
+      "strength": "0.25mg",
+      "amount": null,
+      "frequency": "每日一次",
+      "duration": null,
+      "status": "stopped"
+    },
+    {
+      "name": "Glimepiride",
+      "strength": "2mg",
+      "amount": null,
+      "frequency": "每日一次",
+      "duration": null,
+      "status": "stopped"
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "心内科门诊",
+      "when": "2周后",
+      "tests": "复查血钾、肌酐"
+    },
+    {
+      "clinic": "内分泌科门诊",
+      "when": "4周后",
+      "tests": "复查糖化血红蛋白"
+    }
+  ],
+  "dietLine": "低盐低脂饮食，每日食盐不超过5克",
+  "activityLine": "适当活动，两周内避免提重物及剧烈运动",
+  "warningSigns": [
+    "如出现胸闷、气促加重、双下肢水肿或夜间不能平卧，请立即到急诊科就诊",
+    "如出现牙龈出血、黑便或皮肤大片瘀斑，请立即到急诊科就诊",
+    "如出现头晕、心慌、出汗等低血糖表现，请立即进食并到急诊科就诊"
+  ],
+  "warningAction": "请立即到急诊科就诊",
+  "hospitalContact": "联系电话：0XXX-XXXXXXX（心内科病房，24小时）",
+  "unreadable": [],
+  "traps": {
+    "labBlock": [
+      "NT-proBNP",
+      "3820",
+      "pg/mL",
+      "pmol/L",
+      "µmol/L",
+      "μmol/L",
+      "eGFR",
+      "Vitamin B12",
+      "维生素B12",
+      "148",
+      "96",
+      "5.6",
+      "138",
+      "41",
+      "2.3",
+      "9.4",
+      "mmol/L",
+      "INR",
+      "国际标准化比值",
+      "参考范围",
+      "估算肾小球滤过率"
+    ],
+    "discontinuedBlock": [
+      "Digoxin",
+      "Glimepiride",
+      "0.25mg",
+      "停用"
+    ],
+    "imagingBlock": [
+      "心室率 88",
+      "二尖瓣中度反流",
+      "胆囊未见结石",
+      "下腔静脉增宽"
+    ]
+  },
+  "notes": [
+    "The numbered prefix ('1. ') is stripped from raw/text and kept in quote, the convention fixtures/sheets/cn_zh.expected.json uses.",
+    "The '维生素B12 Vitamin B12 148 pmol/L' row is a lab result, not a medicine. Returning it as a medicine is an invented medicine.",
+    "None of the labBlock strings appears anywhere else on the page, so a hit is a leak, never a coincidence.",
+    "Entries here are printed under a heading that says they are not to be taken after discharge. Returning one is correct so long as its `status` is not \"current\" and it never reaches the plan; returning one as \"current\" is the dangerous failure this sheet exists to catch."
+  ]
+}

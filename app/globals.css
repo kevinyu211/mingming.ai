@@ -1,72 +1,157 @@
 @import "tailwindcss";
 
 /*
- * Palette and type from design.md section 3, as approved on the design canvas.
+ * ============================================================================
+ * v2 design tokens — docs/v2-build-brief.md section 3
+ * ============================================================================
  *
  * Warm, never clinical: no hospital blue, no lab-coat white, and amber rather than red for the
  * warning card so it reads as "attention" and not as a verdict about the person.
  *
- * Light only, deliberately. The canvas was designed and reviewed in one palette; a dark theme that
+ * WHY THESE DIFFER FROM design-canvas/workflow-v2.dc.html
+ * ------------------------------------------------------
+ * The canvas is the layout spec and the string spec; it is NOT the colour spec. Its greys and its
+ * jade were picked on a 27" monitor and several of them carry real words at ratios a
+ * seventy-year-old cannot read on a phone in a ward. Measured, on the canvas's own #FBF8F3:
+ *
+ *     #1E8C6E jade on white   4.17:1   every filled button label
+ *     #7C7A73 grey on ground  4.06:1   subtitles, dose meta
+ *     #A5A29A grey on ground  2.41:1   section headings, the 仲有 N 段 line
+ *     #8FA79E grey on tint    2.28:1   the notification timestamp
+ *
+ * All four are below WCAG AA 4.5:1 and all four were carrying text. The jade is darkened to
+ * #1A7D63 (5.05:1 with white) and the three greys collapse into ONE --muted (#6D6B65) that clears
+ * 4.5:1 on every ground it lands on. Do not re-lighten them to match the canvas: the canvas is
+ * wrong here and the brief says so. --faint survives only for glyphs that carry no meaning.
+ *
+ * Measured ratios are on each line below (WCAG 2.1 relative luminance). Two pairs are traps and
+ * are called out where they appear:
+ *   - --muted on --paper is 4.37:1. Text over a page thumbnail uses --ink (12.18:1).
+ *   - --warn-stroke on --warn-btn is 4.42:1. The amber button's LABEL uses --warn-ink (6.37:1);
+ *     --warn-stroke only ever sits on --warn-bg.
+ *
+ * Light only, deliberately. The canvas was designed and reviewed in one palette; a dark theme
  * nobody has looked at is a worse demo than a light app on a dark phone, and `color-scheme: light`
  * keeps the browser's own controls in step. Bring dark back by designing it, not by inverting.
  */
 :root {
   color-scheme: light;
 
-  --ground: #faf7f2;
-  --ink: #1f1b16;
-  --muted: #6b625a;
-  --faint: #b5ab9f;
-  --accent: #0f6e68;
-  --accent-ink: #ffffff;
-  /*
-   * The canvas drew this amber as #B8600F, which measures 4.0:1 on its own tint — under the 4.5:1
-   * the brief requires, and the warning card is the one place text must never be hard to read.
-   * #A85408 is the nearest amber that clears it: 4.80 on the tint, 4.99 on the ground, 5.33 on
-   * white. Same hue, same "attention not alarm" reading.
-   */
-  --warning-fg: #a85408;
-  --warning-bg: #fff1df;
-  --danger: #b3402e;
+  --ground: #fbf8f3; /* phone background */
   --card: #ffffff;
-  --card-border: #e9e2d8;
-  --hairline: #ede7de;
-  --soft: #f3eee6;
-  --panel: #f0ebe3;
-  --track: #ede8e0;
-  --chip: #e6f0ef;
+  --ink: #2a2723; /* 14.03:1 on ground, 14.86 on white — ALL primary text */
+  --muted: #6d6b65; /* 5.03:1 on ground, 5.33 on white, 4.56 on --neutral — ALL secondary text */
+  --faint: #b4b0a7; /* 2.04:1 — DECORATION ONLY: chevrons, rules, dots. Never a word to read. */
+
+  --jade: #1a7d63; /* 5.05:1 with white — every filled button, at any text size */
+  --jade-shadow: #12604c; /* the `0 4px 0` chunky shadow under a jade button */
+  --jade-ink: #14705a; /* 5.67:1 on ground, 5.34 on tint, 5.18 on tint-2 — jade-coloured TEXT */
+  --jade-tint: #e9f4f0; /* secondary button fill */
+  --jade-tint-2: #e4f1ec; /* inline chips, dose pips */
+  --jade-bubble: #dcefe7; /* the user's own message bubble */
+  --jade-edge: #cfe4dc; /* the tinted button's shadow */
+
+  --neutral: #f1ede4; /* quiet fills, keyboard-mode buttons */
+  --neutral-2: #f6f3ec; /* the 「張紙寫：」 quote block */
+  --hairline: #eae5dc;
+  --paper: #ede8df; /* page thumbnails — put --ink on this, never --muted */
+
+  --warn-bg: #fcf2dc;
+  --warn-ink: #6b4b03; /* 7.17:1 on warn-bg, 6.37 on warn-btn — ALL warning text */
+  --warn-stroke: #8a6104; /* 4.98:1 on warn-bg — the triangle, the 讀住 waveform. warn-bg only. */
+  --warn-dot: #c88a16; /* 2.66:1 — DECORATION ONLY: bullets, the unread dot */
+  --warn-btn: #f6e4be;
+
+  /*
+   * Derived, not from the brief: the brief's palette has no edge colour for the neutral chunky
+   * button (the canvas draws that variant flat). Mixed rather than invented so it can never drift
+   * away from --neutral. Decoration; nothing reads on it.
+   */
+  --neutral-edge: color-mix(in srgb, var(--neutral) 82%, var(--ink));
+
+  /*
+   * Legacy aliases. Every screen built before the v2 redesign is styled with these names and the
+   * other agents' files still use them, so they are kept and re-pointed at the v2 palette rather
+   * than deleted — one rename would break four files this agent does not own.
+   */
+  --accent: var(--jade);
+  --accent-ink: #ffffff;
+  --warning-fg: var(--warn-ink);
+  --warning-bg: var(--warn-bg);
+  --danger: #b3402e; /* 5.37:1 on ground, 5.69 on white — not a v2 token, unchanged, still passes */
+  --card-border: var(--hairline);
+  --soft: var(--neutral-2);
+  --panel: var(--neutral);
+  --track: var(--neutral);
+  --chip: var(--jade-tint-2);
 
   /* Height reserved for the fixed disclaimer footer, so nothing hides behind it. */
   --disclaimer-height: 4.5rem;
 
   /*
-   * System font stacks, no web-font download. iOS/macOS resolve to SF Pro and PingFang, which is
-   * where the native feel comes from; Android gets Noto Sans CJK; Windows gets YaHei/JhengHei.
+   * TYPE.
+   *
+   * Chinese is the SYSTEM HK stack and is never web-loaded. A CJK webfont is several megabytes per
+   * weight; this app gets demoed on conference wifi in a Hong Kong ward, and a mother waiting on a
+   * 4 MB font download to hear her discharge sheet read out is a failed demo. PingFang HK ships on
+   * every iPhone, Noto Sans CJK HK on every Android, and both are what the canvas's Noto Sans HK
+   * was standing in for anyway.
+   *
+   * Latin is Instrument Sans, self-hosted by next/font/google (app/layout.tsx), Latin subset only,
+   * display: swap — about 30 kB, and it never blocks first paint.
    */
-  --font-noto-tc:
-    "PingFang HK", "PingFang TC", "Hiragino Sans TC", "Noto Sans TC", "Noto Sans CJK TC",
-    "Microsoft JhengHei", "Source Han Sans TC", sans-serif;
+  --font-hk:
+    "PingFang HK", "PingFang TC", "Hiragino Sans TC", "Noto Sans CJK HK", "Noto Sans HK",
+    "Noto Sans TC", "Microsoft JhengHei", "Source Han Sans HK", sans-serif;
+  --font-noto-tc: var(--font-hk);
   --font-noto-sc:
     "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei",
     "Source Han Sans SC", sans-serif;
-  --font-inter:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, ui-sans-serif, system-ui,
-    sans-serif;
+  /*
+   * --font-instrument-sans is published by next/font in app/layout.tsx. The system stack after it
+   * is not decoration: if the font fails to load (offline first run, blocked CDN at build time)
+   * every Latin string still renders in SF Pro or Segoe rather than in Times.
+   */
+  --font-latin-stack:
+    var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    Roboto, ui-sans-serif, system-ui, sans-serif;
+  --font-inter: var(--font-latin-stack);
 }
 
 @theme inline {
   --color-ground: var(--ground);
+  --color-card: var(--card);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
+
+  --color-jade: var(--jade);
+  --color-jade-shadow: var(--jade-shadow);
+  --color-jade-ink: var(--jade-ink);
+  --color-jade-tint: var(--jade-tint);
+  --color-jade-tint-2: var(--jade-tint-2);
+  --color-jade-bubble: var(--jade-bubble);
+  --color-jade-edge: var(--jade-edge);
+
+  --color-neutral: var(--neutral);
+  --color-neutral-2: var(--neutral-2);
+  --color-neutral-edge: var(--neutral-edge);
+  --color-hairline: var(--hairline);
+  --color-paper: var(--paper);
+
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-ink: var(--warn-ink);
+  --color-warn-stroke: var(--warn-stroke);
+  --color-warn-dot: var(--warn-dot);
+  --color-warn-btn: var(--warn-btn);
+
+  /* Legacy names, same colours. See the alias block above. */
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --color-warning-fg: var(--warning-fg);
   --color-warning-bg: var(--warning-bg);
   --color-danger: var(--danger);
-  --color-card: var(--card);
   --color-card-border: var(--card-border);
-  --color-hairline: var(--hairline);
   --color-soft: var(--soft);
   --color-panel: var(--panel);
   --color-track: var(--track);
@@ -74,21 +159,26 @@
 
   --radius-card: 16px;
 
-  --font-sans:
-    var(--font-inter), var(--font-noto-tc), var(--font-noto-sc), ui-sans-serif, system-ui,
-    sans-serif;
-  --font-hant: var(--font-noto-tc), var(--font-inter), sans-serif;
-  --font-hans: var(--font-noto-sc), var(--font-inter), sans-serif;
+  /* `--font-latin-stack` is the raw token; the theme name must differ or the var self-references. */
+  --font-sans: var(--font-latin-stack), var(--font-hk), ui-sans-serif, system-ui, sans-serif;
+  --font-hant: var(--font-hk), var(--font-latin-stack), sans-serif;
+  --font-hans: var(--font-noto-sc), var(--font-latin-stack), sans-serif;
+  --font-latin: var(--font-latin-stack), var(--font-hk), sans-serif;
 
-  /* design.md section 3, iOS scale: large title 34, card title 22, dose 20, body 18, meta 15. */
-  --text-display: 34px;
-  --text-display--line-height: 1.15;
-  --text-display--letter-spacing: -0.6px;
+  /*
+   * Sizes are the canvas's own and are deliberately large: page titles 30/700, agent bubbles
+   * 18–20, warning items 22/500, dose names 22/700, secondary lines 15–18.
+   */
+  --text-display: 30px;
+  --text-display--line-height: 1.3;
+  --text-display--letter-spacing: -0.4px;
+  --text-title: 26px;
+  --text-title--line-height: 1.35;
   --text-card-title: 22px;
   --text-card-title--line-height: 1.35;
   --text-card-title--letter-spacing: -0.3px;
   --text-med: 20px;
-  --text-med--line-height: 1.4;
+  --text-med--line-height: 1.6;
   --text-body: 18px;
   --text-body--line-height: 1.55;
   --text-meta: 15px;
@@ -97,8 +187,74 @@
   --text-fine--line-height: 1.45;
 
   /* One soft, layered card shadow. Separation comes from the shadow, not from an outline. */
-  --shadow-card: 0 1px 2px rgb(31 27 22 / 0.04), 0 8px 24px rgb(31 27 22 / 0.045);
-  --shadow-raised: 0 6px 18px rgb(15 110 104 / 0.24);
+  --shadow-card: 0 1px 3px rgb(42 39 35 / 0.08);
+  --shadow-raised: 0 6px 18px rgb(26 125 99 / 0.24);
+  --shadow-sheet: 0 -10px 34px rgb(42 39 35 / 0.16);
+
+  /*
+   * The canvas's five animations. The @keyframes themselves are declared at the top level below,
+   * not inside @theme, so an inline `animation: rise .4s ease both` works as well as `animate-rise`.
+   */
+  --animate-wv: wv 0.9s ease-in-out infinite;
+  --animate-blink: blink 1.1s infinite;
+  --animate-rise: rise 0.4s ease both;
+  --animate-sheet-up: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
+  --animate-edge: edge 2.2s ease-in-out infinite;
+}
+
+/*
+ * The canvas's animation primitives, verbatim.
+ *   wv       the voice waveform — a status indicator, never a control (brief section 6)
+ *   blink    the typing caret and the reading-screen dots
+ *   rise     anything that arrives in the thread
+ *   sheetUp  the bottom sheet
+ *   edge     the camera's document-edge frame
+ * Declared at the top level so plain CSS `animation:` shorthand can name them too.
+ */
+@keyframes wv {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes edge {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @layer base {
@@ -123,7 +279,7 @@
     padding-bottom: var(--disclaimer-height);
   }
 
-  /* Simplified text gets the SC face; traditional keeps the TC face from --font-sans. */
+  /* Simplified text gets the SC face; traditional keeps the HK face from --font-sans. */
   [lang="zh-CN"],
   [lang="zh-Hans"],
   .font-hans {
@@ -144,13 +300,13 @@
   }
 
   :where(button, a, [role="button"]):focus-visible {
-    outline: 3px solid var(--accent);
+    outline: 3px solid var(--jade);
     outline-offset: 2px;
   }
 }
 
 @layer utilities {
-  /* Minimum tap target, design.md section 7: 48 x 48, no exceptions. */
+  /* Minimum tap target, brief section 3: 48 x 48, no exceptions. */
   .tap {
     min-block-size: 48px;
     min-inline-size: 48px;
@@ -165,7 +321,7 @@
 
   /* Printed facts: drug names, strengths, frequencies. Tabular figures, a size up. */
   .dose {
-    font-family: var(--font-inter), var(--font-noto-tc), sans-serif;
+    font-family: var(--font-latin-stack), var(--font-hk), sans-serif;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.2px;
   }
@@ -181,9 +337,62 @@
   .hairrow + .hairrow {
     border-top: 1px solid var(--hairline);
   }
+
+  /*
+   * The chunky pressable: a 4px hard shadow that the button sinks INTO when pressed, so the press
+   * is visible on a phone held at arm's length by someone who cannot feel a hover state.
+   * `components/ChunkyButton.tsx` sets --chunky-edge; anything else that needs the same physics
+   * (the dose 食咗 button, the camera 完成) can add `.chunky` and set the variable itself.
+   */
+  .chunky {
+    --chunky-edge: var(--jade-shadow);
+    box-shadow: 0 4px 0 var(--chunky-edge);
+    transition:
+      transform 0.08s ease,
+      box-shadow 0.08s ease,
+      background-color 0.15s ease;
+  }
+
+  .chunky:active:not(:disabled) {
+    transform: translateY(4px);
+    box-shadow: 0 0 0 var(--chunky-edge);
+  }
+
+  /* A pressed-flat chunky button: same footprint, no lift. Used for "already done" states. */
+  .chunky-flat {
+    box-shadow: none;
+    transform: none;
+  }
 }
 
-/* design.md section 3: respect reduced motion. */
+/*
+ * ============================================================================
+ * Camera chrome — the ONLY dark surface in the app (Agent D, /capture)
+ * ============================================================================
+ *
+ * The palette above is one light theme, and every token in it is measured against --ground. The
+ * camera screen inverts that: it is a near-black sheet with white text on it, so none of those
+ * tokens apply and none of them should be stretched to cover it. These five values are the design
+ * canvas's `isCamera` block verbatim (design-canvas/workflow-v2.dc.html), lifted out of inline
+ * styles so the one dark surface in the product is still named rather than hard-coded.
+ *
+ * Contrast on --cam-ground (#141312, luminance 0.0064):
+ *   #ffffff        19.3:1   the hint, the shutter, the close glyph
+ *   --cam-chip     13.9:1   the mint pill under the frame
+ *   --cam-frame    10.9:1   the guide frame — decoration, carries no words
+ *
+ * Nothing else in this file changes. If a sixth camera value is ever needed it belongs here too.
+ */
+:root {
+  --cam-ground: #141312; /* the flat fill behind the gradient */
+  --cam-grad-top: #2b2823; /* linear-gradient(160deg, top, mid 48%, bottom) */
+  --cam-grad-mid: #171614;
+  --cam-grad-bottom: #100f0e;
+  --cam-frame: #6fd3b4; /* the 2.5px document guide frame */
+  --cam-chip: #bdeedd; /* the mint pill's label */
+}
+
+/* Respect reduced motion. Kills wv/blink/rise/sheetUp/edge as well as every transition. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

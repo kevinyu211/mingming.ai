@@ -1,0 +1,133 @@
+{
+  "id": "handwritten",
+  "file": "handwritten.png",
+  "mediaType": "image/png",
+  "authoredBy": "answer key written from fixtures/stress/handwritten.html, not from any model output",
+  "stresses": "a typeset form annotated in ink: the follow-up date and time are handwritten into a blank rule, two printed doses are struck through and replaced by hand, and the 'Doctor's remarks' box holds a deliberately illegible scrawl",
+  "expectedSheetType": "hk_en",
+  "medicines": [
+    {
+      "name": "Paracetamol",
+      "strength": "500mg",
+      "amount": "2 tabs",
+      "frequency": "QID PRN pain",
+      "duration": "x 5 days",
+      "status": "current"
+    },
+    {
+      "name": "Bisoprolol",
+      "strength": "2.5mg",
+      "amount": "1 tab",
+      "frequency": "daily",
+      "duration": null,
+      "status": "current",
+      "handwritten": "strength",
+      "supersededPrinted": "5mg (struck through in ink)"
+    },
+    {
+      "name": "Aspirin",
+      "strength": "80mg",
+      "amount": "1 tab",
+      "frequency": "daily after breakfast",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Gliclazide MR",
+      "strength": "60mg",
+      "amount": "1 tab",
+      "frequency": "daily before breakfast",
+      "duration": null,
+      "status": "current"
+    },
+    {
+      "name": "Tramadol",
+      "strength": "50mg",
+      "amount": "1 cap",
+      "frequency": "BD PRN",
+      "duration": "x 5 days",
+      "status": "current",
+      "handwritten": "frequency",
+      "supersededPrinted": "TDS (struck through in ink)"
+    }
+  ],
+  "stoppedMedicines": [
+    {
+      "name": "Diclofenac",
+      "strength": "50mg",
+      "amount": null,
+      "frequency": "TDS PRN",
+      "duration": null,
+      "status": "stopped"
+    },
+    {
+      "name": "Glucosamine",
+      "strength": "500mg",
+      "amount": null,
+      "frequency": "TDS",
+      "duration": null,
+      "status": "stopped"
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "Orthopaedic SOPD",
+      "when": "17/9/26 2:30 pm",
+      "tests": null,
+      "handwritten": "when"
+    },
+    {
+      "clinic": "Physiotherapy",
+      "when": "08-09-2026 10:00",
+      "tests": null
+    }
+  ],
+  "handwrittenValues": [
+    "17/9/26 2:30 pm",
+    "2.5mg",
+    "BD PRN"
+  ],
+  "dietLine": "Diet: normal diet, less sugar. Drink plenty of water.",
+  "activityLine": "Activity: partial weight bearing with a walking frame x 2 weeks, then review. Knee exercises as taught by the physiotherapist, 3 times a day.",
+  "warningSigns": [
+    "Fever above 38 C",
+    "Redness, swelling or discharge from the wound",
+    "Calf pain, or the leg becomes hot and swollen"
+  ],
+  "warningAction": "Attend A&E. Do not wait for the follow-up appointment.",
+  "hospitalContact": "Ward 6A enquiries: 2xxx xxxx",
+  "unreadable": [
+    {
+      "section": "Doctor's Remarks",
+      "what": "the remarks box is filled with an illegible handwritten scrawl; no word in it can be made out",
+      "matchAny": [
+        "remark",
+        "scrawl",
+        "handwrit",
+        "illegible",
+        "cannot be read",
+        "unreadable",
+        "note"
+      ]
+    }
+  ],
+  "traps": {
+    "stoppedBlock": [
+      "Diclofenac",
+      "Glucosamine"
+    ],
+    "narrative": [
+      "blood loss 250 mL",
+      "tourniquet time 62 min",
+      "Haemoglobin 10.4",
+      "Knee flexion 85",
+      "6.2 to 11.4"
+    ]
+  },
+  "notes": [
+    "The ink value supersedes the struck-through printed value: 'Bisoprolol 2.5mg' and 'Tramadol ... BD PRN' are the truth. Returning '5mg' or 'TDS' means the reader took the crossed-out value.",
+    "'District nurse to remove clips on 12-09-2026' is arguably a third follow-up; it is not counted against the reader either way.",
+    "The physiotherapy line prints no clinic name as such; 'Physiotherapy' and 'Rehabilitation Block 2/F' are both defensible for clinic.",
+    "Entries in stoppedMedicines are printed under \"Medicines Stopped This Admission (not to be taken)\". Returning one is correct so long as its `status` is not \"current\" and it never reaches the plan; returning one as \"current\" is the dangerous failure."
+  ]
+}

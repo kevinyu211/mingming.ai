@@ -1,0 +1,31 @@
+"use client";
+
+/**
+ * The transitional screen while `/api/read` streams (v2 build brief §7).
+ *
+ * It says what is happening and how long it takes, and nothing else. No progress bar that can lie
+ * about a stream whose length is unknown, and no reassurance about what the sheet will say — the
+ * app has not read it yet. 明仔 at 92 is the only thing moving.
+ *
+ * The page count comes from the pages actually being sent. When it is unknown the line is dropped
+ * rather than guessed, because 「1 頁」 on a four-page discharge would be a claim about a medical
+ * document (constitution IV).
+ */
+import { useT } from "@/components/LocaleProvider";
+import Mascot from "@/components/Mascot";
+
+export default function ReadingProgress({ pageCount }: { pageCount: number }) {
+  const t = useT();
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
+      <Mascot size={92} state="speaking" />
+      <h1 className="text-display font-bold text-ink">{t("reading.title")}</h1>
+      {pageCount > 0 ? (
+        <p className="text-body text-muted">
+          {t("reading.meta").replace("{n}", String(pageCount))}
+        </p>
+      ) : null}
+      <p className="text-meta text-muted">{t("progress.note")}</p>
+    </div>
+  );
+}

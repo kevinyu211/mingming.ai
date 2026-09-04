@@ -54,10 +54,20 @@ function present(value: string | null | undefined): value is string {
  *   and the tests joined verbatim ("SOPD · fasting bloods"); an entry that printed neither gets an
  *   empty label rather than an invented one. `when` is "" when no time was printed, and a plan
  *   with no printed time can have no `followUpDate`.
- * - One `medicineTime` per medicine that printed a frequency. The label is the name plus the
- *   strength, verbatim, and `when` is the frequency, verbatim. A medicine with no printed
+ * - One `medicineTime` per CURRENT medicine that printed a frequency. The label is the name plus
+ *   the strength, verbatim, and `when` is the frequency, verbatim. A medicine with no printed
  *   frequency is skipped: its card already says the usage is not printed and points at the
  *   pharmacist, and a reminder with no time would be an invention.
+ * - A medicine whose `status` is anything other than `current` is skipped outright, whatever it
+ *   printed. A sheet that lists a drug under 「停用药物（出院后不再服用）」 or "not to be taken"
+ *   has withdrawn it, and a countdown against it would schedule precisely the thing the hospital
+ *   stopped (tests/eval/stress.md, "The worst single miss"). The card still says the page names
+ *   it; the plan is a list of doses to take, and it is not one of them.
+ *
+ *   A reading stored before `status` existed carries none, so its medicines are skipped too. That
+ *   direction is deliberate: an unmarked list is exactly the one that could contain a withdrawn
+ *   drug, and an empty medicine plan the user can rebuild by re-reading the sheet is a smaller
+ *   harm than one stopped dose scheduled silently.
  */
 export function draftPlan(reading: StoredReading | SheetReading): DraftPlan {
   const items: PlanItem[] = [];
@@ -73,6 +83,7 @@ export function draftPlan(reading: StoredReading | SheetReading): DraftPlan {
   }
 
   for (const medicine of reading.medicines ?? []) {
+    if (medicine.status !== "current") continue;
     if (!present(medicine.frequency)) continue;
     items.push({
       kind: "medicineTime",

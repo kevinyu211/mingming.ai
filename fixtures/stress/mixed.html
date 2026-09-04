@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>出院记录 — 东江市第二人民医院（合成压力测试样张）</title>
+<style>
+  /* STRESS FIXTURE 4 of 4 — "mixed".
+     A bilingual mainland-style 出院记录: English drug names sit inside Chinese
+     instruction lines, section headings are bilingual, and a ruled laboratory
+     table sits directly above 出院带药. The lab table is NOT a discharge
+     instruction — it is there to see whether the extractor stays inside its
+     schema instead of hoovering up unrelated numbers (and whether it invents a
+     medicine out of the "Vitamin B12" row). */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #fff; color: #111;
+    font-family: "Songti SC", "SimSun", "STSong", serif;
+    font-size: 17px; line-height: 1.38;
+    padding: 44px 62px 30px 62px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hei { font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .hosp { text-align: center; font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 24px; letter-spacing: 3px; }
+  .hosp small { display: block; font-family: Arial, sans-serif; font-size: 12px; letter-spacing: .6px; margin-top: 3px; color: #333; }
+  .doctype { text-align: center; font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 29px; font-weight: bold; letter-spacing: 9px; margin-top: 6px; }
+  .doctype small { display: block; font-family: Arial, sans-serif; font-size: 13px; font-weight: normal; letter-spacing: 2px; margin-top: 2px; }
+  .rule { border-top: 2px solid #111; margin-top: 9px; }
+  .rule.thin { border-top: 1px solid #111; margin-top: 0; }
+
+  .meta { margin-top: 11px; font-size: 16px; }
+  .meta .row { display: flex; margin-bottom: 4px; }
+  .meta .cell { white-space: nowrap; }
+  .u { display: inline-block; min-width: 118px; border-bottom: 1px solid #111; text-align: center; }
+  .u.w1 { min-width: 66px; }
+  .u.w3 { min-width: 186px; }
+
+  .sec { margin-top: 8px; }
+  .sec > .h {
+    font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 18px; font-weight: bold; letter-spacing: 1.5px;
+    border-left: 5px solid #111; padding-left: 8px; margin-bottom: 3px;
+  }
+  .sec > .h em { font-family: Arial, sans-serif; font-style: normal; font-size: 13px; font-weight: normal; letter-spacing: .4px; color: #333; margin-left: 8px; }
+  .sec .ln { display: block; text-align: justify; }
+  .sec.orders .ln { margin-bottom: 1px; }
+
+  table.lab { width: 100%; border-collapse: collapse; margin-top: 3px; font-size: 15px; }
+  table.lab th, table.lab td { border: 1px solid #111; padding: 3px 7px; text-align: left; }
+  table.lab th { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 13.5px; background: #efefef; letter-spacing: .5px; }
+  table.lab td.v { width: 96px; text-align: right; }
+  table.lab td.un { width: 132px; }
+  table.lab td.rf { width: 168px; color: #333; }
+  table.lab td.fl { width: 54px; text-align: center; font-family: Arial, sans-serif; }
+  .labnote { font-size: 12.5px; color: #444; margin-top: 3px; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+
+  .foot { margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sigwrap { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 17px; }
+  .sigwrap i { font-family: "Kaiti SC", "STKaiti", "KaiTi", serif; font-style: normal; font-size: 23px; border-bottom: 1px solid #111; padding: 0 24px 1px 5px; }
+  .note { margin-top: 10px; border-top: 1px solid #999; padding-top: 5px; font-size: 12px; color: #555; display: flex; justify-content: space-between; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="hosp">东江市第二人民医院<small>DONGJIANG NO.2 PEOPLE'S HOSPITAL &nbsp;&middot;&nbsp; Department of Cardiology</small></div>
+<div class="doctype">出院记录<small>DISCHARGE SUMMARY</small></div>
+<div class="rule"></div>
+
+<div class="meta">
+  <div class="row">
+    <div class="cell" style="width:288px;"><span class="hei">姓名</span> <span class="u">陈某某</span></div>
+    <div class="cell" style="width:200px;"><span class="hei">性别</span> <span class="u w1">男</span></div>
+    <div class="cell" style="width:210px;"><span class="hei">年龄</span> <span class="u w1">71岁</span></div>
+    <div class="cell"><span class="hei">科室</span> <span class="u">心内科</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:288px;"><span class="hei">床号</span> <span class="u w1">XX</span></div>
+    <div class="cell" style="width:410px;"><span class="hei">住院号</span> <span class="u w3">XXXXXXXX</span></div>
+    <div class="cell"><span class="hei">住院天数</span> <span class="u w1">9天</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:498px;"><span class="hei">入院日期</span> <span class="u w3">2026-08-25</span></div>
+    <div class="cell"><span class="hei">出院日期</span> <span class="u w3">2026-09-03</span></div>
+  </div>
+</div>
+<div class="rule thin" style="margin-top:7px;"></div>
+
+<div class="sec">
+  <div class="h">入院情况 <em>On admission</em></div>
+  <span class="ln">患者男，71岁，慢性心力衰竭病史6年，心房颤动病史3年，长期口服抗凝药。入院前1周活动后气促加重，夜间不能平卧，双下肢水肿至小腿中段，体重较平时增加约3公斤。无胸痛，无咯血，无发热。</span>
+  <span class="ln">查体：神志清，颈静脉稍充盈，双肺底可闻及少量湿性啰音，心律绝对不齐，第一心音强弱不等，双下肢中度凹陷性水肿。</span>
+</div>
+
+<div class="sec">
+  <div class="h">出院诊断 <em>Discharge diagnoses</em></div>
+  <span class="ln">1. 慢性心力衰竭急性加重（NYHA III级）</span>
+  <span class="ln">2. 持续性心房颤动</span>
+  <span class="ln">3. 2型糖尿病</span>
+  <span class="ln">4. 慢性肾脏病3期</span>
+  <span class="ln">5. 缺铁性贫血</span>
+</div>
+
+<div class="sec">
+  <div class="h">诊疗经过 <em>Course in hospital</em></div>
+  <span class="ln">入院后予利尿、控制心率及抗凝处理，症状较入院时明显缓解，双下肢水肿消退，夜间可平卧。住院期间调整降糖方案，加用 Empagliflozin，停用原口服降糖药。经上级医师查看，一般情况可，准予今日出院。</span>
+</div>
+
+<div class="sec">
+  <div class="h">主要辅助检查 <em>Imaging and other studies</em></div>
+  <span class="ln">心电图：心房颤动，心室率 88 次/分，未见急性心肌缺血改变。</span>
+  <span class="ln">心脏超声（2026-08-26）：左室射血分数减低，左房增大，二尖瓣中度反流，下腔静脉增宽。</span>
+  <span class="ln">胸片：心影增大，双侧少量胸腔积液。腹部超声：肝脏形态正常，胆囊未见结石。</span>
+</div>
+
+<div class="sec">
+  <div class="h">检验结果（出院前最后一次） <em>Laboratory results before discharge</em></div>
+  <table class="lab">
+    <tr><th>项目 Item</th><th>结果 Result</th><th>单位 Unit</th><th>参考范围 Reference</th><th>提示</th></tr>
+    <tr><td>血钾 Potassium</td><td class="v">5.6</td><td class="un">mmol/L</td><td class="rf">3.5 - 5.3</td><td class="fl">H</td></tr>
+    <tr><td>肌酐 Creatinine</td><td class="v">138</td><td class="un">&micro;mol/L</td><td class="rf">45 - 84</td><td class="fl">H</td></tr>
+    <tr><td>估算肾小球滤过率 eGFR</td><td class="v">41</td><td class="un">mL/min/1.73m&sup2;</td><td class="rf">&gt; 90</td><td class="fl">L</td></tr>
+    <tr><td>糖化血红蛋白 HbA1c</td><td class="v">9.4</td><td class="un">%</td><td class="rf">4.0 - 6.0</td><td class="fl">H</td></tr>
+    <tr><td>血红蛋白 Haemoglobin</td><td class="v">96</td><td class="un">g/L</td><td class="rf">130 - 175</td><td class="fl">L</td></tr>
+    <tr><td>NT-proBNP</td><td class="v">3820</td><td class="un">pg/mL</td><td class="rf">&lt; 125</td><td class="fl">H</td></tr>
+    <tr><td>维生素B12 Vitamin B12</td><td class="v">148</td><td class="un">pmol/L</td><td class="rf">138 - 652</td><td class="fl">&nbsp;</td></tr>
+    <tr><td>国际标准化比值 INR</td><td class="v">2.3</td><td class="un">&mdash;</td><td class="rf">0.8 - 1.2</td><td class="fl">H</td></tr>
+  </table>
+  <div class="labnote">检验科：东江市第二人民医院检验中心　报告时间 2026-09-02 07:15　审核人 张××</div>
+</div>
+
+<div class="sec">
+  <div class="h">出院情况 <em>Condition on discharge</em></div>
+  <span class="ln">患者一般情况可，气促明显缓解，夜间可平卧，双下肢水肿消退，进食睡眠可，二便正常，无胸闷胸痛，无头晕心慌。</span>
+</div>
+
+<div class="sec">
+  <div class="h">出院带药 <em>Discharge medications</em></div>
+  <span class="ln">1. Metoprolol succinate 缓释片 47.5mg，每日一次，早餐后服</span>
+  <span class="ln">2. Rivaroxaban 15mg，每日一次，晚餐时服</span>
+  <span class="ln">3. Empagliflozin 10mg，每日一次，早晨服</span>
+  <span class="ln">4. Spironolactone 20mg，每日一次，早餐后服</span>
+  <span class="ln">5. Insulin glargine 100IU/mL，每晚睡前皮下注射 12单位</span>
+</div>
+
+<div class="sec">
+  <div class="h">停用药物（出院后不再服用） <em>Discontinued &mdash; do not take</em></div>
+  <span class="ln">Digoxin 0.25mg，每日一次，已于住院第2天停用。</span>
+  <span class="ln">Glimepiride 2mg，每日一次，已于住院第4天停用，改为下方出院带药方案。</span>
+</div>
+
+<div class="sec orders">
+  <div class="h">出院医嘱 <em>Discharge instructions</em></div>
+  <span class="ln">1. 低盐低脂饮食，每日食盐不超过5克</span>
+  <span class="ln">2. 出院后继续监测血压、血糖并记录</span>
+  <span class="ln">3. 适当活动，两周内避免提重物及剧烈运动</span>
+  <span class="ln">4. 如出现胸闷、气促加重、双下肢水肿或夜间不能平卧，请立即到急诊科就诊</span>
+  <span class="ln">5. 如出现牙龈出血、黑便或皮肤大片瘀斑，请立即到急诊科就诊</span>
+  <span class="ln">6. 如出现头晕、心慌、出汗等低血糖表现，请立即进食并到急诊科就诊</span>
+  <span class="ln">7. 2周后心内科门诊复诊，复查血钾、肌酐</span>
+  <span class="ln">8. 4周后内分泌科门诊复诊，复查糖化血红蛋白</span>
+</div>
+
+<div class="sec">
+  <div class="h">联系方式 <em>Contact</em></div>
+  <span class="ln">联系电话：0XXX-XXXXXXX（心内科病房，24小时）</span>
+</div>
+
+<div class="foot">
+  <div class="sigwrap">医师签名：<i>周××</i></div>
+  <div class="sigwrap">日期：2026-09-03</div>
+</div>
+
+<div class="note">
+  <span>本页为合成演示样张，患者与医院均为虚构，非真实病历。</span>
+  <span>SYNTHETIC DEMO DOCUMENT &mdash; DJ2-DS-STRESS-04 &mdash; 第 1 页 / 共 1 页</span>
+</div>
+
+</body>
+</html>

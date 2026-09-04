@@ -1,216 +1,205 @@
 /**
- * T033/T034 — the failure paths (quickstart V7), for the parts a browser can actually prove.
+ * The failure paths, on the v2 screens (quickstart V7).
  *
- * The constitution treats failure paths as features, so each one has a designed screen and each
- * way out is one tap (SC-007). What is covered here: the reading service down (502), a reading
- * that will not validate (422), a body over the limit (413), no voice at all, no speech input,
- * and the camera fallbacks.
+ * The constitution treats failure paths as features: camera fails → the photo library; speech
+ * input fails → type; the model fails → the bundled sample; speech output fails → the words stay
+ * on screen. Each has a designed state and each way out is one tap (SC-007).
  *
- * `/api/tts` is deliberately NOT mocked. It answers 503 for real in this environment
- * (`TTS_PROVIDER=browser`), which is the "speak on the device" signal — so deleting
- * `window.speechSynthesis` is enough to reach the text-only state honestly.
+ * ## What this file owns after the redesign, and what it handed over
+ *
+ * The three read failures — 502, 422, 413 — happened on the v1 `/read` screen, which is gone.
+ * They are now on `/chat`, and `tests/e2e/chat-briefing.spec.ts` covers all three there
+ * (`:282`, `:299`, `:310`, plus the not-a-sheet decline at `:320`), including the part that
+ * matters most: that the bundled sample is one tap away and **actually reads** with the route
+ * still failing. Those cases belong to that file now and are not repeated here.
+ *
+ * What was left uncovered by the hand-over is the *seam*: chat-briefing seeds the downscaled
+ * pages straight into `sessionStorage`, deliberately, so it could be written while `/capture` was
+ * still being rebuilt. Nothing proved that a real photograph taken on the real screen reaches
+ * those states at all. The first test below does exactly that and nothing more.
+ *
+ * "No speech input" is likewise chat-briefing's (`:196` for the honest keyboard state, `:207` for
+ * a typed question actually going through). What is here instead is the half no other file can
+ * reach: no speech OUTPUT, and the camera fallbacks including the laptop.
+ *
+ * ## Deleted rather than migrated
+ *
+ * The v1 "typed-sheet path says honestly what it cannot do yet" test drove the 打字輸入 tile into
+ * `DeclineState`'s `typedText` variant. v2 has no typed-input affordance anywhere — `capture.type`
+ * survives only in the orphaned `components/MicButton.tsx` — so there is no screen to drive and
+ * nothing to assert. See the report; the copy still promises it.
+ *
+ * `/api/tts` is deliberately NOT mocked except where a test is about silence. It answers 503 for
+ * real in this environment (`TTS_PROVIDER=browser`), which is the "speak on the device" signal.
  */
+import path from "node:path";
 import { devices, expect, test } from "@playwright/test";
 import { UI } from "../../lib/i18n/ui";
-import { toScript } from "../../lib/i18n/script";
 import {
-  acceptConsent,
-  cardTitles,
-  cards,
-  chooseCantonese,
+  FIXTURE_DIR,
   expectNoHorizontalScroll,
   expectedCards,
   mockRead,
+  noVoiceOutput,
   seedConsent,
-  seedReading,
+  startReading,
   uploadFixture,
 } from "./helpers";
 
 /** Copy that lives in `components/DeclineState.tsx`, not in `lib/i18n/ui.ts`. */
-const INVALID_TITLE = "讀唔到呢張紙";
-const INVALID_BODY = "影清楚啲再試多次，或者用示範紙睇下點運作。";
 const UNAVAILABLE_BODY = "而家連唔到讀紙嗰邊。示範紙照用得，成個流程都睇到。";
-const TYPED_TITLE = "打字輸入仲未做得到";
-const TYPED_BODY = "呢個版本淨係讀得到相。影張相，或者用示範紙睇下點運作。";
 
-/** Copy that lives in `components/VoiceBar.tsx`. */
-const MIC_UNAVAILABLE = "而家聽唔到你講嘢，打字問就得。";
+const cards = expectedCards("hk_en");
+const warnings = cards.filter((card) => card.type === "warning");
 
-test.describe("The reading service is down or refuses (V7)", () => {
+/* -------------------------------------------------------------------------- */
+/* The seam between /capture and /chat                                        */
+/* -------------------------------------------------------------------------- */
+
+test.describe("A photograph that cannot be read (V7)", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await acceptConsent(page);
-    await chooseCantonese(page);
+    await seedConsent(page);
   });
 
-  test("502 offers the bundled sample sheet, and the sample reads", async ({ page }) => {
+  /**
+   * The whole way in, driven as a person does it: the camera, the review grid, 講俾我聽, and the
+   * honest state at the other end with the sample one tap away.
+   *
+   * This is the only test in the suite that crosses the `sessionStorage` hand-off for real. Its
+   * value is the crossing, not the 502 — `chat-briefing.spec.ts:282` already proves what the
+   * failure state says and that the sample reads out of it. If this ever fails while that one
+   * passes, the bug is in the hand-off, which is precisely what a split like this buys.
+   */
+  test("a real photograph reaches the honest state, and the sample is one tap out", async ({
+    page,
+  }) => {
     await mockRead(page, { status: 502 });
 
     await uploadFixture(page, "hk_en.png");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
+    await startReading(page);
 
     await expect(
       page.getByRole("heading", { name: UI.hant["fallback.modelUnavailable"], exact: true }),
     ).toBeVisible();
     await expect(page.getByText(UNAVAILABLE_BODY, { exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
+    // The sheet never became "the active sheet" on the strength of a photograph nobody could read.
+    await expect(page.getByRole("region", { name: UI.hant["brief.warnTitle"] })).toHaveCount(0);
 
-    // One tap out (SC-007): the sample is bundled, so it works with the route still failing.
     await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
-
     await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(expectedCards("hk_en").length);
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
+
     await expectNoHorizontalScroll(page);
-  });
-
-  test("422 shows the couldn't-read state with the sample sheet beside it", async ({ page }) => {
-    await mockRead(page, { status: 422 });
-
-    await uploadFixture(page, "hk_en.png");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
-
-    await expect(page.getByRole("heading", { name: INVALID_TITLE, exact: true })).toBeVisible();
-    await expect(page.getByText(INVALID_BODY, { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: UI.hant["capture.retake"], exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: UI.hant["capture.sample"], exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
-  });
-
-  test("413 re-downscales and retries once, then ends in an honest state", async ({ page }) => {
-    const log = await mockRead(page, { status: 413 });
-
-    await uploadFixture(page, "hk_en.png");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
-
-    // contracts/api-read.md: "Client re-downscales and retries once". A second 413 lands on the
-    // invalid-reading state, honest and one tap from the sample sheet.
-    await expect(page.getByRole("heading", { name: INVALID_TITLE, exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: UI.hant["capture.sample"], exact: true })).toBeVisible();
-    await expect(cards(page)).toHaveCount(0);
-
-    // Exactly two requests: the original pages, then the smaller re-encode.
-    expect(log.count).toBe(2);
   });
 });
 
+/* -------------------------------------------------------------------------- */
+/* No voice at all                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * S10, re-expressed for a product where **nothing is a play button** (brief §6).
+ *
+ * The v1 version of this test pressed 全部讀出 and asserted that every card's play control turned
+ * into 睇字. That assertion now contradicts the product: 明仔 types himself out and speaks at the
+ * same time, the 讀住 waveform is a status indicator, and the only voice control on the screen is
+ * the speaker toggle. Asserting a play control would pin down the exact thing the redesign
+ * removed, so the behaviour is re-expressed as what it was always protecting:
+ *
+ *   with no voice anywhere, the WORDS still arrive, and the screen says out loud that they are
+ *   all there is.
+ *
+ * That is the constitution's "speech output fails → on-screen text" without naming a control.
+ */
 test.describe("Speech output is unavailable (V7)", () => {
-  test("the play controls become the text-only state and the cards stay readable", async ({
+  test("the words arrive anyway, the screen says so, and there is no play control", async ({
     page,
   }) => {
     await seedConsent(page);
-    // The no-cloud-voice half of the fallback: `TTS_PROVIDER=browser` makes /api/tts answer 503 on
-    // its own, but when the suite reuses a dev server configured for a cloud provider this forces
-    // the same signal. Deleting speechSynthesis below removes the device voice; with neither, `speak`
-    // returns text-only — the state this test is about.
-    await page.route("**/api/tts", (route) => route.fulfill({ status: 503 }));
-    await page.addInitScript(() => {
-      // Window interface members are own properties of the global object, so this really removes
-      // it: `lib/speech/tts.ts` then falls through the cloud path (503) to text-only.
-      const globalWindow = window as unknown as Record<string, unknown>;
-      delete globalWindow.speechSynthesis;
-      delete globalWindow.SpeechSynthesisUtterance;
+    await noVoiceOutput(page);
+
+    await page.goto("/chat?sample=hk_en");
+
+    // 1. The words. 明仔's opening line is typed out and committed with no sound behind it.
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
     });
 
-    await page.goto("/read?sample=hk_en");
-
-    const expected = expectedCards("hk_en");
-    await expect(cards(page)).toHaveCount(expected.length);
-
-    // The sheet message's one "read it all" control. On a phone with no voice it turns the whole
-    // message to the on-screen-text state, the same way the old play-all bar did.
-    const playAll = page.getByRole("button", { name: UI.hant["cards.playAll"], exact: true });
-    await expect(playAll).toBeVisible();
-    await playAll.click();
-
-    // S10: every card's play control becomes 睇字, and the read-it-all control says where the words are.
-    await expect(page.getByText(UI.hant["fallback.noVoice"], { exact: true })).toHaveCount(
-      expected.length,
+    // 2. The red flags, in full, still first and still not behind a tap (constitution II).
+    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
+    await expect(block).toBeVisible();
+    for (const warning of warnings) {
+      await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
+    }
+    // And each of them still traces to its own line, which is the only way to check a silent app.
+    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
+      warnings.length,
     );
-    await expect(page.getByText(UI.hant["fallback.noVoiceNote"], { exact: true })).toBeVisible();
 
-    // The point of the fallback: the words are still on screen.
-    await expect(
-      cards(page).first().getByText(toScript(expected[0].body.yue, "hant"), { exact: true }),
-    ).toBeVisible();
-    expect(await cardTitles(page)).toHaveLength(expected.length);
-    await expectNoHorizontalScroll(page);
-  });
-});
-
-test.describe("Speech input is unavailable (V7, Story 1 scenario 11)", () => {
-  test("the mic shows its unavailable state and the text box takes over", async ({ page }) => {
-    await seedReading(page, "hk_en");
-    await page.addInitScript(() => {
-      const globalWindow = window as unknown as Record<string, unknown>;
-      delete globalWindow.SpeechRecognition;
-      delete globalWindow.webkitSpeechRecognition;
-      delete globalWindow.MediaRecorder;
+    // 3. The screen says it is silent rather than looking broken.
+    await expect(page.getByText(UI.hant["fallback.noVoiceNote"], { exact: true })).toBeVisible({
+      timeout: 30_000,
     });
 
-    // The mic lives in the voice bar pinned to the one-screen conversation now.
-    await page.goto("/read");
-
-    // `components/MicButton.tsx` renames itself to the typed-input label when there is no API.
-    const mic = page.getByRole("button", { name: UI.hant["capture.type"], exact: true });
-    await expect(mic).toBeVisible();
-    await expect(page.getByText(MIC_UNAVAILABLE, { exact: true })).toBeVisible();
-
-    // Holding a dead mic moves focus to the field instead of failing silently. The button carries
-    // `aria-disabled` (it cannot listen) but is not `disabled` and still handles the tap, exactly
-    // as it would on a phone — so the actionability check is skipped rather than waited out.
-    await mic.click({ force: true });
-    const field = page.getByRole("textbox", { name: UI.hant["ask.placeholder"], exact: true });
-    await expect(field).toBeFocused();
-
-    await field.fill("白色嗰粒係朝早定夜晚食？");
+    // 4. And it does NOT grow a play button to compensate. The speaker toggle is still the only
+    //    voice control, even now that there is no voice for it to control.
+    for (const gone of ["cards.playAll", "cards.play", "cards.stop", "fallback.noVoice"] as const) {
+      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
+    }
+    await expect(page.getByRole("button", { name: UI.hant["chat.reading"] })).toHaveCount(0);
     await expect(
-      page.getByRole("button", { name: UI.hant["ask.send"], exact: true }),
-    ).toBeEnabled();
+      page.getByRole("button", { name: UI.hant["chat.muteSpeaker"], exact: true }),
+    ).toBeVisible();
+
+    // 5. The teach-back loop still runs, so a silent phone can still walk the whole sheet.
+    await expect(
+      page.getByRole("button", { name: UI.hant["brief.understand"], exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+
     await expectNoHorizontalScroll(page);
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* No speech input — see chat-briefing.spec.ts                                */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * "The bar goes to keyboard mode and says so honestly" is covered by
+ * `tests/e2e/chat-briefing.spec.ts:196` — it deletes `SpeechRecognition`, asserts the plain
+ * sentence 「而家聽唔到你講嘢，打字問就得。」, asserts the field is there, and asserts 按住講嘢 is
+ * NOT, which is the whole of the v1 behaviour on the one control that replaced the voice bar.
+ * `:207` then sends a typed question through it end to end. Nothing is added by saying it twice.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* The camera is not the way in                                               */
+/* -------------------------------------------------------------------------- */
 
 test.describe("The camera is not the way in (V7)", () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    await acceptConsent(page);
-    await chooseCantonese(page);
-  });
-
-  test("the photo-library picker takes a file", async ({ page }) => {
+  test("上載相片 opens the picker, and a chosen photo reads like a photographed one", async ({
+    page,
+  }) => {
+    await seedConsent(page);
     await mockRead(page, "hk_en");
 
-    // Both projects emulate a touch device, so `components/Capture.tsx` treats the camera as
-    // usable: the big tile is the camera, and the photo library is the secondary way in
-    // (S3). On a phone that refuses the camera, this secondary picker is what the user reaches
-    // for, so it has to take a file and read it exactly like the camera path.
-    await expect(
-      page.getByRole("button", { name: UI.hant["capture.title"], exact: true }),
-    ).toBeVisible();
-    const libraryButton = page.getByRole("button", { name: UI.hant["capture.library"], exact: true });
-    await expect(libraryButton).toHaveCount(1);
-    await expect(libraryButton).toBeVisible();
+    // Both phone profiles report touch, so `components/Capture.tsx` treats the camera as usable
+    // and 拍張紙 is the primary. On a phone whose camera is refused, 上載相片 is what the family
+    // reaches for — so it has to take a file and read it exactly like the camera path (S3).
+    await page.goto("/");
+    await page.getByRole("link", { name: UI.hant["capture.upload"] }).click();
+    await expect(page.getByRole("dialog", { name: UI.hant["pick.title"] })).toBeVisible();
 
     await uploadFixture(page, "hk_en.png", "library");
-    await expect(page.getByRole("img", { name: "第 1 頁", exact: true })).toBeVisible();
+    await startReading(page);
 
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
-    await expect(cards(page)).toHaveCount(expectedCards("hk_en").length);
-  });
-
-  test("the typed-sheet path says honestly what it cannot do yet", async ({ page }) => {
-    await page.getByRole("button", { name: UI.hant["capture.type"], exact: true }).click();
-
-    const box = page.getByLabel(UI.hant["capture.type"]);
-    await expect(box).toBeVisible();
-    await box.fill("Amlodipine 5mg 1 tab daily");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
-
-    const notice = page.getByRole("region", { name: TYPED_TITLE, exact: true });
-    await expect(notice).toBeVisible();
-    await expect(notice.getByText(TYPED_BODY, { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(
-      notice.getByRole("button", { name: UI.hant["capture.sample"], exact: true }),
+      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
     ).toBeVisible();
   });
 });
@@ -219,10 +208,12 @@ test.describe("The camera is not the way in (V7)", () => {
  * The laptop case (FR-024, S10).
  *
  * Both phone profiles report touch and a mobile user agent, so `components/Capture.tsx` keeps the
- * camera tile there and the describe above never reaches the other branch. A judge opening the
- * demo on a laptop does: `readCapture()` sees no touch and a desktop UA, the tile becomes the
- * photo-library picker, and it says why the camera is not on offer. Nothing else covered that,
- * and `fallback.cameraDenied` is the one S10 string with no other route to the screen.
+ * viewfinder there and the describe above never reaches the other branch. A judge opening the demo
+ * on a laptop does: `readCapture()` sees no touch and a desktop UA, `/capture` opens on the review
+ * grid instead of a dark panel pretending to be a lens, and it says why the camera is not on offer.
+ *
+ * This is still the one route to `fallback.cameraDenied` on screen, which is why it survived the
+ * redesign unchanged in purpose. Only the screen it drives moved: `/` → `/capture`.
  */
 test.describe("The camera is not the way in, on a laptop (V7)", () => {
   // Not `...devices["Desktop Chrome"]`: it carries `defaultBrowserType`, which forces a new
@@ -234,27 +225,38 @@ test.describe("The camera is not the way in, on a laptop (V7)", () => {
     hasTouch: false,
   });
 
-  test("the tile becomes the library picker, says why, and still reads a sheet", async ({
+  test("says why there is no viewfinder, and still reads a sheet from the library", async ({
     page,
   }) => {
+    await seedConsent(page);
     await mockRead(page, "hk_en");
-    await page.goto("/");
-    await acceptConsent(page);
-    await chooseCantonese(page);
 
+    await page.goto("/capture");
+
+    // The honest reason, in the subtitle's own place, on the screen the camera would have been.
     await expect(page.getByText(UI.hant["fallback.cameraDenied"], { exact: true })).toBeVisible();
-    // The tile IS the picker here, so there is no second library button beside it, and the
-    // camera tile's name is gone from the screen entirely.
+    // No viewfinder chrome at all: no shutter to press, no 完成 over a camera that never opened.
     await expect(
-      page.getByRole("button", { name: UI.hant["capture.library"], exact: true }),
-    ).toHaveCount(1);
-    await expect(
-      page.getByRole("button", { name: UI.hant["capture.title"], exact: true }),
+      page.getByRole("button", { name: UI.hant["camera.shutter"], exact: true }),
     ).toHaveCount(0);
+    await expect(page.getByText(UI.hant["camera.hintFirst"], { exact: true })).toHaveCount(0);
+    // The promise about the photograph is made here too — it is the screen a document is chosen on.
+    await expect(page.getByText(UI.hant["review.onDevice"], { exact: true }).first()).toBeVisible();
+
+    // 加一頁 is the way in on this branch, and it opens the picker rather than a dead camera.
+    await page.getByRole("button", { name: UI.hant["review.addPage"], exact: true }).click();
+    await expect(page.getByRole("dialog", { name: UI.hant["pick.title"] })).toBeVisible();
 
     // The fallback is only real if it reads a sheet like the camera path does.
-    await uploadFixture(page, "hk_en.png", "library");
-    await page.getByRole("button", { name: UI.hant["capture.start"], exact: true }).click();
-    await expect(cards(page)).toHaveCount(expectedCards("hk_en").length);
+    await page.locator('input[type="file"]').last().setInputFiles(path.join(FIXTURE_DIR, "hk_en.png"));
+    await expect(page.getByRole("img", { name: "第 1 頁", exact: true }).first()).toBeVisible();
+    await page
+      .getByRole("button", { name: UI.hant["pick.use"].replace("{n}", "1"), exact: true })
+      .click();
+
+    await startReading(page);
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });

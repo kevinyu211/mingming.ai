@@ -209,6 +209,122 @@ describe("runReadingPipeline", () => {
       code: "invalid_output:schema",
     });
   });
+
+  /**
+   * tests/eval/stress.md: on `dense` the page prints "Breathless at rest" and six of eight runs
+   * quoted "Breathlessness at rest". Nothing on the server can see the photograph, so the quote
+   * itself cannot be checked — but a medicine's own fields and its own quote are copied off the
+   * same printed line, so they can be checked against each other.
+   */
+  it("marks a medicine whose name is not in its own quote, and still shows it", async () => {
+    const reading = fixture();
+    reading.medicines[0].name = "Amlodipine besylate";
+
+    const result = await runReadingPipeline(reading, NEVER_CALLED, { now: NOW });
+    expect(result.kind).toBe("reading");
+    if (result.kind !== "reading") return;
+
+    const card = result.cards.find((c) => c.id === "medicine-0");
+    expect(card?.unverified).toBe(true);
+    // Kept, not dropped: losing a medicine is worse than showing a doubtful one.
+    expect(card?.facts?.name).toBe("Amlodipine besylate");
+    expect(result.cards.filter((c) => c.type === "medicine")).toHaveLength(3);
+  });
+
+  it("marks a medicine whose strength disagrees with its own quote", async () => {
+    const reading = fixture();
+    reading.medicines[0].strength = "10mg";
+
+    const result = await runReadingPipeline(reading, NEVER_CALLED, { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+    expect(result.cards.find((c) => c.id === "medicine-0")?.unverified).toBe(true);
+  });
+
+  it("leaves a medicine unmarked when its fields are all findable in its quote", async () => {
+    const result = await runReadingPipeline(fixture(), NEVER_CALLED, { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+    for (const card of result.cards) expect(card.unverified).toBeUndefined();
+  });
+
+  it("does not fault a medicine over spacing or width alone", async () => {
+    const reading = fixture();
+    const quote = reading.medicines[0].source.quote;
+    // "5mg" printed, "5 mg" typed: the same value, spelled with a space. Folding is comparison
+    // only — the stored field keeps exactly what was returned.
+    reading.medicines[0].strength = `${reading.medicines[0].strength?.replace(/(\d)(\D)/, "$1 $2")}`;
+    expect(reading.medicines[0].strength).not.toBe(quote);
+
+    const result = await runReadingPipeline(reading, NEVER_CALLED, { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+    expect(result.cards.find((c) => c.id === "medicine-0")?.unverified).toBeUndefined();
+  });
+
+  it("marks a medicine that cites no line at all", async () => {
+    const reading = fixture();
+    reading.medicines[0].source = { ...reading.medicines[0].source, quote: "" };
+
+    const result = await runReadingPipeline(reading, NEVER_CALLED, { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+    expect(result.cards.find((c) => c.id === "medicine-0")?.unverified).toBe(true);
+  });
+
+  it("keeps the unverified mark through a banned-term repair", async () => {
+    const reading = fixture();
+    reading.medicines[0].name = "Amlodipine besylate";
+    reading.medicines[0].spoken = { yue: "治療。", cmn: "治疗。", en: "It treats it." };
+    const clean: Speakable = { yue: "食藥。", cmn: "吃药。", en: "Take the tablet." };
+
+    const result = await runReadingPipeline(reading, stubProvider(clean), { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+    const card = result.cards.find((c) => c.id === "medicine-0");
+    expect(card?.body).toEqual(clean);
+    expect(card?.unverified).toBe(true);
+  });
+
+  /**
+   * The repair path is where a stopped medicine is most dangerous: the sentence saying the page
+   * stopped it lives only in the model's wording, and that is precisely what gets discarded here.
+   *
+   * This used to fall through to `SEE_THE_SHEET`, which was safe but threw the drug's name away.
+   * The live stress runs showed how often it fires — on `fixtures/stress/mixed.png`, one read in
+   * three had the model write `spoken` text for a withdrawn drug that reads like a live dose
+   * ("0.25mg 每日"), the numeric-target rule rejected it, and the family was left being told to
+   * look at a sheet without being told what to look for.
+   *
+   * `templateFor` now dispatches on `facts.status`, so the rebuilt card names the drug verbatim
+   * and attributes the fact to the page. What must never come back is a DOSE.
+   */
+  it("rebuilds a stopped medicine as a named ended medicine, never as a dose", async () => {
+    const reading = fixture();
+    reading.medicines[0].status = "stopped";
+    reading.medicines[0].spoken = { yue: "治療。", cmn: "治疗。", en: "It treats it." };
+
+    const provider = {
+      phrase: vi.fn(async () => {
+        throw new Error("provider down");
+      }),
+    };
+    const result = await runReadingPipeline(reading, provider, { now: NOW });
+    if (result.kind !== "reading") throw new Error("expected a reading");
+
+    const card = result.cards.find((c) => c.id === "medicine-0");
+    expect(card?.stopped).toBe(true);
+    expect(result.filter).toEqual({ regenerated: 0, templated: 1 });
+
+    // The drug is named, so the family knows which box on the table this is about.
+    for (const spoken of Object.values(card?.body ?? {})) {
+      expect(spoken).toContain("Amlodipine");
+    }
+    // ...and no dose survives. The frequency is what tripped the filter in the first place, so a
+    // repair that reintroduced it would be the original bug wearing a template.
+    const body = Object.values(card?.body ?? {}).join(" ");
+    for (const dose of ["每日", "每天", "daily", "1 tab", "1 粒", "14"]) {
+      expect(body).not.toContain(dose);
+    }
+    // The generic "look at the sheet" fallback is no longer the answer for this case.
+    expect(card?.body).not.toEqual(SEE_THE_SHEET);
+    expect(card?.body).toEqual(templateFor("medicine", card?.facts ?? {}));
+  });
 });
 
 describe("safeTemplate", () => {
