@@ -39,8 +39,13 @@ import {
 
 const PROVIDER_ID = "minimax";
 
-/** Default T2A model. Override with MINIMAX_TTS_MODEL. */
-const DEFAULT_MODEL = "speech-02-hd";
+/**
+ * Default T2A model. Override with MINIMAX_TTS_MODEL.
+ *
+ * `speech-2.8-hd` is MiniMax's current top model and the only family that supports the
+ * interjection tags; more importantly it is the one the delivery was actually tuned against.
+ */
+const DEFAULT_MODEL = "speech-2.8-hd";
 
 /**
  * Default voice ids. These are MiniMax system voices used as a safe starting point; the
@@ -53,9 +58,9 @@ const DEFAULT_MODEL = "speech-02-hd";
  * 2026-09-03. English matters here as much as the two Chinese readings: a Hong Kong discharge
  * sheet is often printed in English, and the carer reading it aloud may not be the patient.
  */
-const DEFAULT_VOICE_YUE = "female-chengshu";
-const DEFAULT_VOICE_CMN = "female-chengshu";
-const DEFAULT_VOICE_EN = "English_Graceful_Lady";
+const DEFAULT_VOICE_YUE = "Cantonese_GentleLady";
+const DEFAULT_VOICE_CMN = "Chinese_wenrounvxing";
+const DEFAULT_VOICE_EN = "English_CalmWoman";
 
 const DEFAULT_BASE_URL = "https://api.minimax.io";
 
@@ -136,12 +141,27 @@ export function buildMinimaxTtsRequest(
     model: creds.model,
     text,
     stream: false,
-    // The voice: picked by the day-one listening test, one id per dialect.
+    // The voice: chosen by ear, one id per dialect.
     voice_setting: {
       voice_id: voiceId(dialect),
-      speed: 1,
+      // Slightly under natural pace. The listener is often in their seventies and hearing a
+      // medicine name for the first time; 1.0 raced through the doses.
+      speed: 0.95,
       vol: 1,
       pitch: 0,
+      /**
+       * Left unset for a long time, which meant "automatic" — the delivery drifted between
+       * sentences and read as a newsreader on a warning line. `calm` is the register this
+       * product wants everywhere: it never dramatises a red flag, and it never chirps.
+       */
+      emotion: "calm",
+      /**
+       * The single most valuable flag on this endpoint for THIS app, and it was off.
+       *
+       * Without it the engine reads a dose as characters — "25mg" and 「每日兩次」 come out
+       * wrong, which is unusable for a product whose entire job is saying doses out loud.
+       */
+      text_normalization: true,
     },
     // Forces Cantonese phonology instead of a Mandarin reading of traditional characters -
     // the exact failure research.md R5 calls out.

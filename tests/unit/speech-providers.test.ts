@@ -181,7 +181,7 @@ describe("minimax tts adapter", () => {
     expect(headerOf(calls[0].init, "Content-Type")).toBe("application/json");
 
     const body = jsonBody(calls[0].init);
-    expect(body.model).toBe("speech-02-hd");
+    expect(body.model).toBe("speech-2.8-hd");
     expect(body.text).toBe(YUE_TEXT);
     // Confirmed against the live endpoint: "Cantonese" is rejected (2013 invalid params).
     expect(body.language_boost).toBe("Chinese,Yue");
@@ -213,7 +213,7 @@ describe("minimax tts adapter", () => {
 
     const body = jsonBody(calls[0].init);
     expect(body.language_boost).toBe("English");
-    expect(body.voice_setting).toMatchObject({ voice_id: "English_Graceful_Lady" });
+    expect(body.voice_setting).toMatchObject({ voice_id: "English_CalmWoman" });
   });
 
   it("lets MINIMAX_VOICE_EN override the English default", async () => {

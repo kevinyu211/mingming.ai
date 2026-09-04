@@ -3,8 +3,10 @@
 /**
  * Speaking a card, on the phone.
  *
- * The chain is cloud, then browser, then text on screen (research.md R5, and the
- * constitution's "failure paths are features" rule):
+ * The chain is the cloud voice, then the words on screen (research.md R5, and the
+ * constitution's "failure paths are features" rule). The device's own voice is NOT a fallback:
+ * it speaks only where it is the configured provider, because a companion that switches voice
+ * mid-conversation reads as broken. See `speak`.
  *
  *   1. `POST /api/tts` with `{ text, dialect }`. Audio bytes come back and play through an
  *      `HTMLAudioElement`. A 503 means the server is configured for browser speech
@@ -58,6 +60,15 @@ const audioCache = new Map<string, Blob>();
 
 /** Set once the server has answered 503; stops every later card retrying the cloud path. */
 let cloudDisabled = false;
+
+/**
+ * True only when this deployment is DELIBERATELY configured for device speech
+ * (`TTS_PROVIDER=browser`, which answers 503). That is the one case where the device voice is
+ * the chosen voice rather than an unannounced substitute for a failed clip — see `speak`.
+ */
+function deviceSpeechIsChosen(): boolean {
+  return cloudDisabled;
+}
 
 /** Last non-empty voice list seen, because `getVoices()` can transiently return []. */
 let cachedVoices: SpeechSynthesisVoice[] = [];
@@ -119,7 +130,7 @@ async function fetchAudio(
       signal,
     });
   } catch {
-    // Offline, blocked, or aborted: fall through to the browser voice.
+    // Offline, blocked, or aborted. The caller falls through to text-only, not to another voice.
     return null;
   }
 
@@ -313,7 +324,24 @@ export async function speak(
   const blob = await fetchAudio(text, dialect, opts?.signal);
   if (blob && (await playBlob(blob, opts?.signal))) return { mode: "cloud" };
 
-  if (await speakWithBrowser(text, dialect, opts)) return { mode: "browser" };
+  /**
+   * The device's own voice used to sit here, and it has been removed deliberately.
+   *
+   * It was reached whenever a cloud clip failed to fetch OR failed to play — and on iOS the
+   * commonest reason for the second is the autoplay policy, which fires on the ordinary path
+   * where 明仔 speaks without being tapped. The result was a product that read most lines in the
+   * chosen Cantonese voice and occasional lines in iOS's own robot, mid-conversation, with no
+   * explanation. Kevin heard it immediately on a real phone and it reads as broken, because it is.
+   *
+   * A companion has ONE voice. If that voice cannot speak, the honest state is silence with the
+   * words on screen — which the interface already designs for (`fallback.noVoice*`), and which is
+   * what `text-only` means to every caller. `speakWithBrowser` is kept below for the deliberate
+   * device-speech configuration (`TTS_PROVIDER=browser`), where it is the chosen voice rather
+   * than an unannounced substitute.
+   */
+  if (deviceSpeechIsChosen()) {
+    if (await speakWithBrowser(text, dialect, opts)) return { mode: "browser" };
+  }
 
   return { mode: "text-only" };
 }
