@@ -15,10 +15,11 @@ import { createAzureSttProvider, createAzureTtsProvider } from "./azure";
 import { browserSttProvider, browserTtsProvider } from "./browser";
 import { createElevenLabsSttProvider, createElevenLabsTtsProvider } from "./elevenlabs";
 import { createMinimaxTtsProvider } from "./minimax";
+import { createOpenAiSttProvider } from "./openai";
 import { readEnvOr, type SttProvider, type TtsProvider } from "./types";
 
 export const TTS_PROVIDER_IDS = ["minimax", "elevenlabs", "azure", "browser"] as const;
-export const STT_PROVIDER_IDS = ["elevenlabs", "azure", "browser"] as const;
+export const STT_PROVIDER_IDS = ["openai", "elevenlabs", "azure", "browser"] as const;
 
 export type TtsProviderId = (typeof TTS_PROVIDER_IDS)[number];
 export type SttProviderId = (typeof STT_PROVIDER_IDS)[number];
@@ -74,10 +75,13 @@ export function getTtsProvider(): TtsProvider {
 
 /**
  * Resolve the speech-to-text provider. Same error contract as `getTtsProvider`. MiniMax is not
- * an STT candidate (`provider_shortlist.md` section 2).
+ * an STT candidate (`provider_shortlist.md` section 2). OpenAI is STT only - the voice is
+ * MiniMax's, and `openai.ts` exports no `TtsProvider` so that cannot drift.
  */
 export function getSttProvider(): SttProvider {
   switch (sttProviderId()) {
+    case "openai":
+      return createOpenAiSttProvider();
     case "elevenlabs":
       return createElevenLabsSttProvider();
     case "azure":

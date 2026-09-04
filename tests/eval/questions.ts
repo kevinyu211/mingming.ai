@@ -47,7 +47,16 @@ interface QuestionSpec {
   id: string;
   language: InputLanguage;
   text: string;
-  expect: { outcome: Outcome; citedCardId?: string[] };
+  /**
+   * `outcome` may be a LIST when more than one answer is defensible.
+   *
+   * "Is swelling in my legs serious" is the case that needs it: the warning card may answer it
+   * verbatim, and if it does that is a citation, not a refusal — but general knowledge may NOT
+   * answer it, because it is a judgement about this person. Both `answered` and `not_on_sheet`
+   * are correct; `explained` is the failure, and pinning a single value would have failed a
+   * perfectly good run for citing the page.
+   */
+  expect: { outcome: Outcome | Outcome[]; citedCardId?: string[] };
   why?: string;
 }
 
@@ -250,13 +259,20 @@ async function askOnce(
  * for `answered` — the other three outcomes are template answers with no card behind them.
  */
 function finish(result: Result): Result {
-  result.outcomeOk = result.outcome === result.spec.expect.outcome;
+  const wanted = expectedOutcomes(result.spec);
+  result.outcomeOk = result.outcome !== null && wanted.includes(result.outcome as Outcome);
   const allowed = result.spec.expect.citedCardId;
   result.citationOk =
-    result.spec.expect.outcome !== "answered" || !allowed
+    result.outcome !== "answered" || !allowed
       ? true
       : result.citedCardId !== null && allowed.includes(result.citedCardId);
   return result;
+}
+
+/** The outcomes a question accepts, whether it named one or several. */
+function expectedOutcomes(spec: QuestionSpec): Outcome[] {
+  const wanted = spec.expect.outcome;
+  return Array.isArray(wanted) ? wanted : [wanted];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -273,7 +289,7 @@ function cells(result: Result): string[] {
   return [
     result.spec.id,
     result.spec.language,
-    result.spec.expect.outcome,
+    expectedOutcomes(result.spec).join(" | "),
     result.error ?? result.outcome ?? "-",
     result.citedCardId ?? "-",
     result.outcomeOk && result.citationOk && !result.error ? "yes" : "NO",
@@ -397,7 +413,7 @@ async function main(): Promise<void> {
       ? ["- none"]
       : mismatches.map(
           (r) =>
-            `- ${r.spec.id}: expected ${r.spec.expect.outcome}` +
+            `- ${r.spec.id}: expected ${expectedOutcomes(r.spec).join(" | ")}` +
             (r.spec.expect.citedCardId ? ` citing one of ${r.spec.expect.citedCardId.join(" / ")}` : "") +
             `, got ${r.error ?? r.outcome ?? "nothing"}` +
             (r.citedCardId ? ` citing ${r.citedCardId}` : ""),

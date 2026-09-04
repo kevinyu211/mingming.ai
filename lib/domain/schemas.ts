@@ -147,10 +147,32 @@ export const StoredReadingSchema = SheetReadingSchema.extend({
 });
 export type StoredReading = z.infer<typeof StoredReadingSchema>;
 
-/** Structured output of /api/ask's model call. */
+/**
+ * Structured output of /api/ask's model call.
+ *
+ * `kind` is the whole safety boundary of this route, and it is the model's ONE job to place a
+ * question in the right box (constitution IV, amended 1.1.0):
+ *
+ *   sheet    the answer is on a supplied card. `citedCardId` names it. The reader is being told
+ *            what THEIR page says, so it must trace to a line.
+ *   general  the question asked what a word or a routine practice MEANS — "what does fasting
+ *            mean", "why is blood taken on an empty stomach". Answered from general knowledge,
+ *            cites nothing, and the UI labels it as general so it is never mistaken for the page.
+ *   none     neither. The honest, expected outcome.
+ *
+ * The line is action, not knowledge. A definition is `general`; anything that would change what
+ * the reader DOES — a dose, a decision to go to hospital, what is normal for them — is `none`,
+ * and the medicine-change and crisis gates have already refused most of it before this runs.
+ */
+export const AskKindSchema = z.enum(["sheet", "general", "none"]);
+export type AskKind = z.infer<typeof AskKindSchema>;
+
 export const AskResultSchema = z.strictObject({
-  grounded: z.boolean().describe("True only if the answer comes from a supplied card"),
-  citedCardId: z.string().nullable(),
+  kind: AskKindSchema,
+  citedCardId: z
+    .string()
+    .nullable()
+    .describe('The card the answer came from. Non-null only when kind is "sheet".'),
   answer: SpeakableSchema.nullable(),
 });
 export type AskResult = z.infer<typeof AskResultSchema>;

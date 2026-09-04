@@ -229,9 +229,27 @@ describe("JSON schema export for structured outputs", () => {
     expect(exported.properties.medicines.items.required).toContain("status");
   });
 
-  it("AskResult requires grounded, citedCardId and answer", () => {
+  it("AskResult requires kind, citedCardId and answer", () => {
     const schema = askResultJsonSchema() as { required?: string[] };
-    expect(schema.required?.sort()).toEqual(["answer", "citedCardId", "grounded"]);
-    expect(AskResultSchema.safeParse({ grounded: false, citedCardId: null, answer: null }).success).toBe(true);
+    expect(schema.required?.sort()).toEqual(["answer", "citedCardId", "kind"]);
+    expect(
+      AskResultSchema.safeParse({ kind: "none", citedCardId: null, answer: null }).success,
+    ).toBe(true);
+  });
+
+  /**
+   * The three boxes, and the one that is new: a general explanation cites nothing, because it is
+   * not a claim about this person's page (constitution IV, amended 1.1.0).
+   */
+  it("accepts the three answer kinds and nothing else", () => {
+    for (const kind of ["sheet", "general", "none"]) {
+      expect(
+        AskResultSchema.safeParse({ kind, citedCardId: null, answer: null }).success,
+        kind,
+      ).toBe(true);
+    }
+    expect(
+      AskResultSchema.safeParse({ kind: "grounded", citedCardId: null, answer: null }).success,
+    ).toBe(false);
   });
 });

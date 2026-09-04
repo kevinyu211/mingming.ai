@@ -91,6 +91,8 @@ const hant = {
   "ask.refused": "呢樣要問藥劑師",
   "ask.refusedBody": "藥物點樣食、要唔要調整，都要問返醫生或者藥劑師。張紙上面嘅電話喺下面。",
   "ask.notOnSheet": "張紙冇講呢樣",
+  // A general explanation, not something this page says. The label is the whole safety of it.
+  "ask.explained": "呢個唔係你張紙寫嘅，係一般嘅意思",
   "ask.notOnSheetBody": "我淨係讀到張紙上面有嘅嘢。呢樣可以覆診嗰陣問吓。",
   "ask.referral": "呢度有人可以幫手",
   "ask.referralBody": "如果而家好危險，即刻打下面嘅電話。",
@@ -434,6 +436,7 @@ const hans: Record<UiKey, string> = {
   "ask.refused": "这个要问药剂师",
   "ask.refusedBody": "药物怎么吃、要不要调整，都要问回医生或者药剂师。纸上写的电话在下面。",
   "ask.notOnSheet": "这张纸没讲这个",
+  "ask.explained": "这不是你纸上写的，是一般的意思",
   "ask.notOnSheetBody": "我只读得到纸上有的内容。这个可以复诊的时候问一下。",
   "ask.referral": "这里有人可以帮忙",
   "ask.referralBody": "如果现在很危险，马上打下面的电话。",
@@ -708,6 +711,7 @@ const en: Record<UiKey, string> = {
   "ask.refusedBody":
     "How a medicine is taken, and whether anything about it changes, is for the doctor or the pharmacist. The number printed on the sheet is below.",
   "ask.notOnSheet": "The sheet doesn't say",
+  "ask.explained": "Not from your sheet — this is what it generally means",
   "ask.notOnSheetBody":
     "I only read what is on the page. This one is worth raising at the follow-up visit.",
   "ask.referral": "There are people who can help",

@@ -94,12 +94,23 @@ export default function ChatMessage({
   const warn = message.tone === "warn";
   const refusal =
     message.outcome === "refused_medicine_change" || message.outcome === "not_on_sheet";
+  /**
+   * A general explanation gets its own heading, and that heading is the whole safety of the
+   * feature (constitution IV, amended 1.1.0).
+   *
+   * It is answered from ordinary knowledge, not from this person's page, so it cites no line and
+   * nothing behind it can be checked against the paper. The reader must be able to tell at a
+   * glance that 明仔 is explaining a word rather than reporting their sheet — otherwise a general
+   * statement about fasting reads as an instruction their doctor wrote down.
+   */
   const heading =
     message.outcome === "refused_medicine_change"
       ? t("ask.refused")
       : message.outcome === "not_on_sheet"
         ? t("ask.notOnSheet")
-        : null;
+        : message.outcome === "explained"
+          ? t("ask.explained")
+          : null;
 
   const bubble = warn
     ? "bg-warn-bg text-warn-ink"

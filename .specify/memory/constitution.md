@@ -1,7 +1,11 @@
 <!--
 Sync Impact Report
-- Version change: (template, unversioned) → 1.0.0
-- Modified principles: none (initial ratification)
+- Version change: 1.0.0 → 1.1.0
+- Modified principles: IV (Everything Traces to a Line → Everything About the Sheet Traces to a
+  Line). MINOR: the provenance requirement is unchanged for every claim about the sheet; what is
+  added is a permitted class of answer — a general explanation of a word or routine practice —
+  which carries no citation and is labelled as general. The boundary is action rather than
+  knowledge, so nothing that changes what the reader does becomes newly sayable.
 - Added sections:
   - Core Principles I–VI (Facts Not Verdicts; Red Flags First; Model Reads, Rules Decide;
     Everything Traces to a Line; Nothing Leaves the Phone; Banned Words Are Enforced)
@@ -52,14 +56,31 @@ code: the specialized-diet lock, the banned-term filter, the unreadable-region h
 card is shown. Rationale: a hallucinated gate is a safety failure, not a bad answer, and the
 pitch must be able to state exactly which outputs are model-generated and which are rules.
 
-### IV. Everything Traces to a Line
+### IV. Everything About the Sheet Traces to a Line
 
-Every card and every spoken sentence MUST carry a reference to the source line or region on the
-page, and the UI MUST let the user see it. When a region cannot be read, the app MUST output
-"I couldn't read this part" for that region and MUST NOT fill the gap with a guess. Sheet types
-the app does not recognise MUST produce an explicit "this doesn't look like a discharge sheet"
-state, not a best-effort summary. Rationale: provenance is what turns a summarizer into a
+Every card and every claim about THIS PERSON'S SHEET MUST carry a reference to the source line or
+region on the page, and the UI MUST let the user see it. When a region cannot be read, the app MUST
+output "I couldn't read this part" for that region and MUST NOT fill the gap with a guess. Sheet
+types the app does not recognise MUST produce an explicit "this doesn't look like a discharge
+sheet" state, not a best-effort summary. Rationale: provenance is what turns a summarizer into a
 product a family can trust, and refusal is the transparency behavior the rules reward.
+
+**General explanations are permitted, and are not claims about the sheet.** A question that asks
+what a word or a routine practice MEANS — "what does fasting mean", "why is blood taken on an empty
+stomach", "what is a low-salt diet", "what does BD mean" — MAY be answered from general knowledge.
+Such an answer MUST be visibly labelled as general rather than as something the page says, MUST
+cite no line, and MUST NOT contradict the sheet.
+
+The line between the two is **action, not knowledge**: an answer that changes what the person DOES
+is refused; an answer that only tells them what something MEANS is allowed. Explaining that fasting
+means not eating beforehand is a definition. Saying whether to skip tonight's dose, whether to go to
+hospital, what illness this is, or what is normal FOR THEM is not, and stays refused under Principle
+I and the medicine-change gate.
+
+Rationale: a tool that answers "the paper doesn't say" to "what does fasting mean" has refused the
+literacy question it exists to serve — the track is 健康信息獲取與素養, report interpretation and
+plain-language explanation — while giving up none of the safety, because none of those answers tell
+anybody to do anything.
 
 ### V. Nothing Leaves the Phone Except the Question
 
@@ -129,4 +150,4 @@ wording. Any amendment touching Principles I–VI MUST also update the cross-ref
 a compliance check against this document, and any complexity that violates the Development
 Workflow MUST be justified in writing in the plan.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-02
+**Version**: 1.1.0 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-04

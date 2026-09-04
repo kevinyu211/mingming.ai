@@ -45,6 +45,12 @@ export const ASK_ENDPOINT = "/api/ask";
 /** Outcomes the rules or the model can decide (data-model.md, Question.outcome). */
 export type AnswerOutcome =
   | "answered"
+  /**
+   * A general explanation of a word or a routine practice, from general knowledge rather than
+   * from the page. Carries no cited card and no source line, and the UI must label it as general
+   * so it is never mistaken for something the reader's own sheet says.
+   */
+  | "explained"
   | "refused_medicine_change"
   | "not_on_sheet"
   | "crisis_referral";
@@ -136,6 +142,7 @@ type AskEvent = OutcomeEvent | AnswerEvent | DoneEvent | ErrorEvent;
 
 const ANSWER_OUTCOMES: ReadonlySet<string> = new Set<AnswerOutcome>([
   "answered",
+  "explained",
   "refused_medicine_change",
   "not_on_sheet",
   "crisis_referral",

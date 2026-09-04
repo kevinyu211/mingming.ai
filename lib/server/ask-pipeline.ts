@@ -105,6 +105,7 @@ export type AskRequest = z.infer<typeof AskRequestSchema>;
 /** data-model.md § Question. `answered` only ever follows a citation the server verified. */
 export type AskOutcome =
   | "answered"
+  | "explained"
   | "refused_medicine_change"
   | "not_on_sheet"
   | "crisis_referral";
@@ -118,6 +119,12 @@ export type AskEvent =
   | { event: "outcome"; outcome: "crisis_referral"; referral: ReferralPayload }
   | { event: "outcome"; outcome: "refused_medicine_change" }
   | { event: "outcome"; outcome: "not_on_sheet" }
+  /**
+   * A general explanation: what a word or a routine practice MEANS. Carries no card and no source
+   * line, because it is not a claim about this person's page — the UI labels it as general so the
+   * two can never be confused (constitution IV, amended 1.1.0).
+   */
+  | { event: "outcome"; outcome: "explained" }
   | {
       event: "outcome";
       outcome: "answered";
@@ -232,8 +239,32 @@ export async function* runAsk(
     result = null;
   }
 
-  const cited = result === null ? null : citedCard(cards, result.citedCardId);
-  if (result === null || result.grounded !== true || cited === null || result.answer === null) {
+  if (result === null || result.answer === null || result.kind === "none") {
+    yield* notOnSheetEvents();
+    return;
+  }
+
+  /**
+   * A general explanation leaves here, before any of the card machinery below.
+   *
+   * It cites nothing by construction, so there is no card to check it against and no template to
+   * fall back to — if the banned-term filter rejects the wording there is nothing safe left to
+   * say, and it becomes "not on the sheet" rather than a rephrase. Explanations are a convenience;
+   * the sheet is the product, and only the sheet gets the repair path.
+   */
+  if (result.kind === "general") {
+    if (!checkSpeakable(result.answer).ok) {
+      yield* notOnSheetEvents();
+      return;
+    }
+    yield { event: "outcome", outcome: "explained" };
+    yield { event: "answer", answer: result.answer };
+    yield { event: "done" };
+    return;
+  }
+
+  const cited = citedCard(cards, result.citedCardId);
+  if (cited === null) {
     yield* notOnSheetEvents();
     return;
   }
