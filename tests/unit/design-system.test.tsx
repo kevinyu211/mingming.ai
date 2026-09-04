@@ -24,7 +24,7 @@ const SIZES: MascotSize[] = [30, 44, 64, 92];
 const STATES: MascotState[] = ["idle", "speaking", "listening", "greeting"];
 const ANIMALS = ["cat", "panda", "puppy", "rabbit"];
 
-describe("明仔 is decoration, and says so", () => {
+describe("明明 is decoration, and says so", () => {
   it("is aria-hidden at every size and state", () => {
     for (const size of SIZES) {
       for (const state of STATES) {
@@ -36,7 +36,7 @@ describe("明仔 is decoration, and says so", () => {
 
   it("never labels the picture", () => {
     // He always appears next to his name as real text (`mascot.name`). A label on the picture as
-    // well would make a screen reader say 明仔 twice, and an alt text would make it say it wrong —
+    // well would make a screen reader say 明明 twice, and an alt text would make it say it wrong —
     // so the alt is empty, which is what marks an image as decoration rather than content.
     for (const size of SIZES) {
       const html = renderToStaticMarkup(<Mascot size={size} />);
@@ -58,7 +58,7 @@ describe("明仔 is decoration, and says so", () => {
   });
 });
 
-describe("明仔's art is shipped, and every state points at a file that exists", () => {
+describe("明明's art is shipped, and every state points at a file that exists", () => {
   it("asks for the chosen animal's file for the state it is in, and asks for it directly", () => {
     for (const state of STATES) {
       const html = renderToStaticMarkup(<Mascot size={44} state={state} />);
@@ -96,7 +96,7 @@ describe("明仔's art is shipped, and every state points at a file that exists"
   });
 });
 
-describe("明仔 still has a drawing to fall back on", () => {
+describe("明明 still has a drawing to fall back on", () => {
   // The art can 404 or the network can give up, and a broken-image icon on the demo phone is worse
   // than anything a few divs cost. `Mascot` swaps to this on the image's own error event.
   it("drops the mouth at 30 and the eye glints below 92, as the canvas does", () => {

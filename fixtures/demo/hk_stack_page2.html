@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<title>覆診紙 / 抽血紙 page 2 of 2 — Harbour View Hospital (synthetic demo sheet)</title>
+<style>
+  /* DEMO SHEET 1b of 3 — "hk_stack", page 2.
+     The 覆診紙 and the 抽血紙: two small slips on one A4 sheet, separated by a
+     cut line. This page carries BOTH appointment dates and no medicines at all —
+     the mirror image of page 1. Sent together, the two images are one discharge.
+
+     Look: a pre-printed bilingual form with the variable fields overprinted in a
+     monospace face, which is how ward-printed HA slips read. Chinese leads here
+     and English follows, the opposite weighting from the summary on page 1,
+     because that is how patient-facing slips are actually set.
+
+     Fictional hospital, fictional patient, placeholder numbers throughout. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #ffffff; color: #111111;
+    font-family: "PingFang HK", "Hiragino Sans CNS", "Heiti TC", "Microsoft JhengHei", Arial, sans-serif;
+    font-size: 18px; line-height: 1.4;
+    padding: 52px 62px 34px 62px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .en { font-family: Arial, Helvetica, sans-serif; }
+  /* Overprinted values: monospace, a hair off the baseline, like a ward printer. */
+  .v { font-family: "Courier New", Courier, monospace; font-weight: bold; letter-spacing: .4px; position: relative; top: 1px; }
+
+  .sheethdr { display: flex; justify-content: space-between; align-items: flex-start; }
+  .hosp { font-size: 21px; font-weight: bold; letter-spacing: 2px; }
+  .hosp .en { display: block; font-size: 15px; font-weight: bold; letter-spacing: .4px; margin-top: 2px; }
+  .hosp small { display: block; font-family: Arial, sans-serif; font-size: 12px; font-weight: normal; letter-spacing: 0; margin-top: 3px; color: #222; }
+  .stamp {
+    border: 1.5px solid #555; color: #555; text-align: center;
+    padding: 5px 10px; font-size: 11px; letter-spacing: .8px; line-height: 1.3; max-width: 268px;
+  }
+  .stamp b { display: block; font-family: Arial, sans-serif; font-size: 12px; letter-spacing: 1.6px; }
+  .pagemark { text-align: right; font-size: 13px; margin-top: 6px; }
+
+  /* ---- a slip ---- */
+  .slip { border: 2px solid #111; margin-top: 16px; }
+  .slip .cap {
+    border-bottom: 2px solid #111; background: #ececec;
+    padding: 6px 12px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .slip .cap .t { font-size: 21px; font-weight: bold; letter-spacing: 3px; }
+  .slip .cap .t .en { font-size: 14px; letter-spacing: .6px; margin-left: 10px; font-weight: bold; }
+  .slip .cap .no { font-family: "Courier New", Courier, monospace; font-size: 13px; }
+  .slip .inner { padding: 12px 16px 14px 16px; }
+
+  .fld { display: flex; align-items: baseline; border-bottom: 1px dotted #999; padding: 5px 0 4px 0; }
+  .fld:last-of-type { border-bottom: none; }
+  .fld .k { width: 300px; font-size: 16px; }
+  .fld .k .en { display: block; font-size: 12px; color: #333; letter-spacing: .3px; }
+  .fld .d { flex: 1; font-size: 19px; }
+  .fld.big .d { font-size: 24px; }
+
+  .halves { display: flex; gap: 26px; }
+  .halves > div { flex: 1; }
+
+  .notice { margin-top: 10px; border-top: 1px solid #111; padding-top: 8px; font-size: 15px; line-height: 1.45; }
+  .notice .ln { display: block; }
+  .notice .en { display: block; font-size: 12.5px; color: #333; margin-top: 1px; }
+
+  .cut {
+    margin: 16px 0 0 0; border-top: 2px dashed #666; position: relative; height: 20px;
+  }
+  .cut span {
+    position: absolute; left: 50%; top: -11px; transform: translateX(-50%);
+    background: #fff; padding: 0 12px; font-size: 12px; color: #555; letter-spacing: 2px;
+  }
+
+  .barcode { margin-top: 10px; display: flex; align-items: flex-end; gap: 14px; }
+  .bars { height: 42px; width: 300px;
+    background: repeating-linear-gradient(90deg,#111 0 2px,#fff 2px 4px,#111 4px 7px,#fff 7px 9px,#111 9px 10px,#fff 10px 14px);
+  }
+  .barcode .num { font-family: "Courier New", Courier, monospace; font-size: 13px; letter-spacing: 2px; }
+
+  .foot { margin-top: 22px; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #555; display: flex; justify-content: space-between; font-family: Arial, sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="sheethdr">
+  <div class="hosp">海景醫院<span class="en">HARBOUR VIEW HOSPITAL</span>
+    <small>Specialist Out-patient Department &nbsp;專科門診部 &nbsp;|&nbsp; 12 Harbour View Road, Hong Kong</small>
+  </div>
+  <div class="stamp"><b>SYNTHETIC — NOT A REAL MEDICAL RECORD</b>合成樣張，非真實病歷</div>
+</div>
+<div class="pagemark"><b>Page 2 of 2</b> &nbsp;第 2 頁，共 2 頁 &nbsp;|&nbsp; 附於出院紙之後 attached to discharge summary</div>
+
+<!-- ============================ slip 1: 覆診紙 ============================ -->
+<div class="slip">
+  <div class="cap">
+    <div class="t">覆診預約<span class="en">FOLLOW-UP APPOINTMENT SLIP</span></div>
+    <div class="no">FORM HVH / SOPD-04 (Rev 2026)</div>
+  </div>
+  <div class="inner">
+    <div class="halves">
+      <div>
+        <div class="fld"><div class="k">姓名<span class="en">Name of patient</span></div><div class="d v">LAU KWAI YING</div></div>
+        <div class="fld"><div class="k">病歷號碼<span class="en">Case number</span></div><div class="d v">HVH-XXXXXXXX</div></div>
+      </div>
+      <div>
+        <div class="fld"><div class="k">身份證號碼<span class="en">HKID</span></div><div class="d v">X345678(9)</div></div>
+        <div class="fld"><div class="k">出院日期<span class="en">Date of discharge</span></div><div class="d v">02-09-2026</div></div>
+      </div>
+    </div>
+
+    <div class="fld"><div class="k">覆診專科<span class="en">Follow-up clinic</span></div><div class="d v">內科專科門診</div></div>
+    <div class="fld big"><div class="k">覆診日期及時間<span class="en">Appointment date &amp; time</span></div><div class="d v">14-10-2026 (Wed) 09:30</div></div>
+    <div class="fld"><div class="k">應診地點<span class="en">Venue</span></div><div class="d v">門診部 A 座 2 樓 &nbsp; Block A, 2/F</div></div>
+    <div class="fld"><div class="k">應診醫生<span class="en">Doctor</span></div><div class="d v">DR S. W. CHEUNG</div></div>
+
+    <div class="notice">
+      <span class="ln">請於預約時間前 30 分鐘到達登記處報到，並帶備此覆診紙、身份證及全部藥物。
+        <span class="en">Please register 30 minutes before the appointment time, and bring this slip, your HKID and all your medicines.</span></span>
+      <span class="ln">如未能依時應診，請於辦公時間致電 2xxx xxxx 更改預約。逾期未到者須重新輪候。
+        <span class="en">To change this appointment, call 2xxx xxxx during office hours.</span></span>
+    </div>
+
+    <div class="barcode">
+      <div class="bars"></div>
+      <div class="num">APPT XXXXXXXXXXXX &nbsp; 14102026 0930</div>
+    </div>
+  </div>
+</div>
+
+<div class="cut"><span>沿虛線剪開　CUT HERE</span></div>
+
+<!-- ============================ slip 2: 抽血紙 ============================ -->
+<div class="slip">
+  <div class="cap">
+    <div class="t">抽血化驗預約<span class="en">BLOOD TEST APPOINTMENT SLIP</span></div>
+    <div class="no">FORM HVH / PATH-11 (Rev 2026)</div>
+  </div>
+  <div class="inner">
+    <div class="halves">
+      <div>
+        <div class="fld"><div class="k">姓名<span class="en">Name of patient</span></div><div class="d v">LAU KWAI YING</div></div>
+      </div>
+      <div>
+        <div class="fld"><div class="k">病歷號碼<span class="en">Case number</span></div><div class="d v">HVH-XXXXXXXX</div></div>
+      </div>
+    </div>
+
+    <div class="fld"><div class="k">化驗部門<span class="en">Department</span></div><div class="d v">病理化驗部</div></div>
+    <div class="fld big"><div class="k">抽血日期及時間<span class="en">Blood test date &amp; time</span></div><div class="d v">07-10-2026 (Wed) 08:00 - 09:00</div></div>
+    <div class="fld"><div class="k">抽血地點<span class="en">Venue</span></div><div class="d v">地下抽血室 &nbsp; Phlebotomy Room, G/F</div></div>
+    <div class="fld"><div class="k">化驗項目<span class="en">Tests requested</span></div><div class="d v">腎功能、電解質、血色素</div></div>
+
+    <div class="notice">
+      <span class="ln">抽血前須禁食 8 小時，可飲少量清水，當日照常服藥。
+        <span class="en">Fast for 8 hours before the blood test. A little plain water is allowed. Take your medicines as usual that morning.</span></span>
+      <span class="ln">化驗結果會於覆診當日交由醫生講解，無須另行領取。
+        <span class="en">The doctor will go through the results at the clinic appointment above.</span></span>
+    </div>
+
+    <div class="barcode">
+      <div class="bars" style="width:240px;"></div>
+      <div class="num">LAB XXXXXXXXXXXX &nbsp; 07102026</div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <span>SYNTHETIC — NOT A REAL MEDICAL RECORD. 合成樣張，非真實病歷。 FICTIONAL PATIENT AND FICTIONAL HOSPITAL.</span>
+  <span>HVH-DS-DEMO-01 / p2</span>
+</div>
+
+</body>
+</html>

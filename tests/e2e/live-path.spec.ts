@@ -55,7 +55,7 @@ import {
 const ASK_UNAVAILABLE =
   "而家connect唔到，答唔到你。張紙上面嘅嘢仲喺度，可以撳「睇張紙點寫」自己睇。";
 
-/** How long the sheet takes to arrive as messages: 明仔 types a clause at a time. */
+/** How long the sheet takes to arrive as messages: 明明 types a clause at a time. */
 const TYPING_TIMEOUT = 30_000;
 
 /* -------------------------------------------------------------------------- */
@@ -104,7 +104,7 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
   test("記錄 → 傾偈 → 跟進, all naming the same piece of paper", async ({ page }) => {
     const log = await mockRead(page, "hk_en", { delayMs: 600 });
 
-    // 1. 記錄, empty: 明仔 has nothing to say yet and says exactly that.
+    // 1. 記錄, empty: 明明 has nothing to say yet and says exactly that.
     await page.goto("/");
     await expect(page.getByText(UI.hant["home.emptyMascot"], { exact: true })).toBeVisible();
 
@@ -274,7 +274,7 @@ test.describe("Asking the sheet (V5, V9)", () => {
     // releases it in the callback the typing chain runs when the last clause lands — and taking
     // the floor cancels that chain, so the callback never runs. Until `takeFloor()` cleared the
     // flag itself, the first interruption of the session latched it forever and every later turn
-    // returned at its first guard: 明仔 answered once and then went silent for good.
+    // returned at its first guard: 明明 answered once and then went silent for good.
     //
     // Wait for it to be COMMITTED first — the speaker control only appears on a message that has
     // landed. Interrupting a line still typing itself out drops it, which is what taking the
@@ -298,7 +298,7 @@ test.describe("Asking the sheet (V5, V9)", () => {
 
 /**
  * The v1 script toggle is now the three-way chip in the 傾偈 header (粵 / 普 / EN). The rule it
- * protects is unchanged and is the one that matters: the words 明仔 says convert to the reader's
+ * protects is unchanged and is the one that matters: the words 明明 says convert to the reader's
  * script, and the quoted line does NOT — a quote that has been rewritten is no longer a quote
  * (FR-003, constitution IV).
  *
@@ -318,7 +318,7 @@ test.describe("The language switch (V1)", () => {
 
     await page.goto("/chat?sample=cn_zh");
 
-    // Cantonese first, which is the default: what 明仔 says is the card's Cantonese body.
+    // Cantonese first, which is the default: what 明明 says is the card's Cantonese body.
     await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
       timeout: TYPING_TIMEOUT,
     });
@@ -337,7 +337,7 @@ test.describe("The language switch (V1)", () => {
       .getByRole("button", { name: UI.hant["language.cmn"], exact: true })
       .click();
 
-    // Everything the app WROTE follows the choice: the interface, and the words 明仔 says. The
+    // Everything the app WROTE follows the choice: the interface, and the words 明明 says. The
     // switch starts the sheet again in the chosen language rather than rewriting what was already
     // said in the other one — see the comment on `spokenIn` in app/chat/page.tsx.
     await expect(page.getByText(UI.hans["cards.sampleBanner"], { exact: true })).toBeVisible();

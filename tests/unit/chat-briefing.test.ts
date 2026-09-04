@@ -233,7 +233,7 @@ const CTX = {
   sheetWord: "出院紙",
 };
 
-describe("the script 明仔 plays", () => {
+describe("the script 明明 plays", () => {
   const cards = buildCards(
     reading({
       warningSigns: [warning("胸口痛"), warning("氣促")],

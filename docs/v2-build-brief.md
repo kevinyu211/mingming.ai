@@ -16,8 +16,8 @@ Three tabs, one conversation, **one active sheet at a time**.
 
 | Tab | Route | Contents |
 | --- | --- | --- |
-| 記錄 | `/` | Photograph or upload a sheet · a notification from 明仔 · the sheet being talked about · 以前嘅 (read-only history) |
-| 傾偈 | `/chat` | The whole product. The sheet arrives as messages from 明仔, who types and speaks on his own. Questions go in the same thread. |
+| 記錄 | `/` | Photograph or upload a sheet · a notification from 明明 · the sheet being talked about · 以前嘅 (read-only history) |
+| 傾偈 | `/chat` | The whole product. The sheet arrives as messages from 明明, who types and speaks on his own. Questions go in the same thread. |
 | 跟進 | `/track` | The active sheet's medicines, its appointment, its warning signs. Nothing else. |
 
 Full-screen, tab-less routes: `/capture` (camera + review). `/chat` also hides the tab bar — it
@@ -218,7 +218,7 @@ Anything else → 0/false, and the card shows the printed clause with no counter
 
 This is the product. Get it right.
 
-**Nothing is a play button.** 明仔 types himself out clause by clause (split on `，。、？！：`,
+**Nothing is a play button.** 明明 types himself out clause by clause (split on `，。、？！：`,
 ~360ms per clause) and speaks at the same time. The 讀住 waveform is a *status indicator*, not a
 control. The only voice control is the speaker toggle in the header, which silences the audio and
 lets the text keep typing.
@@ -252,7 +252,7 @@ crisis-referral outcomes render as messages in the thread, styled by `outcome` �
 screens. The crisis referral keeps its resource list.
 
 **The check-in.** When the active sheet has at least one countable dose and the briefing has
-reached `end`, `checkin` becomes `pending`. Opening the notification sets it to `open` and 明仔
+reached `end`, `checkin` becomes `pending`. Opening the notification sets it to `open` and 明明
 asks 「今日食咗藥未？張紙寫每日兩次，隨餐食。」 — the frequency quoted **verbatim from the page**,
 assembled by a fixed template, never by the model. 食咗 increments the counter and replies
 「好，我幫你記低咗。今日仲有一次。」 (or 「今日食晒喇。」). 未食 replies with the printed clause
@@ -265,11 +265,11 @@ pretend otherwise.
 
 ## 7. 記錄 and 跟進 (Agent D)
 
-**記錄, empty:** the two big buttons (拍張紙 jade / 上載相片 tinted), then 明仔 at 34% opacity and
+**記錄, empty:** the two big buttons (拍張紙 jade / 上載相片 tinted), then 明明 at 34% opacity and
 「仲未有紙。拍完我就即刻講俾你聽。」
 
 **記錄, with a sheet:** the two buttons, smaller; then the notification block when
-`checkin === "pending"` (明仔's face, an amber unread dot, the time, the question, a chevron) or
+`checkin === "pending"` (明明's face, an amber unread dot, the time, the question, a chevron) or
 the collapsed line 「今日嘅藥：仲有 N 次」 linking to 跟進 when it is `done`; then 傾緊呢張 with
 the active sheet's card (page thumbnail, title, date · N 頁 · N 隻藥, and a preview of where the
 conversation got to); then 以前嘅 (N) collapsing into read-only rows marked 只可以睇.
@@ -290,7 +290,7 @@ which shows a date and days-remaining **only when `plan.followUpDate` parsed**; 
 the printed `when` verbatim and no countdown · 今日嘅藥, one card per medicine: name, strength,
 「張紙寫：<frequency verbatim>」, and either 今日仲有 N 次 / 今日食晒 with a 食咗 button, or
 唔痛就唔使食 with no button, or — for a `stopped` medicine — 張紙寫唔使再食 with no button and no
-counter · 危險訊號 (N), collapsible, with 叫明仔講一次 which jumps to the thread and re-speaks it.
+counter · 危險訊號 (N), collapsible, with 叫明明講一次 which jumps to the thread and re-speaks it.
 
 ---
 

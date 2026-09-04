@@ -6,7 +6,7 @@
  * so the countdown is testable without touching the system time.
  *
  * **These are not counters.** A counter counts remaining doses and may never show a clock time
- * (brief §2 rule 7). `formatTime` is here for one thing only — the timestamp on 明仔's in-app
+ * (brief §2 rule 7). `formatTime` is here for one thing only — the timestamp on 明明's in-app
  * message, the way any chat app stamps a message — and it must never be attached to a medicine.
  */
 import type { UiLocale } from "@/lib/i18n/ui";
@@ -52,7 +52,7 @@ export function formatYmd(ymd: string | null | undefined, locale: UiLocale): str
  * 「上午 9:00」 / "09:00" — the timestamp on one in-app message, and nothing else.
  *
  * There are no push notifications in this product, so this is never "when the phone will go off".
- * It is when 明仔 last said something, which is a fact about the thread.
+ * It is when 明明 last said something, which is a fact about the thread.
  */
 export function formatTime(iso: string | null | undefined, locale: UiLocale): string {
   const at = parse(iso);

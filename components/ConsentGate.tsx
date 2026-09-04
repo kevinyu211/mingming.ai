@@ -76,7 +76,7 @@ export default function ConsentGate({ children }: { children: ReactNode }) {
      * FIRST, and synchronously, before anything that could yield.
      *
      * iOS only lets an audio element make a sound if a real user gesture touched THAT element, and
-     * 明仔 speaks with nothing to press — so without this the very first `play()` is refused and
+     * 明明 speaks with nothing to press — so without this the very first `play()` is refused and
      * every later one is refused identically. This tap is the one gesture that always precedes a
      * reading, so it is where the session's single audio element gets unlocked. Moving this below
      * an `await`, or into a promise continuation, silently breaks it: the gesture only counts on

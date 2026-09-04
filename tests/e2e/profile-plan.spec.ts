@@ -384,7 +384,7 @@ test.describe("A stopped medicine is never a dose (brief §2 rule 8)", () => {
     await expectNoClockTime(page);
   });
 
-  test("and 明仔 never asks whether a withdrawn medicine was taken", async ({ page }) => {
+  test("and 明明 never asks whether a withdrawn medicine was taken", async ({ page }) => {
     // The check-in is the one place a number about a medicine is spoken, so a withdrawn drug must
     // not be able to produce one. `CheckinNotice` refuses on the same rule the counter does: with
     // nothing countable there is no verbatim clause to quote, so the block does not render at all.

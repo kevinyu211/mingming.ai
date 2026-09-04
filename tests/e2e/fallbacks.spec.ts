@@ -83,7 +83,7 @@ test.describe("A photograph that cannot be read (V7)", () => {
     ).toBeVisible();
     await expect(page.getByText(UNAVAILABLE_BODY, { exact: true })).toBeVisible();
     // The sheet never became "the active sheet" on the strength of a photograph nobody could read:
-    // 明仔 has not greeted anybody, because there is nothing to greet them about.
+    // 明明 has not greeted anybody, because there is nothing to greet them about.
     await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
@@ -104,7 +104,7 @@ test.describe("A photograph that cannot be read (V7)", () => {
  * S10, re-expressed for a product where **nothing is a play button** (brief §6).
  *
  * The v1 version of this test pressed 全部讀出 and asserted that every card's play control turned
- * into 睇字. That assertion now contradicts the product: 明仔 types himself out and speaks at the
+ * into 睇字. That assertion now contradicts the product: 明明 types himself out and speaks at the
  * same time, the 讀住 waveform is a status indicator, and the only voice control on the screen is
  * the speaker toggle. Asserting a play control would pin down the exact thing the redesign
  * removed, so the behaviour is re-expressed as what it was always protecting:
@@ -123,7 +123,7 @@ test.describe("Speech output is unavailable (V7)", () => {
 
     await page.goto("/chat?sample=hk_en");
 
-    // 1. The words. 明仔's opening line is typed out and committed with no sound behind it.
+    // 1. The words. 明明's opening line is typed out and committed with no sound behind it.
     await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
       timeout: 30_000,
     });

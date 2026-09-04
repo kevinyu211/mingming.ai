@@ -25,7 +25,7 @@ export interface BottomSheetProps {
    * dialog with no name is announced as an unlabelled group.
    */
   title: string;
-  /** The quiet line under the title (「明仔會用你揀嘅話講同寫」). */
+  /** The quiet line under the title (「明明會用你揀嘅話講同寫」). */
   subtitle?: string;
   /** Keeps `title` as the accessible name but draws no heading, for a sheet with its own layout. */
   titleHidden?: boolean;

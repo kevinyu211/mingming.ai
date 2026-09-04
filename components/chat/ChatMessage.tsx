@@ -10,7 +10,7 @@
  *
  * ## Why this is a bubble now, and a small one
  *
- * The first build gave 明仔 full-width 20 px paragraphs and put the warning signs in a 22 px block
+ * The first build gave 明明 full-width 20 px paragraphs and put the warning signs in a 22 px block
  * of their own. On a phone that is one and a half messages per screen: the conversation — the
  * thing the whole product is — could not be seen. So both sides are bubbles at the scale a
  * messaging app uses, the avatar is 30 px, and a warning is an amber bubble in the same column as
@@ -100,7 +100,7 @@ export default function ChatMessage({
    *
    * It is answered from ordinary knowledge, not from this person's page, so it cites no line and
    * nothing behind it can be checked against the paper. The reader must be able to tell at a
-   * glance that 明仔 is explaining a word rather than reporting their sheet — otherwise a general
+   * glance that 明明 is explaining a word rather than reporting their sheet — otherwise a general
    * statement about fasting reads as an instruction their doctor wrote down.
    */
   const heading =

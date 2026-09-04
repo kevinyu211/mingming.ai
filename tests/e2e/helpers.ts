@@ -400,7 +400,7 @@ export async function seedProfile(page: Page, id?: FixtureId): Promise<void> {
  * builds the real one changed underneath it.
  *
  * The default `briefing.phase` is `end` because most callers want a sheet that is simply *there*
- * — on 跟進, or on 記錄 — without 明仔 starting to talk over the assertions. A spec about the
+ * — on 跟進, or on 記錄 — without 明明 starting to talk over the assertions. A spec about the
  * briefing itself passes `{ briefing: { phase: "idle", step: 0 } }`.
  */
 export function activeSheet(reading: StoredReading, overrides: Partial<Sheet> = {}): Sheet {
@@ -640,7 +640,7 @@ export async function expectNoHorizontalScroll(page: Page): Promise<void> {
  * prescribing. This walks the rendered text rather than one element, because the rule is about the
  * whole screen: a time that leaked into a card heading is as wrong as one inside a counter.
  *
- * `allowed` is for the timestamps that are legitimately times — 明仔's in-app message stamp on 記錄
+ * `allowed` is for the timestamps that are legitimately times — 明明's in-app message stamp on 記錄
  * is the only one, and it is a fact about the thread, not about a medicine.
  */
 export async function expectNoClockTime(page: Page, allowed: RegExp[] = []): Promise<void> {

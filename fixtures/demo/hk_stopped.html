@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Discharge Summary — Harbour View Hospital (synthetic demo sheet, stopped medicines)</title>
+<style>
+  /* DEMO SHEET 2 of 3 — "hk_stopped".
+     One page, one patient, TWO medicine tables: the discharge list, and directly
+     under it a block headed "MEDICINES STOPPED — NOT TO BE TAKEN AFTER DISCHARGE".
+
+     The stopped block is deliberately ORDINARY. Same rules, same column headings,
+     same grey caption bar, no red ink, no boxed warning — because a real ward
+     printout does not flag it either. That is exactly why the app has to read the
+     heading rather than the styling: the only thing separating a drug the family
+     must take from one the hospital withdrew is the sentence above the table.
+
+     Fictional hospital, fictional patient, placeholder identifiers throughout. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #ffffff; color: #111111;
+    font-family: Arial, Helvetica, "Liberation Sans", sans-serif;
+    font-size: 17px; line-height: 1.34;
+    padding: 46px 58px 34px 58px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .zh { font-family: "PingFang HK", "Hiragino Sans CNS", "Heiti TC", "Microsoft JhengHei", sans-serif; }
+
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; }
+  .hosp { font-size: 23px; font-weight: bold; letter-spacing: .4px; }
+  .hosp .cn { font-size: 21px; letter-spacing: 3px; font-weight: bold; }
+  .hosp small { display: block; font-size: 13px; font-weight: normal; letter-spacing: 0; margin-top: 4px; color: #222; }
+  .stamp {
+    border: 1.5px solid #555; color: #555; text-align: center;
+    padding: 5px 10px; font-size: 11px; letter-spacing: .8px; line-height: 1.3; max-width: 268px;
+  }
+  .stamp b { display: block; font-size: 12px; letter-spacing: 1.6px; }
+  .doctype { margin-top: 12px; text-align: center; font-size: 22px; font-weight: bold; letter-spacing: 3px; }
+  .doctype span { font-size: 19px; letter-spacing: 6px; }
+  .rule { border-top: 2px solid #111; margin-top: 7px; }
+
+  .toprow { display: flex; gap: 20px; margin-top: 14px; }
+  .label-box { width: 430px; border: 1px dashed #111; padding: 8px 11px; }
+  .label-box .cap { font-size: 11px; letter-spacing: 1.2px; color: #444; margin-bottom: 5px; }
+  .label-box .line { font-size: 17px; }
+  .label-box .line b { display: inline-block; min-width: 112px; font-weight: bold; }
+  .topfields { flex: 1; }
+  .topfields .fld { display: flex; margin-bottom: 3px; }
+  .topfields .fld .k { width: 218px; font-weight: bold; }
+  .topfields .fld .v { flex: 1; }
+  .box { display: inline-block; width: 12px; height: 12px; border: 1px solid #111; margin-right: 4px; position: relative; top: 1px; text-align: center; line-height: 10px; font-size: 11px; }
+
+  .sec { margin-top: 13px; }
+  .sec > .h {
+    font-size: 15px; font-weight: bold; letter-spacing: 1.1px;
+    background: #ebebeb; border: 1px solid #111; border-left-width: 5px;
+    padding: 3px 9px; margin-bottom: 5px;
+  }
+  .sec > .h .zh { font-weight: normal; font-size: 14px; letter-spacing: 1px; margin-left: 7px; }
+  .sec .ln { display: block; }
+  .sec .body { padding: 0 3px; }
+
+  table.dx { width: 100%; border-collapse: collapse; }
+  table.dx td { vertical-align: top; border: 1px solid #111; padding: 6px 9px; }
+  table.dx td.k { width: 214px; font-weight: bold; background: #f4f4f4; font-size: 15px; }
+
+  table.rx { width: 100%; border-collapse: collapse; font-size: 16px; }
+  table.rx th, table.rx td { border: 1px solid #111; padding: 5px 8px; text-align: left; vertical-align: top; }
+  table.rx th { font-size: 13px; letter-spacing: .5px; background: #ebebeb; font-weight: bold; }
+  table.rx th .zh { display: block; font-weight: normal; font-size: 12px; letter-spacing: 1px; }
+  table.rx td.n { width: 34px; text-align: center; }
+  table.rx td.st { width: 96px; }
+  table.rx td.ds { width: 108px; }
+  table.rx td.fq { width: 258px; }
+  table.rx td.du { width: 122px; }
+  .rxnote { font-size: 13px; margin-top: 4px; color: #222; }
+
+  .adv .ln { margin-bottom: 2px; }
+
+  .sig { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; }
+  .sigblk { width: 560px; }
+  .sigline { border-bottom: 1px solid #111; height: 34px; position: relative; }
+  .sigline i { position: absolute; left: 12px; bottom: 1px; font-family: "Snell Roundhand", "Brush Script MT", cursive; font-size: 29px; font-style: normal; }
+  .small { font-size: 13px; }
+  .foot { margin-top: 14px; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #555; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hosp">HARBOUR VIEW HOSPITAL &nbsp;<span class="cn zh">海景醫院</span>
+    <small>Department of Medicine &amp; Geriatrics &nbsp;<span class="zh">內科及老人科</span> &nbsp;|&nbsp; 12 Harbour View Road, Hong Kong</small>
+  </div>
+  <div class="stamp"><b>SYNTHETIC — NOT A REAL MEDICAL RECORD</b><span class="zh">合成樣張，非真實病歷</span></div>
+</div>
+<div class="doctype">DISCHARGE SUMMARY &nbsp;<span class="zh">出院紙</span></div>
+<div class="rule"></div>
+
+<div class="toprow">
+  <div class="label-box">
+    <div class="cap">PATIENT LABEL <span class="zh">病人標籤</span></div>
+    <div class="line"><b>Name:</b> TSANG Wai Man</div>
+    <div class="line"><b>HKID:</b> X456789(0)</div>
+    <div class="line"><b>Case No.:</b> HVH-XXXXXXXX</div>
+    <div class="line"><b>Sex / Age:</b> M / 74</div>
+    <div class="line"><b>Ward / Bed:</b> 7A / 06</div>
+  </div>
+  <div class="topfields">
+    <div class="fld"><div class="k">Attending Doctor(s):</div><div class="v">Dr W. K. TAM / Dr J. Y. LO</div></div>
+    <div class="fld"><div class="k">Admission Date:</div><div class="v">26-08-2026</div></div>
+    <div class="fld"><div class="k">Discharge Date:</div><div class="v">02-09-2026</div></div>
+    <div class="fld"><div class="k">Length of Stay:</div><div class="v">7 days</div></div>
+    <div class="fld"><div class="k">Discharge to:</div><div class="v"><span class="box">X</span>Home &nbsp; <span class="box"></span>Other Hospital &nbsp; <span class="box"></span>OAH</div></div>
+    <div class="fld"><div class="k">Allergies:</div><div class="v">NKDA</div></div>
+    <div class="fld"><div class="k">Documents given:</div><div class="v"><span class="box">X</span>Discharge summary &nbsp;<span class="box">X</span>Drug bags &nbsp;<span class="box">X</span>Blood sugar diary</div></div>
+  </div>
+</div>
+
+<table class="dx" style="margin-top:13px;">
+  <tr>
+    <td class="k">Principal Diagnosis</td>
+    <td><span class="ln">Symptomatic hypoglycaemia, drug related</span></td>
+  </tr>
+  <tr>
+    <td class="k">Secondary Diagnosis</td>
+    <td><span class="ln">1. Type 2 Diabetes Mellitus &nbsp;&nbsp; 2. Hypertension &nbsp;&nbsp; 3. Sinus bradycardia &nbsp;&nbsp; 4. CKD stage 3a</span></td>
+  </tr>
+  <tr>
+    <td class="k">Course in Hospital</td>
+    <td>
+      <span class="ln">74M brought in by daughter after a fall at home. Found sweating and confused, capillary glucose 2.4 mmol/L. Responded to IV dextrose within 10 min.</span>
+      <span class="ln">Nil head injury, CT brain nil acute. ECG: sinus bradycardia 44/min on admission, 62/min after beta-blocker held. Cr 118, eGFR 48, HbA1c 6.4%.</span>
+      <span class="ln">No further hypoglycaemic episode after the sulphonylurea was held. Pre-meal glucose 6.1–8.9 mmol/L over the last 3 days on metformin alone.</span>
+      <span class="ln">Seen by diabetes nurse with daughter present; glucometer technique reviewed and a blood sugar diary given. Physiotherapist: steady with a frame indoors.</span>
+    </td>
+  </tr>
+</table>
+
+<div class="sec">
+  <div class="h">DISCHARGE MEDICATIONS <span class="zh">出院藥物</span></div>
+  <table class="rx">
+    <tr>
+      <th>No.</th>
+      <th>Drug <span class="zh">藥物名稱</span></th>
+      <th>Strength <span class="zh">劑量</span></th>
+      <th>Dose <span class="zh">每次服用</span></th>
+      <th>Frequency <span class="zh">服法</span></th>
+      <th>Duration <span class="zh">服用日數</span></th>
+    </tr>
+    <tr><td class="n">1</td><td>Metformin</td><td class="st">500mg</td><td class="ds">1 tab</td><td class="fq">BD with meals</td><td class="du">28 days</td></tr>
+    <tr><td class="n">2</td><td>Amlodipine</td><td class="st">5mg</td><td class="ds">1 tab</td><td class="fq">Daily</td><td class="du">28 days</td></tr>
+    <tr><td class="n">3</td><td>Aspirin</td><td class="st">80mg</td><td class="ds">1 tab</td><td class="fq">Daily after food</td><td class="du">28 days</td></tr>
+    <tr><td class="n">4</td><td>Atorvastatin</td><td class="st">20mg</td><td class="ds">1 tab</td><td class="fq">Nocte</td><td class="du">28 days</td></tr>
+    <tr><td class="n">5</td><td>Senna</td><td class="st">7.5mg</td><td class="ds">2 tabs</td><td class="fq">Nocte PRN for constipation</td><td class="du">20 tabs</td></tr>
+  </table>
+</div>
+
+<div class="sec">
+  <div class="h">MEDICINES STOPPED — NOT TO BE TAKEN AFTER DISCHARGE <span class="zh">已停用藥物 — 出院後不需服用</span></div>
+  <table class="rx">
+    <tr>
+      <th>No.</th>
+      <th>Drug <span class="zh">藥物名稱</span></th>
+      <th>Strength <span class="zh">劑量</span></th>
+      <th>Dose <span class="zh">每次服用</span></th>
+      <th>Frequency <span class="zh">服法</span></th>
+      <th>Duration <span class="zh">服用日數</span></th>
+    </tr>
+    <tr><td class="n">1</td><td>Gliclazide</td><td class="st">80mg</td><td class="ds">1 tab</td><td class="fq">Daily before breakfast</td><td class="du"></td></tr>
+    <tr><td class="n">2</td><td>Bisoprolol</td><td class="st">5mg</td><td class="ds">1 tab</td><td class="fq">Daily</td><td class="du"></td></tr>
+    <tr><td class="n">3</td><td>Ibuprofen</td><td class="st">400mg</td><td class="ds">1 tab</td><td class="fq">TDS after food</td><td class="du"></td></tr>
+  </table>
+  <div class="rxnote">The three medicines in this block were stopped during this admission and are not to be taken after going home. Old supplies should be returned to the pharmacy or the clinic. <span class="zh">上列三種藥物已於今次住院期間停用，出院後不需再服用，舊藥請交回藥房或門診。</span></div>
+</div>
+
+<div class="sec">
+  <div class="h">ADVICE ON DISCHARGE <span class="zh">出院指導</span></div>
+  <div class="body adv">
+    <span class="ln">1. Diet: diabetic diet. No sweet drinks and no sweet snacks between meals.</span>
+    <span class="ln">2. Activity: walk indoors with the frame. Do not go out alone until you have been seen at the clinic.</span>
+    <span class="ln">3. Check the blood sugar before breakfast and before dinner, and write both readings in the diary given.</span>
+    <span class="ln">4. Return to the Accident &amp; Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down.</span>
+    <span class="ln">5. Keep a sweet drink or three glucose tablets within reach at home and in the bag.</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">FOLLOW-UP <span class="zh">覆診安排</span></div>
+  <div class="body">
+    <span class="ln">FU MED SOPD 4/52. Bring all drug bags, including the stopped ones, to the clinic.</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">HOSPITAL CONTACT <span class="zh">醫院聯絡方法</span></div>
+  <div class="body">
+    <span class="ln">Ward 7A enquiries <span class="zh">病房查詢</span>: 2xxx xxxx (24 hours)</span>
+  </div>
+</div>
+
+<div class="sig">
+  <div class="sigblk">
+    <div class="small" style="font-weight:bold;margin-bottom:3px;">Doctor's Name / Signature <span class="zh">醫生簽署</span></div>
+    <div class="sigline"><i>W.K. Tam</i></div>
+    <div class="small" style="margin-top:3px;">Dr W. K. TAM, MBBS (HK) &nbsp; Reg. No. M0XXXXX &nbsp; 02-09-2026</div>
+  </div>
+  <div class="small" style="text-align:right;">
+    Printed 02-09-2026 09:41<br><b>Page 1 of 1</b> &nbsp;<span class="zh">第 1 頁，共 1 頁</span>
+  </div>
+</div>
+
+<div class="foot">
+  <span>SYNTHETIC — NOT A REAL MEDICAL RECORD. <span class="zh">合成樣張，非真實病歷。</span> FICTIONAL PATIENT AND FICTIONAL HOSPITAL.</span>
+  <span>HVH-DS-DEMO-02</span>
+</div>
+
+</body>
+</html>

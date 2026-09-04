@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 明仔 typing himself out and speaking at the same time (v2 build brief §6).
+ * 明明 typing himself out and speaking at the same time (v2 build brief §6).
  *
  * **There is no play button anywhere in this product.** A message is revealed one clause per
  * ~360 ms and the audio starts on the same tick, so the words on screen and the words in the air
@@ -18,14 +18,14 @@
  *
  * **The clip is fetched before the bubble needs it.** One MiniMax call measures two to three
  * seconds. Asked for at the moment the bubble appears — which is what this hook used to do — the
- * whole line is typed out and sitting still before a sound comes out of the phone, and 明仔 reads
+ * whole line is typed out and sitting still before a sound comes out of the phone, and 明明 reads
  * a message the reader finished half a sentence ago. So `say()` takes the lines that come AFTER
  * this one and warms them while the current one is speaking (`warm`, `prefetch`): by the time each
  * bubble appears its audio is already in the session cache, and the voice starts on the same tick
  * as the text. Nothing ever waits on it — an unwarmed line still types immediately and speaks when
  * the clip lands, because holding words off the screen to wait for a voice is the worse failure.
  *
- * On iOS a first sound with no user gesture behind it is refused by the autoplay policy, and 明仔
+ * On iOS a first sound with no user gesture behind it is refused by the autoplay policy, and 明明
  * speaks without being tapped. `lib/speech/unlock.ts` is what buys the right to make a sound — one
  * element, unlocked on a real tap and reused for every clip. If it is still refused, `speak()`
  * reports that honestly as `text-only`, which sets `voiceUnavailable`: the text is already on
@@ -67,7 +67,7 @@ export interface Voice {
    * Fetch these lines now, without saying any of them.
    *
    * For the line that has no line before it: the opening bubble cannot be warmed by the one that
-   * precedes it, so whoever knows the script warms it in the pause before 明仔 starts talking.
+   * precedes it, so whoever knows the script warms it in the pause before 明明 starts talking.
    */
   warm: (lines: string[]) => void;
   /** Drops the timer queue, stops the audio, and invalidates everything in flight. */

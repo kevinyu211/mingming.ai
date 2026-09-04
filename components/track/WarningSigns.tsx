@@ -8,7 +8,7 @@
  * never empty and never silently absent — so this component always renders something, and the
  * "no warning signs" state is a designed state rather than a gap.
  *
- * 叫明仔講一次 hands the job back to the conversation: `/chat?say=warnings` re-speaks the block in
+ * 叫明明講一次 hands the job back to the conversation: `/chat?say=warnings` re-speaks the block in
  * the thread, where the voice, the waveform and the source links already live. Reading it aloud
  * from here would be a second speaking surface with its own bugs.
  */

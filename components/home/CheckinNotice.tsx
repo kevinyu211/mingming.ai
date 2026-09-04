@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * The block under the two buttons on 記錄: either 明仔's check-in waiting to be read, or the quiet
+ * The block under the two buttons on 記錄: either 明明's check-in waiting to be read, or the quiet
  * line it collapses into once it has been answered (brief §7).
  *
  * **This is an IN-APP message.** There are no push notifications in this product and nothing here
  * may imply the phone will go off by itself: no bell, no "reminder", no "we'll tell you at 9".
  * What it looks like — a name, a time, an unread dot — is what a message that is already sitting
  * in the app looks like when you open it, which is exactly what this is. The timestamp is when
- * 明仔 last said something in the thread, read back off the thread, never a time we scheduled.
+ * 明明 last said something in the thread, read back off the thread, never a time we scheduled.
  *
  * The question itself is assembled from the FIXED template `checkin.question` with the medicine's
  * name and the page's own frequency clause dropped in verbatim (brief §6). A model turn never

@@ -36,7 +36,7 @@ export const CLAUSE_MS = 360;
 export const COMMIT_MS = 700;
 
 /**
- * The beat between one committed message and 明仔 starting the next one, spent showing the three
+ * The beat between one committed message and 明明 starting the next one, spent showing the three
  * dots. It is what makes the briefing read as somebody talking rather than as a list unrolling —
  * and it is the window in which the reader can cut in, because a hold on the bar during this pause
  * takes the floor before anything else has been said.
@@ -55,7 +55,7 @@ const JOIN = "\n";
 /**
  * Between what a bubble says and the question it ends with.
  *
- * A blank line, because the question is a different act from the content: it is where 明仔 hands
+ * A blank line, because the question is a different act from the content: it is where 明明 hands
  * the floor over, and running it on from the last medicine makes it look like part of the dose.
  */
 const ASK_GAP = "\n\n";
@@ -133,7 +133,7 @@ export function pieceSpeech(card: Card, dialect: Dialect): string {
 /* -------------------------------------------------------------------------- */
 
 /**
- * One thing 明仔 says, in the order he says it.
+ * One thing 明明 says, in the order he says it.
  *
  * The briefing used to be a phase machine that stopped at 明唔明？ after every card and waited for
  * a button. It is a **script** now: a flat array of beats that plays itself out, with the reader
@@ -246,7 +246,7 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
   /**
    * The opening: what is on the page, in numbers, and an offer of where to start.
    *
-   * A reader who has just been handed a medical document does not know what is in it, and 明仔
+   * A reader who has just been handed a medical document does not know what is in it, and 明明
    * launching straight into red flags gives them no idea how long this is going to take or what is
    * coming. One sentence of shape first — four things to watch for, five medicines, one visit —
    * and then the floor, because someone who came to the app worried about one specific thing

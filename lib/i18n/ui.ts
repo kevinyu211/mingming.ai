@@ -163,11 +163,11 @@ const hant = {
   "tab.chat": "傾偈",
   "tab.track": "跟進",
   "tab.navLabel": "主要頁面",
-  "tab.chatPending": "明仔有嘢想問你",
+  "tab.chatPending": "明明有嘢想問你",
 
-  // --- V2 明仔 -------------------------------------------------------------
+  // --- V2 明明 -------------------------------------------------------------
   // He is drawn, never labelled: components/Mascot.tsx is aria-hidden and THIS is the real text.
-  "mascot.name": "明仔",
+  "mascot.name": "明明",
 
   // --- V2 記錄 -------------------------------------------------------------
   "home.title": "記錄",
@@ -246,18 +246,18 @@ const hant = {
   "chat.speakAgain": "讀多次",
   "chat.listening": "聽住…",
   "chat.nothingHeard": "我冇聽到，撳住個掣再講多次。",
-  "chat.typing": "明仔諗緊…",
+  "chat.typing": "明明諗緊…",
 
   // --- V2 The briefing -----------------------------------------------------
   // The opening is two beats, the way a person opens a conversation: hello and who is talking,
   // then what is about to happen. {title} is `sheetTitle()` — derived from the page by rule, or
   // the plain word 出院紙 when the page named no hospital. Never a person's name: the profile
   // stores a relationship label and nothing here addresses anybody by name.
-  "brief.hello": "你好呀，我係明仔。你張{title}我已經睇咗喇。",
+  "brief.hello": "你好呀，我係明明。你張{title}我已經睇咗喇。",
   // The opening. What is on the page in numbers, then the floor — someone who came worried about
   // one thing should be able to say so instead of sitting through the rest to reach it.
-  "brief.summary": "你好呀，我係明仔。你張{sheet}我睇完喇，入面有{parts}。想我由邊樣講起？定係我一樣一樣咁講？",
-  "brief.summaryBare": "你好呀，我係明仔。你張{sheet}我睇完喇。我一樣一樣咁講俾你聽。",
+  "brief.summary": "你好呀，我係明明。你張{sheet}我睇完喇，入面有{parts}。想我由邊樣講起？定係我一樣一樣咁講？",
+  "brief.summaryBare": "你好呀，我係明明。你張{sheet}我睇完喇。我一樣一樣咁講俾你聽。",
   "count.warnings": "{n}樣要留意嘅情況",
   "count.medicines": "{n}隻藥",
   "count.followUp": "{n}次覆診",
@@ -272,7 +272,7 @@ const hant = {
   // The teach-back beat. It is a question, not a form: there is no 明白 button to press, because
   // the answer this app wants is the reader talking back into the same thread.
   "brief.checkUnderstand": "講到呢度，明唔明？有邊句唔明白，撳住下面個掣話我知，我再講一次。",
-  // Asked at the end of every later section, and 明仔 WAITS for the answer. Deliberately offers
+  // Asked at the end of every later section, and 明明 WAITS for the answer. Deliberately offers
   // both doors — carry on, or ask — because a reader who is only told they may continue will not
   // think to ask.
   "brief.askContinue": "明唔明？想我講埋跟住嗰樣，或者有嘢想問，撳住下面個掣同我講。",
@@ -331,7 +331,7 @@ const hant = {
   "track.daysAfter": "{n} 日之後",
   "track.todayMeds": "今日嘅藥",
   "track.warnings": "危險訊號 ({n})",
-  "track.saySigns": "叫明仔講一次",
+  "track.saySigns": "叫明明講一次",
   "appt.directions": "睇下點去",
 
   // --- V2 Dose cards -------------------------------------------------------
@@ -488,10 +488,10 @@ const hans: Record<UiKey, string> = {
   "tab.chat": "聊天",
   "tab.track": "跟进",
   "tab.navLabel": "主要页面",
-  "tab.chatPending": "明仔有话想问你",
+  "tab.chatPending": "明明有话想问你",
 
-  // --- V2 明仔 -------------------------------------------------------------
-  "mascot.name": "明仔",
+  // --- V2 明明 -------------------------------------------------------------
+  "mascot.name": "明明",
 
   // --- V2 记录 -------------------------------------------------------------
   "home.title": "记录",
@@ -559,12 +559,12 @@ const hans: Record<UiKey, string> = {
   "chat.speakAgain": "再读一次",
   "chat.listening": "听着…",
   "chat.nothingHeard": "我没听到，按住那个键再说一次。",
-  "chat.typing": "明仔在想…",
+  "chat.typing": "明明在想…",
 
   // --- V2 The briefing -----------------------------------------------------
-  "brief.hello": "你好，我是明仔。你的{title}我已经看过了。",
-  "brief.summary": "你好，我是明仔。你的{sheet}我看完了，里面有{parts}。想我从哪一样讲起？还是我一样一样地讲？",
-  "brief.summaryBare": "你好，我是明仔。你的{sheet}我看完了。我一样一样地讲给你听。",
+  "brief.hello": "你好，我是明明。你的{title}我已经看过了。",
+  "brief.summary": "你好，我是明明。你的{sheet}我看完了，里面有{parts}。想我从哪一样讲起？还是我一样一样地讲？",
+  "brief.summaryBare": "你好，我是明明。你的{sheet}我看完了。我一样一样地讲给你听。",
   "count.warnings": "{n}样要留意的情况",
   "count.medicines": "{n}种药",
   "count.followUp": "{n}次复诊",
@@ -619,7 +619,7 @@ const hans: Record<UiKey, string> = {
   "track.daysAfter": "{n} 天之后",
   "track.todayMeds": "今天的药",
   "track.warnings": "危险讯号 ({n})",
-  "track.saySigns": "叫明仔讲一次",
+  "track.saySigns": "叫明明讲一次",
   "appt.directions": "看看怎么去",
 
   // --- V2 Dose cards -------------------------------------------------------
@@ -771,8 +771,8 @@ const en: Record<UiKey, string> = {
   "tab.navLabel": "Main sections",
   "tab.chatPending": "Ming has a question waiting",
 
-  // --- V2 明仔 -------------------------------------------------------------
-  // Romanised for the English interface. He is still 明仔 to the parent, who hears him, not reads.
+  // --- V2 明明 -------------------------------------------------------------
+  // Romanised for the English interface. He is still 明明 to the parent, who hears him, not reads.
   "mascot.name": "Ming",
 
   // --- V2 Sheets tab -------------------------------------------------------

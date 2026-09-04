@@ -1,5 +1,5 @@
 /**
- * What the reader meant when they answered 明仔.
+ * What the reader meant when they answered 明明.
  *
  * The briefing stops at the end of every section and asks. Whatever comes back — spoken or typed —
  * lands here, and this decides one of three things:

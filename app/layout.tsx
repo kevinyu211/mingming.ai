@@ -29,7 +29,7 @@ const instrumentSans = Instrument_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Plainly · 講明白",
+  title: "Ming Ming · 明明",
   description:
     "Photograph a hospital discharge sheet and hear it explained plainly, in Cantonese, Mandarin or English — warning signs first.",
   manifest: "/manifest.webmanifest",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     // Short on purpose: iOS truncates the home-screen label, so the bilingual form would clip.
-    title: "Plainly",
+    title: "Ming Ming",
   },
   icons: {
     icon: "/icons/icon.svg",

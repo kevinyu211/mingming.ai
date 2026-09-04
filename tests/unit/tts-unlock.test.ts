@@ -5,7 +5,7 @@
  * itself, and it's also delayed. Significantly."* The first half is this file.
  *
  * `lib/speech/tts.ts` used to build `new Audio(url)` per clip. On iOS a freshly constructed
- * element has no user gesture behind it, and 明仔 starts talking on his own — so the very first
+ * element has no user gesture behind it, and 明明 starts talking on his own — so the very first
  * `play()` was refused and every clip after it was refused the same way. The fix is the standard
  * one and it only works if it is exactly this: ONE `HTMLAudioElement`, `play()`ed once inside a
  * real handler, then re-`src`ed for every later clip.
@@ -135,7 +135,7 @@ describe("the audio element is unlocked once and reused", () => {
     stubBrowser();
     stubCloud();
 
-    // Exactly the briefing's own order: 明仔 speaks first and nobody has pressed anything.
+    // Exactly the briefing's own order: 明明 speaks first and nobody has pressed anything.
     const { speak, unlockAudio } = await import("@/lib/speech/tts");
     await speak("未撳過任何嘢。", "yue");
     expect(built).toHaveLength(1);
@@ -174,13 +174,13 @@ describe("the audio element is unlocked once and reused", () => {
     expect(isAudioUnlocked()).toBe(true);
   });
 
-  it("a tap during a line does not cut 明仔 off", async () => {
+  it("a tap during a line does not cut 明明 off", async () => {
     const documentStub = stubBrowser();
     const { isAudioUnlocked, speechAudio } = await import("@/lib/speech/unlock");
 
     // Chrome allows autoplay, so nothing there ever calls `unlockAudio()` and the safety net stays
     // armed for the whole session. Pointing the element at the silent buffer on the next tap would
-    // then stop the reading: the reader taps a source link and 明仔 goes quiet mid-sentence.
+    // then stop the reading: the reader taps a source link and 明明 goes quiet mid-sentence.
     const element = speechAudio() as unknown as FakeAudio;
     element.src = "blob:clip/reading-right-now";
     element.paused = false;

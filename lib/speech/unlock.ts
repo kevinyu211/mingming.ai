@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The one `<audio>` element 明仔 speaks through, and the tap that unlocks it.
+ * The one `<audio>` element 明明 speaks through, and the tap that unlocks it.
  *
  * ── Why this file exists ─────────────────────────────────────────────────────────────────────
  *
@@ -11,7 +11,7 @@
  * taps. That is the whole trick, and it is the only one that works.
  *
  * `lib/speech/tts.ts` used to do `new Audio(url)` per clip. A freshly constructed element has no
- * gesture behind it, so on a real iPhone the very first `audio.play()` was rejected — and 明仔
+ * gesture behind it, so on a real iPhone the very first `audio.play()` was rejected — and 明明
  * starts talking on his own, with nothing to press, so there was never a gesture to inherit. The
  * report from the phone was exactly what that produces: *"some don't even speak… I had to click
  * on it, and then it kind of did."*
@@ -118,12 +118,12 @@ export function unlockAudio(): boolean {
 
   /**
    * Something is already coming out of it, so the lock was never the problem — and pointing the
-   * element at the silence now would cut 明仔 off mid-sentence.
+   * element at the silence now would cut 明明 off mid-sentence.
    *
    * Reachable on any browser that allows autoplay: nothing there ever calls `unlockAudio`, so the
    * safety net below stays armed for the whole session and fires on every tap. Without this line,
    * tapping a source link while a line was being read stopped the reading. Nothing on this screen
-   * silences 明仔 except the two things that are meant to.
+   * silences 明明 except the two things that are meant to.
    */
   if (!audio.paused) {
     noteAudioPlaying();

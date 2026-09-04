@@ -5,7 +5,7 @@
  *
  * It says what is happening and how long it takes, and nothing else. No progress bar that can lie
  * about a stream whose length is unknown, and no reassurance about what the sheet will say — the
- * app has not read it yet. 明仔 at 92 is the only thing moving.
+ * app has not read it yet. 明明 at 92 is the only thing moving.
  *
  * The page count comes from the pages actually being sent. When it is unknown the line is dropped
  * rather than guessed, because 「1 頁」 on a four-page discharge would be a claim about a medical

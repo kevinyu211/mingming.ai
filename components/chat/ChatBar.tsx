@@ -108,7 +108,7 @@ export interface ChatBarProps {
   onSend: (text: string) => void;
   /**
    * The microphone opened or closed. The page uses it to draw the listening bubble, and — this is
-   * the part that matters — to stop 明仔 talking the instant the reader takes the floor.
+   * the part that matters — to stop 明明 talking the instant the reader takes the floor.
    */
   onListening?: (listening: boolean) => void;
   /** Partial transcript, live. Browser recognition path only; "" on the cloud path. */

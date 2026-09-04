@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 明仔 — the companion.
+ * 明明 — the companion.
  *
  * He is a drawing now: four transparent 192 px squares per animal in `public/mascot/`, cut out of
  * the studio renders by `scripts/build-mascots.mjs` (which is also where the story of the white
@@ -17,11 +17,11 @@
  * WebP, a few KB — so `/_next/image` would only re-encode them, and it would do two things we do not
  * want. It caps a fixed-size image's srcset at 2×, which on a 3× phone hands the 30 px avatar a
  * 64 px file for a 90-device-pixel box; and when a client does not advertise WebP it falls back to
- * JPEG, which has no alpha and flattens 明仔 onto a black square. Straight to the file it is: four
+ * JPEG, which has no alpha and flattens 明明 onto a black square. Straight to the file it is: four
  * requests for the whole app, every one of them the full-resolution art.
  *
  * ACCESSIBILITY. He is decoration. Every place he appears, his NAME appears next to him as real
- * text (「明仔」, from `mascot.name`), so labelling the picture as well would make a screen reader
+ * text (「明明」, from `mascot.name`), so labelling the picture as well would make a screen reader
  * say his name twice. The root is `aria-hidden`, the image is `alt=""`; there is no `role`, no
  * `aria-label`, no `title`. If you are tempted to add one, add the name as visible text instead —
  * that helps everyone.
@@ -33,7 +33,7 @@ export type MascotAnimal = "cat" | "panda" | "puppy" | "rabbit";
 
 /**
  * ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
- * │  THIS ONE WORD IS THE MASCOT. Change it to "cat", "puppy" or "rabbit" and every 明仔 in the  │
+ * │  THIS ONE WORD IS THE MASCOT. Change it to "cat", "puppy" or "rabbit" and every 明明 in the  │
  * │  app changes with it — the thread avatar, the home screen, the reading screen, the check-in  │
  * │  notice. All four animals are already in `public/mascot/`; nothing else needs touching.      │
  * └─────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -44,7 +44,7 @@ export const MASCOT: MascotAnimal = "panda";
 export type MascotSize = 30 | 44 | 64 | 92;
 
 /**
- * `speaking` is 明仔 mid-sentence; `listening` is him with the microphone open, and it also breathes
+ * `speaking` is 明明 mid-sentence; `listening` is him with the microphone open, and it also breathes
  * a ring around him. Both are status, never a control — the same rule as the 讀住 waveform (brief
  * section 6). `greeting` waves, and is the one nothing calls yet. Reduced motion stops the ring
  * (globals.css).
@@ -121,7 +121,7 @@ export default function Mascot({ size = 44, state = "idle", className = "", styl
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────────────────────
-   The fallback: 明仔 in CSS, for when the art does not arrive.
+   The fallback: 明明 in CSS, for when the art does not arrive.
 
    Two ear circles, a round white face, two eyes, a mouth — every part a positioned div, so he
    renders offline, at any pixel ratio, in the palette's own tokens. Geometry is the design

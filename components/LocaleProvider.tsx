@@ -116,7 +116,7 @@ export function LocaleProvider({
     // English is not a written form of Chinese, so choosing it as the SPOKEN language must leave
     // the card script alone. `scriptForDialect` is a yue/else binary and answers "hans" for "en" —
     // which would quietly turn a Cantonese-reading family's traditional cards into simplified the
-    // moment they asked 明仔 to speak English. Harmless while it was held in memory; not once the
+    // moment they asked 明明 to speak English. Harmless while it was held in memory; not once the
     // choice is persisted.
     if (next === "en") {
       persist({ dialect: next });

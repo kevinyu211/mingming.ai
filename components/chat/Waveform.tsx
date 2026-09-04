@@ -1,5 +1,5 @@
 /**
- * The 讀住 indicator: four bars that rise and fall while 明仔 is actually speaking.
+ * The 讀住 indicator: four bars that rise and fall while 明明 is actually speaking.
  *
  * **It is status, never a control** (v2 build brief §6). There is no play button in this product,
  * so this is not a disabled one — it is the same thing as a "typing…" bubble in a chat app: it

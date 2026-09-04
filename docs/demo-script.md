@@ -1,6 +1,6 @@
 # Demo script and backup video checklist
 
-You present in **English**. The app speaks **Cantonese**. Do not translate 明仔 for the judges —
+You present in **English**. The app speaks **Cantonese**. Do not translate 明明 for the judges —
 the gap between the language you are explaining in and the language he is speaking in *is* the
 product, and they should watch it rather than be told about it.
 
@@ -16,7 +16,7 @@ silence.
 ## Before you walk up
 
 - Phone on the **deployed HTTPS URL**, never the LAN address — the microphone needs a secure origin.
-- **Tap 明白，開始 before you are on.** That tap is what unlocks audio on iOS; without it 明仔 is
+- **Tap 明白，開始 before you are on.** That tap is what unlocks audio on iOS; without it 明明 is
   silent. It also gets the consent gate out of your five minutes.
 - 記錄 empty, no active sheet.
 - **Ring/silent switch OFF.** Check it. This is the failure that looks exactly like a broken app.
@@ -59,7 +59,7 @@ Point at the line under the thumbnails as you go:
 
 ## 1:05 — Talk over the read (up to 60 s: the dead-air slot)
 
-Cut this short the moment 明仔 starts talking. He is the demo; this is filler.
+Cut this short the moment 明明 starts talking. He is the demo; this is filler.
 
 > "Two things here are the model, and only two: reading a page of clinical abbreviations, and
 > writing the sentence a daughter would say to her mother in Cantonese.
@@ -76,7 +76,7 @@ we found in a stress fixture and made impossible by construction.
 
 ## 2:05 — He starts talking, and then he stops (75 s)
 
-明仔 opens with what is on the page — how many things to watch for, how many medicines, one visit —
+明明 opens with what is on the page — how many things to watch for, how many medicines, one visit —
 and asks where to start. **Say 「一樣一樣講」 out loud, into the phone.**
 
 > "He tells her what's on it before he reads any of it, and then he hands over. Someone who came to

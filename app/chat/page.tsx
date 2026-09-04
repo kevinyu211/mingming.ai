@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * 傾偈 — the whole product, as one conversation with 明仔 (v2 build brief §6).
+ * 傾偈 — the whole product, as one conversation with 明明 (v2 build brief §6).
  *
- * The sheet does not arrive as a stack of cards. It arrives as messages: 明仔 types himself out
+ * The sheet does not arrive as a stack of cards. It arrives as messages: 明明 types himself out
  * clause by clause and speaks at the same time, one thing at a time, and takes questions in the
  * same thread. There is **no play button anywhere** — the 讀住 waveform is a status indicator, the
  * per-message speaker is the only repeat control, and the header toggle silences the lot.
@@ -156,7 +156,7 @@ function ChatScreen() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   /** The beat being typed out, so its bubble can carry the right connective and tone. */
   const [beatOnAir, setBeatOnAir] = useState<Beat | null>(null);
-  /** 明仔 is between two things he is about to say: the three dots. */
+  /** 明明 is between two things he is about to say: the three dots. */
   const [thinking, setThinking] = useState(false);
   /** The microphone is open, and what it has heard so far. */
   const [listening, setListening] = useState(false);
@@ -171,12 +171,12 @@ function ChatScreen() {
   const started = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const request = useRef<AbortController | null>(null);
-  /** True while 明仔 is mid-sentence, so nothing else may start talking over him. */
+  /** True while 明明 is mid-sentence, so nothing else may start talking over him. */
   const driving = useRef(false);
   /** True from the moment the script starts playing until it ends or the reader cuts in. */
   const playing = useRef(false);
   /**
-   * 明仔's 「好。」 waiting to be said as the opening of the NEXT bubble rather than as one of its own.
+   * 明明's 「好。」 waiting to be said as the opening of the NEXT bubble rather than as one of its own.
    *
    * An acknowledgement is one word. Giving it a bubble, a speaker button and an AI chip is three
    * rows of furniture for it — exactly the "shooting out a lot of text" this reshape is undoing —
@@ -282,7 +282,7 @@ function ChatScreen() {
         return;
       }
 
-      // Swallow a waiting acknowledgement into this bubble, so 「好。」 opens the next thing 明仔
+      // Swallow a waiting acknowledgement into this bubble, so 「好。」 opens the next thing 明明
       // says instead of standing alone as a message.
       const ack = pendingAck.current;
       pendingAck.current = null;
@@ -320,7 +320,7 @@ function ChatScreen() {
         const next = index + 1;
 
         /**
-         * The end of a section. 明仔 has asked, and now he waits — no timer, no next beat.
+         * The end of a section. 明明 has asked, and now he waits — no timer, no next beat.
          *
          * This is the whole difference between a conversation and a monologue with pauses in it.
          * Before this, the script played to the end whatever the reader did, so the only way to be
@@ -408,7 +408,7 @@ function ChatScreen() {
        *
        * `play` runs from an effect whenever the screen settles — a re-render, a keyboard opening,
        * a return to the tab. Without this line it resumed the script out of `waiting` on its own,
-       * so 明仔 asked a question and then answered it himself a beat later, which is the exact
+       * so 明明 asked a question and then answered it himself a beat later, which is the exact
        * monologue this whole change exists to end. Worse, it did it while the reader was typing:
        * by the time the reply arrived the phase had already moved to `speaking`, the reply was
        * posted to the model as a question, and 「明白」 came back as 「張紙冇講呢樣」.
@@ -428,14 +428,14 @@ function ChatScreen() {
     [at, beats.length],
   );
 
-  /** The reader has the floor: 明仔 stops mid-sentence and the script waits where it is. */
+  /** The reader has the floor: 明明 stops mid-sentence and the script waits where it is. */
   const takeFloor = useCallback(() => {
     playing.current = false;
     // `driving` is claimed by `runBeat` and released in the callback `say()` runs when the last
     // clause lands. Cancelling the utterance means that callback never runs — so without this
     // line the flag stays raised for the rest of the session and every later `play()` returns at
     // its first guard. The symptom was the conversation dying silently the first time anybody
-    // held the bar: the reader's question was answered, and 明仔 never said another word.
+    // held the bar: the reader's question was answered, and 明明 never said another word.
     driving.current = false;
     dropTimers();
     cancel();
@@ -478,7 +478,7 @@ function ChatScreen() {
   /**
    * The check-in question this session has already put to the reader.
    *
-   * Without it 明仔 would ask again every time something else lands in the thread while `checkin`
+   * Without it 明明 would ask again every time something else lands in the thread while `checkin`
    * is still `open` — a nag, from an app that has deliberately given itself no way to nag. It is
    * cleared when the check-in stops being open, so a check-in re-opened later still gets asked.
    */
@@ -533,7 +533,7 @@ function ChatScreen() {
       const text = raw.trim();
       if (text.length === 0 || asking || !reading) return;
 
-      // The reader interrupting has the floor: whatever 明仔 was saying stops, and the script must
+      // The reader interrupting has the floor: whatever 明明 was saying stops, and the script must
       // not start the next beat on top of the answer while the request is in flight. `driving` is
       // claimed here and released on every way out; the script picks itself up afterwards.
       takeFloor();
@@ -569,7 +569,7 @@ function ChatScreen() {
       }
 
       /**
-       * Gate 3: 明仔 asked a question and this is the answer to it.
+       * Gate 3: 明明 asked a question and this is the answer to it.
        *
        * "Yeah" is the commonest thing anyone says to this app. Posting it to a model to be told it
        * means yes would put a network round trip, a cost and a failure mode in the middle of every
@@ -586,7 +586,7 @@ function ChatScreen() {
        * began before a re-render still completes — which is correct for the gesture and fatal
        * here: the closure can be one render behind, and one render behind is exactly the render
        * where the phase was not yet `waiting`. The symptom was 「明白」 being posted to the model,
-       * answered with 「張紙冇講呢樣」, and the script resuming anyway — the reader saw 明仔 fail to
+       * answered with 「張紙冇講呢樣」, and the script resuming anyway — the reader saw 明明 fail to
        * understand the single commonest word in the conversation.
        */
       const live = loadSheets().active;
@@ -782,7 +782,7 @@ function ChatScreen() {
    * A committed message is a record of what was actually said, and rewriting one in another
    * language would be forging it — but leaving the reader with a thread they cannot read is
    * worse, and somebody who reaches for the language chip has just told you they did not
-   * understand a word of it. So the thread is cleared and 明仔 says the sheet again from the top.
+   * understand a word of it. So the thread is cleared and 明明 says the sheet again from the top.
    * Only an in-session change does this: the ref starts empty, so the first render never resets
    * anything, and a reload leaves what was said alone.
    */
@@ -879,7 +879,7 @@ function ChatScreen() {
   const onListeningChange = useCallback(
     (open: boolean) => {
       setListening(open);
-      // Holding the bar is how the reader takes the floor. Nothing else stops 明仔 mid-sentence,
+      // Holding the bar is how the reader takes the floor. Nothing else stops 明明 mid-sentence,
       // and nothing should have to: the gesture that starts a question is the gesture that
       // interrupts the answer to the last one.
       if (open) takeFloor();

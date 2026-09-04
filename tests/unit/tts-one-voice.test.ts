@@ -3,7 +3,7 @@
  *
  * `lib/speech/tts.ts` used to fall through to `window.speechSynthesis` whenever a cloud clip
  * failed to fetch OR failed to play. On iOS the commonest reason for the second is the autoplay
- * policy, and 明仔 speaks without being tapped — so on a real iPhone most lines came out in the
+ * policy, and 明明 speaks without being tapped — so on a real iPhone most lines came out in the
  * chosen Cantonese voice and occasional lines came out in iOS's own robot, mid-conversation, with
  * nothing on screen to explain it. It reads as a broken product, and it was heard within a minute
  * of opening the app on a real phone.

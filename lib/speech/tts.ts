@@ -223,7 +223,7 @@ function audioFor(text: string, dialect: Dialect, signal?: AbortSignal): Promise
  *
  * Every clip goes through the SAME element, because on iOS only an element a finger has touched
  * may make a sound (`lib/speech/unlock.ts`). Assigning `src` and calling `play()` on an already
- * unlocked element needs no gesture of its own, which is what lets 明仔 keep talking.
+ * unlocked element needs no gesture of its own, which is what lets 明明 keep talking.
  */
 async function playBlob(blob: Blob, signal?: AbortSignal): Promise<boolean> {
   const audio = speechAudio();
@@ -417,7 +417,7 @@ export async function speak(
    *
    * It was reached whenever a cloud clip failed to fetch OR failed to play — and on iOS the
    * commonest reason for the second is the autoplay policy, which fires on the ordinary path
-   * where 明仔 speaks without being tapped. The result was a product that read most lines in the
+   * where 明明 speaks without being tapped. The result was a product that read most lines in the
    * chosen Cantonese voice and occasional lines in iOS's own robot, mid-conversation, with no
    * explanation. Kevin heard it immediately on a real phone and it reads as broken, because it is.
    *
@@ -443,7 +443,7 @@ export async function speak(
  * that is the whole line typed out and sitting there before a sound comes out of the phone —
  * which is what Kevin heard, and it is not a slow network, it is the request being made too late.
  * Warming the NEXT line while the current one is speaking moves the entire wait into a window
- * where 明仔 is already talking, and `requestAudio` makes sure the line that was warmed is joined
+ * where 明明 is already talking, and `requestAudio` makes sure the line that was warmed is joined
  * rather than fetched a second time.
  *
  * Never throws and never plays anything; a warm-up that fails just means `speak` fetches it or

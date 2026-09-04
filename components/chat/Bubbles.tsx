@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The three bubbles that are not yet messages: 明仔 about to speak, 明仔 speaking, and the reader
+ * The three bubbles that are not yet messages: 明明 about to speak, 明明 speaking, and the reader
  * being heard.
  *
  * All three live in the thread, in the same column and at the same size as the committed messages,
@@ -17,7 +17,7 @@ import Mascot from "@/components/Mascot";
 import { useT } from "@/components/LocaleProvider";
 import Waveform from "@/components/chat/Waveform";
 
-/** Three dots on the agent's side: 明仔 is about to say something. */
+/** Three dots on the agent's side: 明明 is about to say something. */
 export function TypingBubble() {
   const t = useT();
   return (

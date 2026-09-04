@@ -1,5 +1,5 @@
 /**
- * `/chat` — the conversation with 明仔, end to end (v2 build brief §6).
+ * `/chat` — the conversation with 明明, end to end (v2 build brief §6).
  *
  * What is worth proving in a browser rather than in a unit test is the *sequence*: that the red
  * flags are said before anything else, that the script plays itself to the end with no button to
@@ -93,7 +93,7 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
 
-    // 1. 明仔 greets, says what is ON the page, and offers a choice of where to start — one
+    // 1. 明明 greets, says what is ON the page, and offers a choice of where to start — one
     //    bubble, all of it fixed template.
     const opening = page.getByText(HELLO_OPENS, { exact: false });
     await expect(opening).toBeVisible({ timeout: BEAT });
@@ -129,7 +129,7 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     await page.goto("/chat?sample=hk_en");
     await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
-    // The v1 controls are gone: 明仔 speaks on his own and the only voice control is the toggle.
+    // The v1 controls are gone: 明明 speaks on his own and the only voice control is the toggle.
     for (const gone of ["cards.playAll", "cards.play", "cards.stop"] as const) {
       await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
     }
@@ -230,7 +230,7 @@ test.describe("Questions go into the same thread", () => {
   test("an answer arrives as a message, with the line it came from", async ({ page }) => {
     const log = await mockAsk(page, "answered");
     await page.goto("/chat?sample=hk_en");
-    // Wait for 明仔 to finish his opening line, so the thread order is the one a reader sees.
+    // Wait for 明明 to finish his opening line, so the thread order is the one a reader sees.
     await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });

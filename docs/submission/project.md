@@ -53,14 +53,14 @@ the buttons: the in-app check-in, the sheet currently being talked about, and �
 sheets, read-only, marked 只可以睇.
 
 **傾偈** — the product. The sheet does not arrive as a stack of cards. It arrives as messages from
-明仔, who types himself out clause by clause and speaks at the same time. **There is no play button
+明明, who types himself out clause by clause and speaks at the same time. **There is no play button
 anywhere**: the 讀住 waveform is a status indicator, and the speaker toggle in the header is the
 only voice control.
 
 - The **warning signs come first**, always. The amber block renders and reads itself before
   anything else, by a fixed array in `lib/rules/card-order.ts`. No model turn can reorder it. If
   the sheet prints none, a rule-written card says so and shows the hospital contact line.
-- After each piece 明仔 stops and asks **明唔明？** with 再講一次 / 明白. That is teach-back — the
+- After each piece 明明 stops and asks **明唔明？** with 再講一次 / 明白. That is teach-back — the
   step the HA's own documented workflow does not require — applied one piece at a time.
 - Questions go in the same thread through **one bar: hold to talk, tap to type**. Answers are
   grounded in one card and cite it. Questions the sheet does not answer get "the sheet doesn't

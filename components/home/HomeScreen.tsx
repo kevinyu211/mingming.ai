@@ -3,7 +3,7 @@
 /**
  * 記錄 — the first tab, in its two states (brief §7).
  *
- * **Empty**, before anything has been photographed: the two big buttons, then 明仔 sitting quietly
+ * **Empty**, before anything has been photographed: the two big buttons, then 明明 sitting quietly
  * at 34% with 「仲未有紙。拍完我就即刻講俾你聽。」 He is faded because there is genuinely nothing
  * for him to say yet; the moment there is, he is at full strength in the thread.
  *
