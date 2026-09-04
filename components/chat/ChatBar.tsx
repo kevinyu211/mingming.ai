@@ -5,10 +5,10 @@
  *
  * The full width, because it is the only thing on the screen a seventy-year-old has to hit while
  * holding the phone in one hand. The 220 ms threshold is what separates the two gestures: past it
- * the microphone opens and releasing sends; before it the bar turns into a field with 送 and a mic
- * button back.
+ * the microphone opens and releasing sends; before it the bar turns into a field with 送 and a way
+ * back to talking.
  *
- * ## Two bugs this file used to have, and what fixed them
+ * ## Three bugs this file used to have, and what fixed them
  *
  * 1. **The hold died on its own.** `onPointerLeave` ended the hold, and the bar's own contents
  *    change the moment it starts — the label swaps, the waveform replaces the mic glyph, the box
@@ -19,11 +19,43 @@
  *    is the only thing that ends a hold now, which is also what makes sliding a thumb off the bar
  *    behave the way the design canvas has it.
  *
+ *    Capture is delivered to an ELEMENT, so an element that unmounts mid-hold takes the gesture
+ *    with it and `pointerup` never arrives — the microphone would stay open forever. That is why
+ *    listening never swaps one press target for another: whichever control was pressed stays
+ *    mounted in place and only re-paints itself jade with a waveform in it.
+ *
  * 2. **The transcript had nowhere to appear.** It was rendered inside the button, in the slot the
  *    「按住講嘢」 label had, clipped by a 72 px box with a nowrap sub-label beside it. It is
  *    reported upward now, through `onInterim`, and the page draws it as the reader's own bubble in
  *    the thread — which is where a message being composed belongs, and where the reader is already
  *    looking.
+ *
+ * 3. **The bottom of the screen ate a quarter of the phone.** Two causes, both fixed here.
+ *
+ *    The bar padded itself with `env(safe-area-inset-bottom)` — but the bar is not the bottom of
+ *    the screen. `components/Disclaimer.tsx` is: it is `position: fixed` under everything, it
+ *    already pads itself past the home indicator, and `<main>` is sized `100dvh` minus that
+ *    footer's measured height. So the bar was reserving a home-indicator gap that sits below the
+ *    footer, and on a notched iPhone paid 34 px for empty space nobody could see. It pays a flat
+ *    8 px now.
+ *
+ *    And the furniture was simply tall: a 60 px pill inside 22 px of padding. The press TARGET is
+ *    what has to be big, not the box around it — so the pill is 52 px and runs the full width of
+ *    the phone, which is a bigger thing to hit than anything this bar has ever had, in a box 18 px
+ *    shorter.
+ *
+ * ## Why there is no microphone button to aim at
+ *
+ * In voice mode the bar is ONE element. There is no inner control, no circle to find: press
+ * anywhere along it, anywhere at all, and past 220 ms the microphone is open. The mic glyph inside
+ * it is a picture of what the bar does, drawn in the label's own colour so it does not read as a
+ * separate target.
+ *
+ * Keyboard mode has to keep a field and a 送, so it cannot be one element — but the way back to
+ * talking is not a thing you have to tap either. That control carries the SAME hold gesture as the
+ * bar: hold it and you are talking, exactly as if you had never left voice mode, and a tap on it
+ * is only the shortcut for putting the keyboard away. It is 64 px wide rather than a 48 px circle,
+ * because it is the one target in this component that a thumb has to aim at.
  *
  * When there is no speech input on this device at all, the bar starts in keyboard mode and says
  * so in one plain sentence rather than offering a microphone that cannot work. `lib/speech/stt.ts`
@@ -58,6 +90,14 @@ const NO_MIC: Record<UiLocale, string> = {
 
 /** Past this, the press is a hold and the microphone opens. Under it, it is a tap. */
 const HOLD_MS = 220;
+
+/**
+ * What a quick release means, which depends only on which control the press started on.
+ *
+ * Both controls hold-to-talk. They differ in what a TAP does: tapping the bar opens the keyboard,
+ * tapping the way-back control puts it away. Nothing else about the gesture changes.
+ */
+type TapMeans = "keyboard" | "voice";
 
 export interface ChatBarProps {
   /** The language the question is spoken or typed in. Follows the reader's own language. */
@@ -110,6 +150,8 @@ export default function ChatBar({
 
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tapCandidate = useRef(false);
+  /** Set on pointerdown by whichever control was pressed; read once, on release. */
+  const tapMeans = useRef<TapMeans>("keyboard");
   const stopSignal = useRef<AbortController | null>(null);
   const cancelSignal = useRef<AbortController | null>(null);
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -167,7 +209,7 @@ export default function ChatBar({
   }, [language, onInterim, onListening, onNothingHeard, onSend]);
 
   const onDown = useCallback(
-    (event: ReactPointerEvent<HTMLButtonElement>) => {
+    (event: ReactPointerEvent<HTMLButtonElement>, means: TapMeans) => {
       if (listening.current) return;
       // See the header: without capture the hold ends by itself as soon as the button reflows.
       try {
@@ -177,6 +219,7 @@ export default function ChatBar({
         // the thumb-drifts-off case that goes back to being a release.
       }
       tapCandidate.current = true;
+      tapMeans.current = means;
       holdTimer.current = setTimeout(() => {
         tapCandidate.current = false;
         void beginListening();
@@ -185,7 +228,7 @@ export default function ChatBar({
     [beginListening],
   );
 
-  /** Release — and only release. A pointer that wanders off the bar is still holding it. */
+  /** Release — and only release. A pointer that wanders off the control is still holding it. */
   const onRelease = useCallback((event?: ReactPointerEvent<HTMLButtonElement>) => {
     if (event) {
       try {
@@ -202,6 +245,10 @@ export default function ChatBar({
     }
     if (tapCandidate.current) {
       tapCandidate.current = false;
+      if (tapMeans.current === "voice") {
+        setChosen("voice");
+        return;
+      }
       setChosen("text");
       // The field is mounted by this same state change, so focus waits a frame for it.
       requestAnimationFrame(() => fieldRef.current?.focus());
@@ -217,33 +264,38 @@ export default function ChatBar({
     onSend(text);
   }, [draft, onSend]);
 
-  const note = noMic ? <p className="mb-2 text-fine text-muted">{NO_MIC[locale]}</p> : null;
+  const note = noMic ? (
+    <p className="mb-1.5 text-[12px] leading-[1.35] text-muted">{NO_MIC[locale]}</p>
+  ) : null;
 
   return (
-    <div className="relative z-10 shrink-0 border-t border-hairline bg-ground px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    // No `env(safe-area-inset-bottom)` here: the fixed disclaimer footer is what sits on the home
+    // indicator, and `<main>` is already 100dvh minus that footer's measured height. Padding for
+    // the inset a second time is 34 px of nothing on every notched phone — see the header.
+    <div className="relative z-10 shrink-0 border-t border-hairline bg-ground px-3 pt-1.5 pb-2">
       {note}
 
       {mode === "voice" ? (
         <button
           type="button"
           disabled={busy}
-          onPointerDown={onDown}
+          onPointerDown={(event) => onDown(event, "keyboard")}
           onPointerUp={onRelease}
           onPointerCancel={onRelease}
           // The press is a gesture, not a click: without this the browser starts a text selection
           // and iOS pops the magnifier over the bar mid-hold.
           onContextMenu={(event) => event.preventDefault()}
           aria-pressed={holding}
-          className={`flex min-h-[60px] w-full touch-none items-center justify-center gap-2.5 rounded-[18px] px-4 py-3.5 select-none ${
+          className={`flex min-h-[52px] w-full touch-none items-center justify-center gap-2 rounded-full px-4 py-2 select-none ${
             holding ? "bg-jade shadow-raised" : "surface"
           } ${busy ? "opacity-60" : ""}`}
         >
           {holding ? <HoldingWave /> : <MicMark />}
-          <span className={`text-[18px] font-bold ${holding ? "text-white" : "text-ink"}`}>
+          <span className={`text-[17px] font-bold ${holding ? "text-white" : "text-ink"}`}>
             {holding ? t("bar.listening") : t("bar.hold")}
           </span>
           <span
-            className={`text-[14px] whitespace-nowrap ${holding ? "text-white/80" : "text-muted"}`}
+            className={`text-[13px] whitespace-nowrap ${holding ? "text-white/80" : "text-muted"}`}
           >
             {holding ? t("bar.listeningSub") : t("bar.holdSub")}
           </span>
@@ -253,11 +305,22 @@ export default function ChatBar({
           {!noMic ? (
             <button
               type="button"
-              onClick={() => setChosen("voice")}
+              onPointerDown={(event) => onDown(event, "voice")}
+              onPointerUp={onRelease}
+              onPointerCancel={onRelease}
+              onContextMenu={(event) => event.preventDefault()}
               aria-label={t("bar.backToVoice")}
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-neutral text-muted"
+              aria-pressed={holding}
+              className={`grid h-12 w-16 shrink-0 touch-none place-items-center rounded-full select-none ${
+                holding ? "bg-jade shadow-raised" : "bg-neutral text-muted"
+              }`}
             >
-              <MicMark tone="muted" />
+              {/*
+                The control the reader pressed stays mounted through the whole hold — it only
+                changes colour — because pointer capture lives on this element and unmounting it
+                would strand the gesture with the microphone still open.
+              */}
+              {holding ? <HoldingWave /> : <MicMark tone="muted" />}
             </button>
           ) : null}
           <input
@@ -270,7 +333,7 @@ export default function ChatBar({
             placeholder={t("bar.typePlaceholder")}
             aria-label={t("bar.typePlaceholder")}
             enterKeyHint="send"
-            className="surface h-12 min-w-0 flex-1 rounded-full px-4 text-[17px] text-ink outline-none"
+            className="surface h-12 min-w-0 flex-1 rounded-full px-4 text-[16px] text-ink outline-none"
           />
           <button
             type="button"
@@ -295,7 +358,7 @@ function MicMark({ tone = "jade" }: { tone?: "jade" | "muted" }) {
       viewBox="0 0 15 21"
       aria-hidden="true"
       focusable="false"
-      className="h-[26px] w-[19px] shrink-0"
+      className="h-[22px] w-[16px] shrink-0"
       fill="none"
       stroke={tone === "muted" ? "currentColor" : "var(--jade-ink)"}
       strokeWidth="2.2"
@@ -310,7 +373,7 @@ function MicMark({ tone = "jade" }: { tone?: "jade" | "muted" }) {
 /** The listening waveform, in white on the jade fill. Status, not a control. */
 function HoldingWave() {
   return (
-    <span aria-hidden="true" className="flex h-[22px] items-end gap-1">
+    <span aria-hidden="true" className="flex h-[20px] items-end gap-1">
       {[0, 1, 2, 3, 4].map((i) => (
         <span
           key={i}

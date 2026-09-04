@@ -85,8 +85,16 @@
   --track: var(--neutral);
   --chip: var(--jade-tint-2);
 
-  /* Height reserved for the fixed disclaimer footer, so nothing hides behind it. */
-  --disclaimer-height: 4.5rem;
+  /*
+   * Height reserved for the fixed disclaimer footer, so nothing hides behind it.
+   *
+   * A seed, not the truth: `components/Disclaimer.tsx` measures itself and overwrites this on the
+   * first client frame, because the real height depends on the locale (the English wording runs to
+   * five lines where the Chinese runs to three) and on the phone's own safe-area inset. 3.75rem is
+   * the measured Chinese height at 375 px with no inset — so the value that is wrong for the
+   * shortest possible time is the one that is right for the common case.
+   */
+  --disclaimer-height: 3.75rem;
 
   /*
    * TYPE.
