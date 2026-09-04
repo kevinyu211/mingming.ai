@@ -16,14 +16,34 @@
  * has `this.tok` too. `cancel()` bumps the token, drops the whole timer queue and stops the audio,
  * and it runs on unmount, on navigation, and before every new utterance.
  *
- * On iOS a first sound with no user gesture behind it can be refused by the autoplay policy.
- * `speak()` reports that honestly as `text-only`, which sets `voiceUnavailable` — the text is
- * already on screen either way, so a refused sound costs the reader nothing.
+ * **The clip is fetched before the bubble needs it.** One MiniMax call measures two to three
+ * seconds. Asked for at the moment the bubble appears — which is what this hook used to do — the
+ * whole line is typed out and sitting still before a sound comes out of the phone, and 明仔 reads
+ * a message the reader finished half a sentence ago. So `say()` takes the lines that come AFTER
+ * this one and warms them while the current one is speaking (`warm`, `prefetch`): by the time each
+ * bubble appears its audio is already in the session cache, and the voice starts on the same tick
+ * as the text. Nothing ever waits on it — an unwarmed line still types immediately and speaks when
+ * the clip lands, because holding words off the screen to wait for a voice is the worse failure.
+ *
+ * On iOS a first sound with no user gesture behind it is refused by the autoplay policy, and 明仔
+ * speaks without being tapped. `lib/speech/unlock.ts` is what buys the right to make a sound — one
+ * element, unlocked on a real tap and reused for every clip. If it is still refused, `speak()`
+ * reports that honestly as `text-only`, which sets `voiceUnavailable`: the text is already on
+ * screen either way, so a refused sound costs the reader nothing.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chunks, CLAUSE_MS, COMMIT_MS } from "@/components/chat/briefing";
 import type { Dialect } from "@/lib/domain/schemas";
-import { speak, stopSpeaking } from "@/lib/speech/tts";
+import { prefetch, speak, stopSpeaking } from "@/lib/speech/tts";
+
+/**
+ * How many lines ahead of the one being spoken are fetched.
+ *
+ * Three, because `prefetch` runs three requests at a time and a beat lasts about as long as one
+ * request: two ahead keeps the next bubble warm even when the reader's line is short, and a
+ * fourth would be paid for before there is any chance of it being reached.
+ */
+const WARM_AHEAD = 3;
 
 export interface Voice {
   /** The clauses revealed so far, or null when nothing is being typed. */
@@ -32,10 +52,24 @@ export interface Voice {
   speaking: boolean;
   /** The last attempt produced no sound at all: no cloud voice, no device voice. */
   voiceUnavailable: boolean;
-  /** Types `text` out clause by clause, speaking it, then calls `onDone` once. */
-  say: (text: string, onDone?: () => void) => void;
+  /**
+   * Types `text` out clause by clause, speaking it, then calls `onDone` once.
+   *
+   * `next` is the lines that come after this one, in order. They are fetched while this one is
+   * being spoken, which is the difference between the voice arriving with the words and the voice
+   * arriving two seconds after the reader has finished reading them. Passing nothing is safe and
+   * simply leaves the following line to fetch itself when its turn comes.
+   */
+  say: (text: string, onDone?: () => void, next?: string[]) => void;
   /** Re-speaks something already on screen. Never re-types it (再講一次, brief §6). */
   resay: (text: string) => void;
+  /**
+   * Fetch these lines now, without saying any of them.
+   *
+   * For the line that has no line before it: the opening bubble cannot be warmed by the one that
+   * precedes it, so whoever knows the script warms it in the pause before 明仔 starts talking.
+   */
+  warm: (lines: string[]) => void;
   /** Drops the timer queue, stops the audio, and invalidates everything in flight. */
   cancel: () => void;
 }
@@ -86,9 +120,9 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
     setSpeaking(true);
 
     void speak(text, dialectRef.current, { signal: controller.signal }).then(({ mode }) => {
-      // `speak` falls through to the device voice when the cloud path fails, and a listener added
-      // to an already-aborted signal never fires — so a silenced utterance is stopped again here
-      // rather than being left to finish out loud.
+      // A listener added to an already-aborted signal never fires, and every clip now shares one
+      // element — so a silenced utterance is stopped again here rather than being left to finish
+      // out loud on the element the next line is about to claim.
       if (controller.signal.aborted) {
         stopSpeaking();
         return;
@@ -99,13 +133,32 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
     });
   }, []);
 
+  /**
+   * Ask for the audio of lines that have not been said yet. Never plays anything, never throws,
+   * and never blocks: a warm-up that fails just means `speak` fetches that line when it arrives.
+   *
+   * Silenced means silenced: with the speaker off there is nothing to warm up for, and a warm-up
+   * is a paid call to the provider.
+   */
+  const warm = useCallback((lines: string[]) => {
+    if (!speakerRef.current || lines.length === 0) return;
+    const dialect = dialectRef.current;
+    const ahead = lines
+      .filter((text) => text.trim().length > 0)
+      .slice(0, WARM_AHEAD)
+      .map((text) => ({ text, dialect }));
+    if (ahead.length > 0) void prefetch(ahead);
+  }, []);
+
   const say = useCallback(
-    (text: string, onDone?: () => void) => {
+    (text: string, onDone?: () => void, next?: string[]) => {
       cancel();
       const mine = token.current;
       const parts = chunks(text);
       setTyping("");
       utter(text);
+      // After `utter`, so this line's own clip is the first request out.
+      if (next && next.length > 0) warm(next);
 
       parts.forEach((_, n) => {
         at(CLAUSE_MS * (n + 1), () => {
@@ -120,7 +173,7 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
         onDone?.();
       });
     },
-    [at, cancel, utter],
+    [at, cancel, utter, warm],
   );
 
   const resay = useCallback(
@@ -149,5 +202,5 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
 
   // A silenced speaker is not speaking, whatever the last utterance thinks it is doing. Derived
   // rather than stored so the waveform disappears on the same frame the sound does.
-  return { typing, speaking: speaking && speakerOn, voiceUnavailable, say, resay, cancel };
+  return { typing, speaking: speaking && speakerOn, voiceUnavailable, say, resay, warm, cancel };
 }

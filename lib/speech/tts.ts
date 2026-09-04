@@ -8,9 +8,10 @@
  * it speaks only where it is the configured provider, because a companion that switches voice
  * mid-conversation reads as broken. See `speak`.
  *
- *   1. `POST /api/tts` with `{ text, dialect }`. Audio bytes come back and play through an
- *      `HTMLAudioElement`. A 503 means the server is configured for browser speech
- *      (`TTS_PROVIDER=browser`), not that anything failed.
+ *   1. `POST /api/tts` with `{ text, dialect }`. Audio bytes come back and play through the ONE
+ *      unlocked `HTMLAudioElement` in `lib/speech/unlock.ts` — see that file for why there is
+ *      exactly one and why a fresh `new Audio()` per clip is silent on an iPhone. A 503 means the
+ *      server is configured for browser speech (`TTS_PROVIDER=browser`), not that anything failed.
  *   2. `window.speechSynthesis` with a zh-HK / zh-CN voice.
  *   3. `{ mode: "text-only" }` when no voice exists at all: the caller keeps the card on
  *      screen and says nothing.
@@ -26,6 +27,15 @@
  */
 
 import type { Dialect } from "./providers/types";
+import { noteAudioPlaying, peekSpeechAudio, speechAudio } from "./unlock";
+
+/**
+ * Re-exported so a screen only ever imports from one speech module.
+ *
+ * `unlockAudio()` is the call a tap handler makes; see `lib/speech/unlock.ts` for the rule that
+ * it has to be made synchronously, on the same tick as the gesture.
+ */
+export { armAudioUnlock, isAudioUnlocked, unlockAudio } from "./unlock";
 
 export type SpeakMode = "cloud" | "browser" | "text-only";
 
@@ -58,6 +68,16 @@ const VOICE_LOAD_TIMEOUT_MS = 1000;
  */
 const audioCache = new Map<string, Blob>();
 
+/**
+ * Requests that have gone out and not come back, keyed the same way.
+ *
+ * Without this, warming the next line and then asking for it a moment later fires TWO calls to a
+ * provider that takes two to three seconds and bills per call — and the second one starts from
+ * scratch, so the warm-up buys nothing. Joining the request in flight is what makes `prefetch`
+ * actually shorten the wait rather than just double it.
+ */
+const inFlight = new Map<string, Promise<Blob | null>>();
+
 /** Set once the server has answered 503; stops every later card retrying the cloud path. */
 let cloudDisabled = false;
 
@@ -73,8 +93,16 @@ function deviceSpeechIsChosen(): boolean {
 /** Last non-empty voice list seen, because `getVoices()` can transiently return []. */
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
-let currentAudio: HTMLAudioElement | null = null;
 let currentObjectUrl: string | null = null;
+
+/**
+ * Resolves the clip that owns the shared element right now. Held here rather than inside
+ * `playBlob` so that `stopSpeaking()` can end a clip it did not start: one element means the next
+ * clip's `src` assignment silently orphans the previous one's `ended` event, and a `speak()` left
+ * waiting on an event that will never fire never resolves, so the caller's `speaking` flag sticks
+ * on for the rest of the session.
+ */
+let endCurrentClip: ((played: boolean) => void) | null = null;
 
 function cacheKey(text: string, dialect: Dialect): string {
   return `${dialect} ${text}`;
@@ -84,14 +112,23 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
-/** Stop whatever is being spoken right now. Safe to call at any time. */
+/**
+ * Stop whatever is being spoken right now. Safe to call at any time.
+ *
+ * The element is paused and left alone: it is the session's ONE unlocked element and destroying
+ * it — which is what `currentAudio.src = ""` used to amount to — would throw away the gesture
+ * that bought the right to make a sound at all.
+ */
 export function stopSpeaking(): void {
   if (!isBrowser()) return;
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.src = "";
-    currentAudio = null;
+  const audio = peekSpeechAudio();
+  if (audio) {
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
   }
+  endCurrentClip?.(false);
+  endCurrentClip = null;
   if (currentObjectUrl) {
     URL.revokeObjectURL(currentObjectUrl);
     currentObjectUrl = null;
@@ -105,17 +142,35 @@ export function stopSpeaking(): void {
 export function resetSpeechSession(): void {
   stopSpeaking();
   audioCache.clear();
+  inFlight.clear();
   cloudDisabled = false;
 }
 
 /* ---------------------------------------------------------------- cloud path */
 
+/**
+ * One clip from `/api/tts`, cached and de-duplicated.
+ *
+ * The abort signal is deliberately NOT passed to `fetch`. A clip is shared between the line being
+ * spoken and the warm-up that asked for it first, so cancelling the utterance must not cancel a
+ * download somebody else is waiting on — and the bytes are worth keeping even for a line that was
+ * interrupted, because 再講一次 is one tap away. `speak` races the shared request against its own
+ * signal instead, below.
+ */
+function requestAudio(text: string, dialect: Dialect): Promise<Blob | null> {
+  const key = cacheKey(text, dialect);
+  const existing = inFlight.get(key);
+  if (existing) return existing;
+
+  const request = fetchAudio(text, dialect).finally(() => {
+    if (inFlight.get(key) === request) inFlight.delete(key);
+  });
+  inFlight.set(key, request);
+  return request;
+}
+
 /** Fetch one clip from `/api/tts`. Returns null when the server says "use the browser". */
-async function fetchAudio(
-  text: string,
-  dialect: Dialect,
-  signal?: AbortSignal,
-): Promise<Blob | null> {
+async function fetchAudio(text: string, dialect: Dialect): Promise<Blob | null> {
   const key = cacheKey(text, dialect);
   const cached = audioCache.get(key);
   if (cached) return cached;
@@ -127,7 +182,6 @@ async function fetchAudio(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, dialect }),
-      signal,
     });
   } catch {
     // Offline, blocked, or aborted. The caller falls through to text-only, not to another voice.
@@ -147,36 +201,70 @@ async function fetchAudio(
   return blob;
 }
 
-/** Play a blob to completion. Resolves false if playback could not start (e.g. autoplay). */
+/** The clip for one line, given up on if the caller's utterance is cancelled while it is in the air. */
+function audioFor(text: string, dialect: Dialect, signal?: AbortSignal): Promise<Blob | null> {
+  const cached = audioCache.get(cacheKey(text, dialect));
+  if (cached) return Promise.resolve(cached);
+  if (signal?.aborted) return Promise.resolve(null);
+
+  const request = requestAudio(text, dialect);
+  if (!signal) return request;
+
+  return Promise.race([
+    request,
+    new Promise<null>((resolve) => {
+      signal.addEventListener("abort", () => resolve(null), { once: true });
+    }),
+  ]);
+}
+
+/**
+ * Play a blob to completion on the shared element. Resolves false if playback could not start.
+ *
+ * Every clip goes through the SAME element, because on iOS only an element a finger has touched
+ * may make a sound (`lib/speech/unlock.ts`). Assigning `src` and calling `play()` on an already
+ * unlocked element needs no gesture of its own, which is what lets 明仔 keep talking.
+ */
 async function playBlob(blob: Blob, signal?: AbortSignal): Promise<boolean> {
+  const audio = speechAudio();
+  if (!audio || signal?.aborted) return false;
+
+  // Ends the previous clip, revokes its URL and clears its handlers off the shared element.
   stopSpeaking();
+
   const url = URL.createObjectURL(blob);
-  const audio = new Audio(url);
-  currentAudio = audio;
   currentObjectUrl = url;
 
+  let settle!: (played: boolean) => void;
   const finished = new Promise<boolean>((resolve) => {
-    const done = (ok: boolean) => {
-      audio.onended = null;
-      audio.onerror = null;
-      resolve(ok);
-    };
-    audio.onended = () => done(true);
-    audio.onerror = () => done(false);
-    signal?.addEventListener("abort", () => done(false), { once: true });
+    settle = resolve;
   });
+  const done = (ok: boolean) => {
+    if (endCurrentClip === done) endCurrentClip = null;
+    audio.onended = null;
+    audio.onerror = null;
+    settle(ok);
+  };
+  endCurrentClip = done;
+  audio.onended = () => done(true);
+  audio.onerror = () => done(false);
+  signal?.addEventListener("abort", () => done(false), { once: true });
 
+  audio.src = url;
   try {
     await audio.play();
   } catch {
-    // Autoplay policy, or the element was torn down. The browser voice is no more likely to
+    // Autoplay policy, or a newer clip took the element. The device voice is no more likely to
     // work in that state, but the caller still gets a truthful mode back.
-    if (currentAudio === audio) stopSpeaking();
+    if (endCurrentClip === done) stopSpeaking();
     return false;
   }
+  // It made a sound, so the element is unlocked however that came about — and the safety-net
+  // listener can stop reaching for an element that is already working.
+  noteAudioPlaying();
 
   const ok = await finished;
-  if (currentAudio === audio) stopSpeaking();
+  if (endCurrentClip === done) stopSpeaking();
   return ok;
 }
 
@@ -321,7 +409,7 @@ export async function speak(
 ): Promise<SpeakResult> {
   if (!isBrowser() || text.trim().length === 0) return { mode: "text-only" };
 
-  const blob = await fetchAudio(text, dialect, opts?.signal);
+  const blob = await audioFor(text, dialect, opts?.signal);
   if (blob && (await playBlob(blob, opts?.signal))) return { mode: "cloud" };
 
   /**
@@ -347,12 +435,19 @@ export async function speak(
 }
 
 /**
- * Warm the cache for cards that are about to be read, three requests at a time, so the first
- * card starts while the rest are still arriving (research.md R5: "audio for every card is
- * requested as soon as the card arrives, in parallel, not on tap").
+ * Warm the cache for lines that are about to be read, three requests at a time, so the voice
+ * starts as the words do (research.md R5: "audio for every card is requested as soon as the card
+ * arrives, in parallel, not on tap").
  *
- * Never throws and never plays anything; a prefetch that fails just means `speak` fetches it
- * or falls back later.
+ * Each MiniMax call measures two to three seconds. Asked for at the moment the bubble appears,
+ * that is the whole line typed out and sitting there before a sound comes out of the phone —
+ * which is what Kevin heard, and it is not a slow network, it is the request being made too late.
+ * Warming the NEXT line while the current one is speaking moves the entire wait into a window
+ * where 明仔 is already talking, and `requestAudio` makes sure the line that was warmed is joined
+ * rather than fetched a second time.
+ *
+ * Never throws and never plays anything; a warm-up that fails just means `speak` fetches it or
+ * falls back later.
  */
 export async function prefetch(texts: PrefetchItem[]): Promise<void> {
   if (!isBrowser() || cloudDisabled) return;
@@ -372,7 +467,7 @@ export async function prefetch(texts: PrefetchItem[]): Promise<void> {
       const item = queue[next];
       next += 1;
       try {
-        await fetchAudio(item.text, item.dialect);
+        await requestAudio(item.text, item.dialect);
       } catch {
         // Prefetch is best-effort by definition.
       }
