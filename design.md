@@ -135,7 +135,7 @@ zh-Hans and English variants to be supplied from `lib/i18n/ui.ts`.
 ### S7 Setup (profile, two screens)
 - 你煮飯畀邊個？ chips: 阿媽 · 阿爸 · 老豆 · 家婆 · 其他 (max 12 characters, no name prompt)
 - 佢聽咩話？ tiles as S2
-- Privacy line on both: 只會存喺呢部電話，除咗你問嘅問題，乜都唔會傳出去。冇名，冇病名。
+- Privacy line on both: 只會存喺呢部電話。傳出去嘅淨係張紙、你嘅問題同你把聲。冇名，冇病名。
 
 ### S8 Plan
 - Draft list: appointment row, medicine-time rows, each with the verbatim when/frequency and the

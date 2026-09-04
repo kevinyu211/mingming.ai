@@ -123,10 +123,11 @@ it reads. See the limits below.
 
 Next.js 16.3 (App Router) on Node.js; TypeScript; Zod 4 schemas shared by the model's structured
 output and the client; Claude Opus 5 (`claude-opus-5`, reasoning effort `medium`) through the
-official Anthropic SDK for reading, answering and rephrasing; Tailwind CSS 4; MiniMax `speech-02-hd`
+official Anthropic SDK for reading, answering and rephrasing; Tailwind CSS 4; MiniMax `speech-2.8-hd`
 text-to-speech behind a provider adapter (ElevenLabs and Azure adapters also written; the phone's
 own `speechSynthesis` is the fallback and the default when no provider is configured); speech input
-through the browser's own recognition with a typed fallback; on-device browser storage only, one
+recorded on the phone and transcribed by OpenAI (`gpt-4o-mini-transcribe`), with the browser's own
+recognition showing the words live and a typed fallback; on-device browser storage only, one
 key, no accounts, no server database. Vitest (1060 unit tests in 35 files) and Playwright (5 spec
 files, 46 tests, run on two phone profiles for 92 in total). Deployment target Vercel.
 

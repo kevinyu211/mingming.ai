@@ -71,7 +71,7 @@ Two consequences worth stating before the table:
 | What memory keeps and for how long | **Rules** — last 5 readings, last 50 questions, oldest evicted; crisis questions never recorded | `lib/memory/record.ts`, `lib/memory/types.ts` |
 | Disclaimer, AI label, agent limits, consent notice, every fixed interface string | **Human-written**, three locales, tested against the banned-term filter in CI. The disclaimer is the single filter-exempt string because the rulebook mandates its wording | `lib/i18n/ui.ts`, `tests/unit/ui-copy.test.ts` |
 | Speech audio | **Voice provider** (MiniMax on the demo build, or the phone's own voice) reading the already-filtered text. It never receives the label, a date or an identifier | `lib/speech/tts.ts`, `lib/speech/providers/*` |
-| Transcript of a spoken question | **The browser's own recognition** (`STT_PROVIDER=browser`). Shown to the user before it is submitted | `lib/speech/stt.ts` |
+| Transcript of a spoken question | **Transcription provider** (OpenAI `gpt-4o-mini-transcribe` on the demo build, `STT_PROVIDER=openai`) of a clip recorded on the phone, with the browser's own recognition drawing the words live. Shown to the user before it is submitted | `lib/speech/stt.ts`, `lib/speech/providers/openai.ts` |
 
 ## Where a model can still be wrong, and what catches it
 

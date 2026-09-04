@@ -27,9 +27,9 @@ const SESSION_KEY = "fitornot.consent.session";
 /** Copy with no key in `lib/i18n/ui.ts`. Same rules as everything there (design.md section 6). */
 const LOCAL: Record<"onlyQuestion" | "photoGone", Record<UiLocale, string>> = {
   onlyQuestion: {
-    hant: "除咗你問嘅問題，乜都唔會傳出去。",
-    hans: "除了你问的问题，什么都不会传出去。",
-    en: "Nothing leaves except the question you ask.",
+    hant: "傳出去嘅淨係張紙、你嘅問題同你把聲，用嚟讀同答。唔會有你個名。",
+    hans: "传出去的只有那张纸、你的问题和你的声音，用来读和答。不会带上你的名字。",
+    en: "Only the sheet, your question and your voice leave, to be read and answered. Never your name.",
   },
   photoGone: {
     hant: "張相讀完就掉咗，唔會留低。",

@@ -33,14 +33,15 @@ demo.
   missed. Effort was dropped from `high` to `medium` on the same evidence: identical readings,
   roughly a third off the wait. Both decisions are recorded in `tests/eval/results.md` and
   `tests/eval/stress.md`, including the argument for **not** adding a second vision model.
-- **Voice**: MiniMax `speech-02-hd` through its international endpoint, behind a provider adapter.
+- **Voice**: MiniMax `speech-2.8-hd` through its international endpoint, behind a provider adapter.
   ElevenLabs and Azure Speech adapters are written and switchable by one environment variable; the
   phone's own `speechSynthesis` is the fallback and the shipped default. **The blind listening test
   has not been run** — `tests/eval/voices.md` still ends "PICK: not decided". MiniMax is verified to
   render Cantonese, Mandarin and English at about 2 s a sentence; whether the Cantonese voice sounds
   like a daughter rather than a newsreader has not been judged.
-- **Speech input**: the browser's own `SpeechRecognition`, with a typed fallback. No cloud
-  transcription provider is enabled.
+- **Speech input**: a hybrid. The browser's own `SpeechRecognition` puts the words on screen while
+  the same audio is recorded and transcribed by OpenAI (`gpt-4o-mini-transcribe`) behind the same
+  adapter pattern, with a typed fallback. `STT_PROVIDER=browser` keeps the audio on the phone.
 
 ## What was built for this entry
 

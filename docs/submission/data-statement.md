@@ -27,8 +27,8 @@ Any figure in this pack is a figure on paper we wrote ourselves.
 | The photographed page or pages, downscaled on the device to a 1600 px long edge at JPEG quality 0.85 (`lib/image/downscale.ts`), up to six pages | Anthropic (`claude-opus-5`), servers outside Hong Kong | To read the sheet | Decoded inside one server function's scope, forwarded, dropped. Never written to disk, never cached, never logged. Provider retention follows Anthropic's published policy. |
 | The reading's cards, the typed or transcribed question, and which of the three spoken forms to lead with | Anthropic | To answer the question from the cards | Not stored by us. |
 | A memory brief: at most **1200 characters** of plain text, assembled on the phone from sheets this app already read | Anthropic, attached to the question above | So a question can refer back to an earlier sheet | Not stored by us. Sent only with a question, never on its own, and omitted entirely when empty. |
-| The text of a card or an answer | The configured voice provider. On the demo build that is **MiniMax `speech-02-hd`** through its international endpoint `api.minimax.io`; adapters for ElevenLabs and Azure Speech exist but are not enabled | To speak it aloud | Not stored by us. With no provider configured (`TTS_PROVIDER=browser`, the shipped default) nothing leaves the phone at all — the phone's own `speechSynthesis` speaks it. |
-| A spoken question | **Nobody, by us.** `STT_PROVIDER` and `NEXT_PUBLIC_STT_MODE` are both `browser`, so speech input goes through the browser's own `SpeechRecognition` API and no audio reaches our server. Be aware that on Chrome and Safari that API is itself a platform service and the browser vendor may process the audio on its own servers — that is between the phone and its browser, and we neither see nor control it. Cloud adapters (ElevenLabs, Azure) are written but switched off | To turn speech into text | Not stored by us. The transcript is shown before it is submitted. |
+| The text of a card or an answer | The configured voice provider. On the demo build that is **MiniMax `speech-2.8-hd`** through its international endpoint `api.minimax.io`; adapters for ElevenLabs and Azure Speech exist but are not enabled | To speak it aloud | Not stored by us. With no provider configured (`TTS_PROVIDER=browser`, the shipped default) nothing leaves the phone at all — the phone's own `speechSynthesis` speaks it. |
+| A spoken question, as an audio clip recorded on the phone while the button is held | **OpenAI** (`gpt-4o-mini-transcribe` at `api.openai.com`, servers outside Hong Kong), through our `/api/stt` route. The demo build sets `STT_PROVIDER=openai` and `NEXT_PUBLIC_STT_MODE=cloud`. While the person speaks, the browser's own `SpeechRecognition` also listens so the words appear on screen live; on Chrome and Safari that API is a platform service and the browser vendor may process the audio on its own servers — that is between the phone and its browser, and we neither see nor control it. Set both variables to `browser` and no audio reaches our server at all. Adapters for ElevenLabs and Azure exist but are not enabled | To turn speech into text | Not stored by us. The clip is forwarded inside one server function's scope and dropped; never written to disk, never logged. The transcript is shown before it is submitted. Provider retention follows OpenAI's published policy. |
 
 Nothing else leaves the phone. The relationship label, the follow-up plan, its dates and the consent
 timestamp are never included in any request. The `/api/ask` request schema is strict at every level
@@ -94,13 +94,15 @@ byte appears in any log line.
 - **Voice**: MiniMax, international endpoint `api.minimax.io`, on the demo build. Card and answer
   text only — never an image, never the label, never a date. Set `TTS_PROVIDER=browser` and nothing
   is sent at all.
-- **Speech input**: no cloud provider of ours. See the table note about the browser's own service.
+- **Speech input**: OpenAI, `api.openai.com`, servers outside Hong Kong (United States), on the demo
+  build. The audio clip only — never an image, never the label, never a date. The browser's own
+  recognition runs alongside it; see the table note. Set `STT_PROVIDER=browser` and
+  `NEXT_PUBLIC_STT_MODE=browser` and nothing is sent at all.
 
 This is disclosed in the app in the simulated-input notice before the first health-related input,
 and again in full under Settings.
 
-**Known gap, stated rather than hidden:** the in-app statement still interpolates
-`voice: "TBD by listening test"` because `tests/eval/voices.md` has not yet been closed with a PICK
-line, while the demo build has `TTS_PROVIDER=minimax`. The provider constant in
-`lib/i18n/data-statement.ts` must name MiniMax before the demo, or the build must run on browser
-speech. This document is the accurate version.
+The in-app statement (`lib/i18n/data-statement.ts`) names the same three providers — Anthropic,
+MiniMax, OpenAI — and is the single place to change if a provider changes. The consent notice
+summarises it in one line: only the sheet, the question and the voice leave the phone, never the
+name.

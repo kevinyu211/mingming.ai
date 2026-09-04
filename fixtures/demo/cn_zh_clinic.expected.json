@@ -1,0 +1,205 @@
+{
+  "sheetType": "cn_zh",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果胸痛一直唔散。",
+        "cmn": "这张纸上写着，如果胸痛一直不缓解。",
+        "en": "The sheet says: if his chest pain will not settle."
+      },
+      "action": {
+        "yue": "就即刻去急診科睇，唔好等。",
+        "cmn": "就马上到急诊科就诊，不要等。",
+        "en": "go straight to the emergency department — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 3,
+        "quote": "4. 如出现胸痛持续不缓解，请立即到急诊科就诊"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果行下郁下就好喘、氣促明顯重咗。",
+        "cmn": "这张纸上写着，如果活动后气促明显加重。",
+        "en": "The sheet says: if he gets much more short of breath after moving about."
+      },
+      "action": {
+        "yue": "就即刻去急診科睇，唔好等。",
+        "cmn": "就马上到急诊科就诊，不要等。",
+        "en": "go straight to the emergency department — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 4,
+        "quote": "5. 如出现活动后气促明显加重，请立即到急诊科就诊"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果雙腳水腫腫得更加犀利。",
+        "cmn": "这张纸上写着，如果双下肢水肿加重。",
+        "en": "The sheet says: if the swelling in both legs gets worse."
+      },
+      "action": {
+        "yue": "就即刻去急診科睇，唔好等。",
+        "cmn": "就马上到急诊科就诊，不要等。",
+        "en": "go straight to the emergency department — don't wait."
+      },
+      "source": {
+        "section": "出院医嘱",
+        "lineIndex": 5,
+        "quote": "6. 如出现双下肢水肿加重，请立即到急诊科就诊"
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "苯磺酸氨氯地平片",
+      "strength": "5mg",
+      "amount": "1片",
+      "frequency": "每日一次，早餐后口服",
+      "duration": null,
+      "status": "current",
+      "spoken": {
+        "yue": "苯磺酸氨氯地平片 5mg，每次一片，每日一次，食完早餐先食。",
+        "cmn": "苯磺酸氨氯地平片 5mg，每次一片，每天一次，早餐后服用。",
+        "en": "苯磺酸氨氯地平片 5mg, one tablet, once a day, after breakfast."
+      },
+      "source": {
+        "section": "用药指导",
+        "lineIndex": 0,
+        "quote": "1 苯磺酸氨氯地平片 5mg 1片 每日一次，早餐后口服 28片"
+      }
+    },
+    {
+      "name": "盐酸二甲双胍缓释片",
+      "strength": "0.5g",
+      "amount": "1片",
+      "frequency": "每日两次，随餐口服",
+      "duration": null,
+      "status": "current",
+      "spoken": {
+        "yue": "盐酸二甲双胍缓释片 0.5g，每次一片，每日兩次，同飯一齊食。",
+        "cmn": "盐酸二甲双胍缓释片 0.5g，每次一片，每天两次，随餐服用。",
+        "en": "盐酸二甲双胍缓释片 0.5g, one tablet, twice a day, with meals."
+      },
+      "source": {
+        "section": "用药指导",
+        "lineIndex": 1,
+        "quote": "2 盐酸二甲双胍缓释片 0.5g 1片 每日两次，随餐口服 56片"
+      }
+    },
+    {
+      "name": "阿托伐他汀钙片",
+      "strength": "20mg",
+      "amount": "1片",
+      "frequency": "每晚睡前口服",
+      "duration": null,
+      "status": "current",
+      "spoken": {
+        "yue": "阿托伐他汀钙片 20mg，每次一片，每晚瞓覺之前食。",
+        "cmn": "阿托伐他汀钙片 20mg，每次一片，每晚睡前服用。",
+        "en": "阿托伐他汀钙片 20mg, one tablet, every night before bed."
+      },
+      "source": {
+        "section": "用药指导",
+        "lineIndex": 2,
+        "quote": "3 阿托伐他汀钙片 20mg 1片 每晚睡前口服 28片"
+      }
+    },
+    {
+      "name": "阿司匹林肠溶片",
+      "strength": "100mg",
+      "amount": "1片",
+      "frequency": "每日一次，早餐前口服",
+      "duration": null,
+      "status": "current",
+      "spoken": {
+        "yue": "阿司匹林肠溶片 100mg，每次一片，每日一次，食早餐之前食。",
+        "cmn": "阿司匹林肠溶片 100mg，每次一片，每天一次，早餐前服用。",
+        "en": "阿司匹林肠溶片 100mg, one tablet, once a day, before breakfast."
+      },
+      "source": {
+        "section": "用药指导",
+        "lineIndex": 3,
+        "quote": "4 阿司匹林肠溶片 100mg 1片 每日一次，早餐前口服 28片"
+      }
+    },
+    {
+      "name": "对乙酰氨基酚片",
+      "strength": "0.5g",
+      "amount": "1片",
+      "frequency": "疼痛时口服，每4小时一次，每日不超过4次",
+      "duration": null,
+      "status": "current",
+      "spoken": {
+        "yue": "对乙酰氨基酚片 0.5g，張紙寫住：疼痛时口服，每4小时一次，每日不超过4次。",
+        "cmn": "对乙酰氨基酚片 0.5g，这张纸上写着：疼痛时口服，每4小时一次，每日不超过4次。",
+        "en": "对乙酰氨基酚片 0.5g. The sheet says: 疼痛时口服，每4小时一次，每日不超过4次."
+      },
+      "source": {
+        "section": "用药指导",
+        "lineIndex": 4,
+        "quote": "5 对乙酰氨基酚片 0.5g 1片 疼痛时口服，每4小时一次，每日不超过4次 12片"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "心血管内科门诊",
+      "when": "2026年10月8日上午8:00",
+      "tests": "血钾、肌酐、空腹血糖",
+      "spoken": {
+        "yue": "張紙寫住，2026年10月8日上午8點，要去心血管内科门诊覆診，仲要查血钾、肌酐同空腹血糖。",
+        "cmn": "这张纸上写着，2026年10月8日上午8点，要去心血管内科门诊复诊，还要查血钾、肌酐和空腹血糖。",
+        "en": "The sheet says: come back to 心血管内科门诊 on 2026年10月8日 at 8 in the morning, with 血钾、肌酐、空腹血糖 checked."
+      },
+      "source": {
+        "section": "复诊时间",
+        "lineIndex": 1,
+        "quote": "复诊日期：2026年10月8日上午8:00"
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "低盐低脂饮食，每日食盐不超过5克，戒烟限酒",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低鹽低脂，食鹽一日唔好超過5克，戒煙、少飲酒。",
+      "cmn": "这张纸饮食那一行写着：低盐低脂，食盐一天不超过5克，戒烟、少喝酒。",
+      "en": "The food line on the sheet says: low salt and low fat, no more than 5 grams of salt a day, stop smoking and go easy on alcohol."
+    },
+    "source": {
+      "section": "出院医嘱",
+      "lineIndex": 0,
+      "quote": "1. 低盐低脂饮食，每日食盐不超过5克，戒烟限酒"
+    }
+  },
+  "activityLine": {
+    "text": "适当活动，以室内散步为主，两周内避免提重物及剧烈运动",
+    "spoken": {
+      "yue": "張紙寫住：做返啲輕鬆活動，主要喺室內散下步，兩個星期內唔好搬重嘢，亦唔好做劇烈運動。",
+      "cmn": "这张纸上写着：适当活动，主要在室内散步，两周内不要提重物，也不要做剧烈运动。",
+      "en": "The sheet says: keep activity light, mainly walking indoors, and for two weeks no heavy lifting and no hard exercise."
+    },
+    "source": {
+      "section": "出院医嘱",
+      "lineIndex": 1,
+      "quote": "2. 适当活动，以室内散步为主，两周内避免提重物及剧烈运动"
+    }
+  },
+  "hospitalContact": {
+    "text": "联系电话：0XXX-XXXXXXX（心血管内科病房，24小时）",
+    "spoken": {
+      "yue": "聯絡電話：0XXX-XXXXXXX，心血管内科病房，廿四小時都打得。",
+      "cmn": "联系电话：0XXX-XXXXXXX，心血管内科病房，24小时都可以打。",
+      "en": "Contact number: 0XXX-XXXXXXX, 心血管内科病房, 24 hours."
+    },
+    "source": {
+      "section": "联系方式",
+      "lineIndex": 0,
+      "quote": "联系电话：0XXX-XXXXXXX（心血管内科病房，24小时）"
+    }
+  },
+  "unreadable": []
+}

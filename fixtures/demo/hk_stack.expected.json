@@ -1,0 +1,220 @@
+{
+  "sheetType": "hk_en",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果坐喺度唞唔到氣、好喘。",
+        "cmn": "这张纸上写着，如果休息的时候都气促、喘不上气。",
+        "en": "The sheet says: if she is short of breath even while resting."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you are short of breath at rest, if both ankles swell again, or if your weight goes up more than 2 kg in three days."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果兩隻腳踝又腫返。",
+        "cmn": "这张纸上写着，如果两只脚踝又肿起来。",
+        "en": "The sheet says: if both ankles swell up again."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you are short of breath at rest, if both ankles swell again, or if your weight goes up more than 2 kg in three days."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果三日之內重咗超過兩公斤。",
+        "cmn": "这张纸上写着，如果三天之内体重多了超过两公斤。",
+        "en": "The sheet says: if her weight goes up by more than 2 kg in three days."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you are short of breath at rest, if both ankles swell again, or if your weight goes up more than 2 kg in three days."
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "Frusemide",
+      "strength": "20mg",
+      "amount": "1 tab",
+      "frequency": "Daily in the morning",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Frusemide 20mg，一粒，每朝早食一次，食 28 日。",
+        "cmn": "Frusemide 20mg，一片，每天早上吃一次，吃 28 天。",
+        "en": "Frusemide 20mg, 1 tab, once every morning, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 0,
+        "quote": "1 Frusemide 20mg 1 tab Daily in the morning 28 days"
+      }
+    },
+    {
+      "name": "Metoprolol",
+      "strength": "25mg",
+      "amount": "1 tab",
+      "frequency": "BD",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Metoprolol 25mg，一粒，一日兩次，食 28 日。BD 喺張紙上面即係一日兩次。",
+        "cmn": "Metoprolol 25mg，一片，一天两次，吃 28 天。纸上的 BD 就是一天两次。",
+        "en": "Metoprolol 25mg, 1 tab, twice a day, for 28 days. BD on the sheet means twice a day."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 1,
+        "quote": "2 Metoprolol 25mg 1 tab BD 28 days"
+      }
+    },
+    {
+      "name": "Ramipril",
+      "strength": "2.5mg",
+      "amount": "1 tab",
+      "frequency": "Daily",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Ramipril 2.5mg，一粒，每日一次，食 28 日。",
+        "cmn": "Ramipril 2.5mg，一片，每天一次，吃 28 天。",
+        "en": "Ramipril 2.5mg, 1 tab, once a day, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 2,
+        "quote": "3 Ramipril 2.5mg 1 tab Daily 28 days"
+      }
+    },
+    {
+      "name": "Atorvastatin",
+      "strength": "40mg",
+      "amount": "1 tab",
+      "frequency": "Nocte",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Atorvastatin 40mg，一粒，每晚一次，食 28 日。Nocte 喺張紙上面即係夜晚食。",
+        "cmn": "Atorvastatin 40mg，一片，每晚一次，吃 28 天。纸上的 Nocte 就是晚上吃。",
+        "en": "Atorvastatin 40mg, 1 tab, once at night, for 28 days. Nocte on the sheet means at night."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 3,
+        "quote": "4 Atorvastatin 40mg 1 tab Nocte 28 days"
+      }
+    },
+    {
+      "name": "Paracetamol",
+      "strength": "500mg",
+      "amount": "1-2 tabs",
+      "frequency": "QID PRN for knee pain",
+      "duration": "20 tabs",
+      "status": "current",
+      "spoken": {
+        "yue": "Paracetamol 500mg，膝頭痛嗰陣先食，每次一至兩粒，一日最多四次，總共 20 粒。",
+        "cmn": "Paracetamol 500mg，膝盖痛的时候才吃，每次一到两片，一天最多四次，一共 20 片。",
+        "en": "Paracetamol 500mg, only when the knee hurts, 1 to 2 tabs each time, up to four times a day, 20 tabs in all."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 4,
+        "quote": "5 Paracetamol 500mg 1-2 tabs QID PRN for knee pain 20 tabs"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "內科專科門診",
+      "when": "14-10-2026 (Wed) 09:30",
+      "tests": null,
+      "spoken": {
+        "yue": "第二張紙寫住，10 月 14 號星期三早上 9 點半，要返內科專科門診覆診。",
+        "cmn": "第二张纸上写着，10 月 14 日星期三上午 9 点半，要去内科专科门诊复诊。",
+        "en": "The second page says: come back to the 內科專科門診 clinic on 14-10-2026, a Wednesday, at 9:30 in the morning."
+      },
+      "source": {
+        "section": "覆診預約 FOLLOW-UP APPOINTMENT SLIP",
+        "lineIndex": 5,
+        "quote": "覆診日期及時間 Appointment date & time 14-10-2026 (Wed) 09:30"
+      }
+    },
+    {
+      "clinic": "病理化驗部",
+      "when": "07-10-2026 (Wed) 08:00 - 09:00",
+      "tests": "腎功能、電解質、血色素",
+      "spoken": {
+        "yue": "第二張紙仲寫住，10 月 7 號星期三早上 8 點到 9 點，要去病理化驗部抽血，驗腎功能、電解質同血色素。",
+        "cmn": "第二张纸还写着，10 月 7 日星期三上午 8 点到 9 点，要去病理化验部抽血，查肾功能、电解质和血色素。",
+        "en": "The second page also says: go to 病理化驗部 for a blood test on 07-10-2026, a Wednesday, between 8 and 9 in the morning, for 腎功能、電解質、血色素."
+      },
+      "source": {
+        "section": "抽血化驗預約 BLOOD TEST APPOINTMENT SLIP",
+        "lineIndex": 3,
+        "quote": "抽血日期及時間 Blood test date & time 07-10-2026 (Wed) 08:00 - 09:00"
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "Diet: low salt, no added salt at the table. Fluid up to 1.5 litre a day.",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低鹽，食飯唔好再加鹽，飲水每日最多一公升半。",
+      "cmn": "这张纸饮食那一行写着：低盐，吃饭不要再加盐，饮水每天最多一升半。",
+      "en": "The food line on the sheet says: low salt, no extra salt at the table, and up to 1.5 litres of fluid a day."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 0,
+      "quote": "1. Diet: low salt, no added salt at the table. Fluid up to 1.5 litre a day."
+    }
+  },
+  "activityLine": {
+    "text": "Activity: light walking at home with a stick. No heavy lifting and no stair climbing for 4 weeks.",
+    "spoken": {
+      "yue": "張紙寫住：喺屋企攞住支拐杖慢慢行下就得，四個星期內唔好搬重嘢，亦唔好行樓梯。",
+      "cmn": "这张纸上写着：在家里拄着拐杖慢慢走就好，四周内不要提重物，也不要爬楼梯。",
+      "en": "The sheet says: light walking at home with a stick, and no heavy lifting or stairs for four weeks."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 1,
+      "quote": "2. Activity: light walking at home with a stick. No heavy lifting and no stair climbing for 4 weeks."
+    }
+  },
+  "hospitalContact": {
+    "text": "Ward 9B enquiries 病房查詢: 2xxx xxxx (24 hours)",
+    "spoken": {
+      "yue": "9B 病房查詢電話：2xxx xxxx，廿四小時都打得。",
+      "cmn": "9B 病房咨询电话：2xxx xxxx，24 小时都可以打。",
+      "en": "Ward 9B enquiries: 2xxx xxxx, 24 hours."
+    },
+    "source": {
+      "section": "HOSPITAL CONTACT",
+      "lineIndex": 0,
+      "quote": "Ward 9B enquiries 病房查詢: 2xxx xxxx (24 hours)"
+    }
+  },
+  "unreadable": []
+}

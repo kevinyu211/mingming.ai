@@ -108,7 +108,7 @@ const hant = {
   "setup.chip.other": "其他",
   "setup.otherPlaceholder": "自己寫個稱呼",
   "setup.dialectQuestion": "佢聽咩話？",
-  "setup.privacy": "只會存喺呢部電話，除咗你問嘅問題，乜都唔會傳出去。冇名，冇病名。",
+  "setup.privacy": "只會存喺呢部電話。傳出去嘅淨係張紙、你嘅問題同你把聲。冇名，冇病名。",
   "setup.next": "繼續",
   "setup.done": "搞掂",
 
@@ -455,7 +455,7 @@ const hans: Record<UiKey, string> = {
   "setup.chip.other": "其他",
   "setup.otherPlaceholder": "自己写个称呼",
   "setup.dialectQuestion": "他听哪种话？",
-  "setup.privacy": "只存在这部手机里，除了你问的问题，什么都不会传出去。没有名字，没有病名。",
+  "setup.privacy": "只存在这部手机里。传出去的只有那张纸、你的问题和你的声音。没有名字，没有病名。",
   "setup.next": "继续",
   "setup.done": "好了",
 
@@ -734,7 +734,7 @@ const en: Record<UiKey, string> = {
   "setup.otherPlaceholder": "Write your own word",
   "setup.dialectQuestion": "Which language do they listen in?",
   "setup.privacy":
-    "Kept on this phone only. Nothing leaves it except the question you ask. No name, no illness name.",
+    "Kept on this phone only. Only the sheet, your question and your voice leave it. No name, no illness name.",
   "setup.next": "Continue",
   "setup.done": "Done",
 

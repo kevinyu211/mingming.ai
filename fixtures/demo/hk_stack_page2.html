@@ -80,6 +80,17 @@
   }
   .barcode .num { font-family: "Courier New", Courier, monospace; font-size: 13px; letter-spacing: 2px; }
 
+  /* The stack itself, as the ward checklist prints it: which papers went home. */
+  .docs { border: 2px solid #111; margin-top: 22px; }
+  .docs .cap { border-bottom: 1px solid #111; background: #ececec; padding: 5px 12px; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
+  .docs .cap .en { font-family: Arial, sans-serif; font-size: 12.5px; letter-spacing: .5px; margin-left: 10px; }
+  .docs .grid { display: flex; flex-wrap: wrap; padding: 10px 12px 12px 12px; }
+  .docs .it { width: 33.33%; font-size: 16px; padding: 4px 0; }
+  .docs .it .en { font-family: Arial, sans-serif; font-size: 12px; color: #333; margin-left: 4px; }
+  .cb { display: inline-block; width: 14px; height: 14px; border: 1px solid #111; margin-right: 7px; position: relative; top: 2px; text-align: center; line-height: 12px; font-size: 12px; font-family: Arial, sans-serif; }
+  .docs .by { border-top: 1px dotted #999; margin: 0 12px; padding: 7px 0 9px 0; font-size: 14px; display: flex; justify-content: space-between; }
+  .docs .by i { font-family: "Snell Roundhand", "Brush Script MT", cursive; font-style: normal; font-size: 23px; border-bottom: 1px solid #111; padding: 0 22px 1px 6px; }
+
   .foot { margin-top: 22px; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #555; display: flex; justify-content: space-between; font-family: Arial, sans-serif; }
 </style>
 </head>
@@ -164,6 +175,24 @@
       <div class="bars" style="width:240px;"></div>
       <div class="num">LAB XXXXXXXXXXXX &nbsp; 07102026</div>
     </div>
+  </div>
+</div>
+
+<!-- ==================== the stack, as it left the ward ==================== -->
+<div class="docs">
+  <div class="cap">出院文件核對<span class="en">HOSPITAL DOCUMENTS GIVEN TO PATIENT</span></div>
+  <div class="grid">
+    <div class="it"><span class="cb">X</span>出院紙<span class="en">Discharge summary</span></div>
+    <div class="it"><span class="cb">X</span>覆診紙<span class="en">Appointment slip</span></div>
+    <div class="it"><span class="cb">X</span>抽血紙<span class="en">Blood test slip</span></div>
+    <div class="it"><span class="cb">X</span>藥袋<span class="en">Drug bags</span></div>
+    <div class="it"><span class="cb">&nbsp;</span>病假紙<span class="en">Sick leave certificate</span></div>
+    <div class="it"><span class="cb">&nbsp;</span>繳費單<span class="en">Payment slip</span></div>
+  </div>
+  <div class="by">
+    <span>核對護士 Checked by (nurse)：<i>K.Y. Ho</i></span>
+    <span>講解語言 Language used：粵語 Cantonese</span>
+    <span>日期 Date：02-09-2026</span>
   </div>
 </div>
 

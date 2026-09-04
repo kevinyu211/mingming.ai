@@ -88,6 +88,13 @@
   .adv { padding-left: 3px; }
   .adv .ln { margin-bottom: 2px; }
 
+  /* The ward's own "what we explained" tick list. Furniture, not instructions. */
+  .teach { display: flex; flex-wrap: wrap; padding: 2px 3px 0 3px; }
+  .teach .it { width: 33.33%; font-size: 15px; padding: 3px 0; }
+  .teach .it .zh { font-size: 14px; margin-left: 4px; color: #222; }
+  .teachby { margin-top: 6px; padding: 6px 3px 0 3px; border-top: 1px dotted #999; font-size: 13px; display: flex; justify-content: space-between; }
+  .teachby i { font-family: "Snell Roundhand", "Brush Script MT", cursive; font-style: normal; font-size: 22px; border-bottom: 1px solid #111; padding: 0 20px 1px 6px; }
+
   /* ---- signature + footer ---- */
   .sig { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 16px; }
   .sigblk { width: 560px; }
@@ -191,6 +198,26 @@
   <div class="h">HOSPITAL CONTACT <span class="zh">醫院聯絡方法</span></div>
   <div class="body">
     <span class="ln">Ward 9B enquiries <span class="zh">病房查詢</span>: 2xxx xxxx (24 hours)</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">EXPLAINED TO PATIENT / CARER BEFORE DISCHARGE <span class="zh">出院前已向病人／家屬講解</span></div>
+  <div class="teach">
+    <div class="it"><span class="box">X</span>Medicines and dosage <span class="zh">藥物種類及服用量</span></div>
+    <div class="it"><span class="box">X</span>Signals of condition change <span class="zh">病情變化徵狀</span></div>
+    <div class="it"><span class="box">X</span>Follow-up arrangement <span class="zh">覆診安排</span></div>
+    <div class="it"><span class="box">X</span>Foods to avoid <span class="zh">飲食禁忌</span></div>
+    <div class="it"><span class="box">X</span>Advice on activities <span class="zh">活動／運動建議</span></div>
+    <div class="it"><span class="box">X</span>Hospital contact <span class="zh">醫院聯絡方法</span></div>
+    <div class="it"><span class="box"></span>Post-discharge care skills <span class="zh">護理技巧</span></div>
+    <div class="it"><span class="box"></span>Community nurse referral <span class="zh">社康護士轉介</span></div>
+    <div class="it"><span class="box"></span>Dietitian referral <span class="zh">營養師轉介</span></div>
+  </div>
+  <div class="teachby">
+    <span>Explained by (nurse) <span class="zh">講解護士</span>: <i>K.Y. Ho</i></span>
+    <span>Language used <span class="zh">講解語言</span>: Cantonese <span class="zh">粵語</span></span>
+    <span>Understanding checked <span class="zh">已覆述確認</span>: <span class="box"></span>Yes &nbsp;<span class="box">X</span>Not done</span>
   </div>
 </div>
 

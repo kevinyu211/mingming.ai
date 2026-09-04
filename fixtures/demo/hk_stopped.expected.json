@@ -1,0 +1,259 @@
+{
+  "sheetType": "hk_en",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果企起身嗰陣頭暈、成個人虛虛哋。",
+        "cmn": "这张纸上写着，如果站起来的时候头晕、发虚。",
+        "en": "The sheet says: if he feels faint or dizzy when he stands up."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果屙嘅大便係黑色、好似柏油咁。",
+        "cmn": "这张纸上写着，如果大便是黑色、像柏油一样。",
+        "en": "The sheet says: if his stools are black or tarry."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果食極都留唔住嘢喺個胃度，飲水都嘔返出嚟。",
+        "cmn": "这张纸上写着，如果吃下去、喝下去都留不住，全吐出来。",
+        "en": "The sheet says: if he can't keep food or drink down."
+      },
+      "action": {
+        "yue": "就即刻返急症室，唔好等。",
+        "cmn": "就马上回急诊室，不要等。",
+        "en": "go straight back to A&E — don't wait."
+      },
+      "source": {
+        "section": "ADVICE ON DISCHARGE",
+        "lineIndex": 3,
+        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "Metformin",
+      "strength": "500mg",
+      "amount": "1 tab",
+      "frequency": "BD with meals",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Metformin 500mg，一粒，一日兩次，同飯一齊食，食 28 日。",
+        "cmn": "Metformin 500mg，一片，一天两次，随餐服用，吃 28 天。",
+        "en": "Metformin 500mg, 1 tab, twice a day with meals, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 0,
+        "quote": "1 Metformin 500mg 1 tab BD with meals 28 days"
+      }
+    },
+    {
+      "name": "Amlodipine",
+      "strength": "5mg",
+      "amount": "1 tab",
+      "frequency": "Daily",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Amlodipine 5mg，一粒，每日一次，食 28 日。",
+        "cmn": "Amlodipine 5mg，一片，每天一次，吃 28 天。",
+        "en": "Amlodipine 5mg, 1 tab, once a day, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 1,
+        "quote": "2 Amlodipine 5mg 1 tab Daily 28 days"
+      }
+    },
+    {
+      "name": "Aspirin",
+      "strength": "80mg",
+      "amount": "1 tab",
+      "frequency": "Daily after food",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Aspirin 80mg，一粒，每日一次，食完飯先食，食 28 日。",
+        "cmn": "Aspirin 80mg，一片，每天一次，饭后服用，吃 28 天。",
+        "en": "Aspirin 80mg, 1 tab, once a day after food, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 2,
+        "quote": "3 Aspirin 80mg 1 tab Daily after food 28 days"
+      }
+    },
+    {
+      "name": "Atorvastatin",
+      "strength": "20mg",
+      "amount": "1 tab",
+      "frequency": "Nocte",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Atorvastatin 20mg，一粒，每晚一次，食 28 日。Nocte 喺張紙上面即係夜晚食。",
+        "cmn": "Atorvastatin 20mg，一片，每晚一次，吃 28 天。纸上的 Nocte 就是晚上吃。",
+        "en": "Atorvastatin 20mg, 1 tab, once at night, for 28 days. Nocte on the sheet means at night."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 3,
+        "quote": "4 Atorvastatin 20mg 1 tab Nocte 28 days"
+      }
+    },
+    {
+      "name": "Senna",
+      "strength": "7.5mg",
+      "amount": "2 tabs",
+      "frequency": "Nocte PRN for constipation",
+      "duration": "20 tabs",
+      "status": "current",
+      "spoken": {
+        "yue": "Senna 7.5mg，屙唔出嗰陣先食，夜晚食兩粒，總共 20 粒。",
+        "cmn": "Senna 7.5mg，便秘的时候才吃，晚上吃两片，一共 20 片。",
+        "en": "Senna 7.5mg, 2 tabs at night, only when he is constipated, 20 tabs in all."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 4,
+        "quote": "5 Senna 7.5mg 2 tabs Nocte PRN for constipation 20 tabs"
+      }
+    },
+    {
+      "name": "Gliclazide",
+      "strength": "80mg",
+      "amount": "1 tab",
+      "frequency": "Daily before breakfast",
+      "duration": null,
+      "status": "stopped",
+      "spoken": {
+        "yue": "Gliclazide 80mg：張紙將呢隻擺咗喺「已停用藥物」嗰欄，寫住出院之後唔使再食。",
+        "cmn": "Gliclazide 80mg：这张纸把它列在「已停用药物」那一栏，写着出院后不用再吃。",
+        "en": "Gliclazide 80mg: the sheet lists this one under medicines stopped, and says it is not to be taken after going home."
+      },
+      "source": {
+        "section": "MEDICINES STOPPED — NOT TO BE TAKEN AFTER DISCHARGE",
+        "lineIndex": 0,
+        "quote": "1 Gliclazide 80mg 1 tab Daily before breakfast"
+      }
+    },
+    {
+      "name": "Bisoprolol",
+      "strength": "5mg",
+      "amount": "1 tab",
+      "frequency": "Daily",
+      "duration": null,
+      "status": "stopped",
+      "spoken": {
+        "yue": "Bisoprolol 5mg：張紙將呢隻擺咗喺「已停用藥物」嗰欄，寫住出院之後唔使再食。",
+        "cmn": "Bisoprolol 5mg：这张纸把它列在「已停用药物」那一栏，写着出院后不用再吃。",
+        "en": "Bisoprolol 5mg: the sheet lists this one under medicines stopped, and says it is not to be taken after going home."
+      },
+      "source": {
+        "section": "MEDICINES STOPPED — NOT TO BE TAKEN AFTER DISCHARGE",
+        "lineIndex": 1,
+        "quote": "2 Bisoprolol 5mg 1 tab Daily"
+      }
+    },
+    {
+      "name": "Ibuprofen",
+      "strength": "400mg",
+      "amount": "1 tab",
+      "frequency": "TDS after food",
+      "duration": null,
+      "status": "stopped",
+      "spoken": {
+        "yue": "Ibuprofen 400mg：張紙將呢隻擺咗喺「已停用藥物」嗰欄，寫住出院之後唔使再食。",
+        "cmn": "Ibuprofen 400mg：这张纸把它列在「已停用药物」那一栏，写着出院后不用再吃。",
+        "en": "Ibuprofen 400mg: the sheet lists this one under medicines stopped, and says it is not to be taken after going home."
+      },
+      "source": {
+        "section": "MEDICINES STOPPED — NOT TO BE TAKEN AFTER DISCHARGE",
+        "lineIndex": 2,
+        "quote": "3 Ibuprofen 400mg 1 tab TDS after food"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "MED SOPD",
+      "when": "4/52",
+      "tests": null,
+      "spoken": {
+        "yue": "張紙寫住，四個星期後返 MED SOPD 內科專科門診覆診，記得帶埋所有藥袋，連停咗嗰啲都要帶。",
+        "cmn": "这张纸上写着，四周后回 MED SOPD 内科专科门诊复诊，记得带上所有药袋，包括已经停用的那些。",
+        "en": "The sheet says: come back to MED SOPD in four weeks, and bring all the drug bags, including the stopped ones."
+      },
+      "source": {
+        "section": "FOLLOW-UP",
+        "lineIndex": 0,
+        "quote": "FU: MED SOPD 4/52. Bring all drug bags, including the stopped ones, to the clinic."
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "Diet: diabetic diet. No sweet drinks and no sweet snacks between meals.",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：糖尿病飲食，唔好飲甜嘢，兩餐之間都唔好食甜嘅零食。",
+      "cmn": "这张纸饮食那一行写着：糖尿病饮食，不要喝甜饮料，两餐之间也不要吃甜的零食。",
+      "en": "The food line on the sheet says: a diabetic diet, no sweet drinks, and no sweet snacks between meals."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 0,
+      "quote": "1. Diet: diabetic diet. No sweet drinks and no sweet snacks between meals."
+    }
+  },
+  "activityLine": {
+    "text": "Activity: walk indoors with the frame. Do not go out alone until you have been seen at the clinic.",
+    "spoken": {
+      "yue": "張紙寫住：喺屋企用架助行架行，未覆診之前唔好一個人出街。",
+      "cmn": "这张纸上写着：在室内用助行架走，还没复诊之前不要一个人出门。",
+      "en": "The sheet says: walk indoors with the frame, and don't go out alone before the clinic visit."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 1,
+      "quote": "2. Activity: walk indoors with the frame. Do not go out alone until you have been seen at the clinic."
+    }
+  },
+  "hospitalContact": {
+    "text": "Ward 7A enquiries 病房查詢: 2xxx xxxx (24 hours)",
+    "spoken": {
+      "yue": "7A 病房查詢電話：2xxx xxxx，廿四小時都打得。",
+      "cmn": "7A 病房咨询电话：2xxx xxxx，24 小时都可以打。",
+      "en": "Ward 7A enquiries: 2xxx xxxx, 24 hours."
+    },
+    "source": {
+      "section": "HOSPITAL CONTACT",
+      "lineIndex": 0,
+      "quote": "Ward 7A enquiries 病房查詢: 2xxx xxxx (24 hours)"
+    }
+  },
+  "unreadable": []
+}

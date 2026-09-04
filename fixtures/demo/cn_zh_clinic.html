@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>出院指导单 — 示例市第二人民医院（合成演示样张）</title>
+<style>
+  /* DEMO SHEET 3 of 3 — "cn_zh_clinic".
+     A mainland 出院指导单 in simplified characters, in the order these forms are
+     actually printed: 患者信息 → 出院诊断 → 出院情况 → 出院医嘱 → 用药指导 →
+     复诊时间 → 联系方式 → 医师签名.
+
+     用药指导 is a ruled table, one drug per row, 用法频次 written the way a
+     mainland form writes it. Row 5 is the one the counter must REFUSE: its clause
+     is "疼痛时口服，每4小时一次，每日不超过4次" — an interval plus a stated
+     maximum, not a daily schedule. lib/rules/doses.ts vetoes both forms, so the
+     card shows the printed clause and no number, which is the honest answer.
+
+     复诊时间 prints one dated field rather than a date and a time in two places,
+     so there is exactly one verbatim answer for followUp[0].when.
+
+     Fictional hospital, fictional patient, masked identifiers throughout. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #ffffff; color: #111111;
+    font-family: "Songti SC", "SimSun", "STSong", "Noto Serif CJK SC", serif;
+    font-size: 18px; line-height: 1.44;
+    padding: 48px 66px 34px 66px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .hei { font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: flex-start; }
+  .topbar .lft { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 12px; color: #444; letter-spacing: .5px; line-height: 1.6; }
+  .stamp {
+    border: 1.5px solid #555; color: #555; text-align: center;
+    padding: 5px 10px; font-size: 11px; letter-spacing: .6px; line-height: 1.35; max-width: 250px;
+    font-family: "Heiti SC", "PingFang SC", sans-serif;
+  }
+  .stamp b { display: block; font-family: Arial, sans-serif; font-size: 11px; letter-spacing: 1px; }
+
+  .hosp { text-align: center; font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 25px; letter-spacing: 5px; margin-top: -34px; }
+  .doctype { text-align: center; font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 31px; font-weight: bold; letter-spacing: 12px; margin-top: 6px; }
+  .subline { text-align: center; font-size: 13px; color: #444; margin-top: 4px; font-family: "Heiti SC", "PingFang SC", sans-serif; letter-spacing: 1px; }
+  .rule { border-top: 2px solid #111; margin-top: 9px; }
+  .rule.thin { border-top: 1px solid #111; margin-top: 0; }
+
+  .meta { margin-top: 11px; font-size: 17px; }
+  .meta .row { display: flex; margin-bottom: 5px; }
+  .meta .cell { white-space: nowrap; }
+  .meta .cell .hei { font-weight: normal; }
+  .u { display: inline-block; min-width: 124px; border-bottom: 1px solid #111; text-align: center; }
+  .u.w1 { min-width: 70px; }
+  .u.w3 { min-width: 196px; }
+
+  .sec { margin-top: 12px; }
+  .sec > .h {
+    font-family: "Heiti SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 20px; font-weight: bold; letter-spacing: 2px;
+    border-left: 5px solid #111; padding-left: 9px; margin-bottom: 4px;
+  }
+  .sec .ln { display: block; text-align: justify; }
+  .sec.orders .ln { margin-bottom: 2px; }
+  .kv { display: flex; margin-bottom: 3px; }
+  .kv .k { width: 130px; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+  .kv .val { flex: 1; }
+
+  table.rx { width: 100%; border-collapse: collapse; font-size: 17px; margin-top: 3px; }
+  table.rx th, table.rx td { border: 1px solid #111; padding: 5px 8px; text-align: left; vertical-align: top; }
+  table.rx th { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 15px; font-weight: bold; background: #ececec; letter-spacing: 1.5px; }
+  table.rx td.n { width: 44px; text-align: center; }
+  table.rx td.sp { width: 96px; }
+  table.rx td.ds { width: 100px; }
+  table.rx td.fq { width: 430px; }
+  table.rx td.qt { width: 96px; }
+  .rxnote { font-size: 14px; margin-top: 4px; color: #222; }
+
+  /* Sign-off strip: furniture, not an instruction the app extracts. */
+  .cb { display: inline-block; width: 13px; height: 13px; border: 1px solid #111; margin-right: 6px; position: relative; top: 1px; text-align: center; line-height: 11px; font-size: 11px; font-family: Arial, sans-serif; }
+  .signoff { border: 1px solid #111; margin-top: 12px; padding: 8px 12px 9px 12px; font-size: 16px; }
+  .signoff .r { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .signoff .r:last-child { margin-bottom: 0; }
+  .signoff .ul { display: inline-block; min-width: 150px; border-bottom: 1px solid #111; text-align: center; }
+
+  .foot { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .sigwrap { font-family: "Heiti SC", "PingFang SC", sans-serif; font-size: 18px; }
+  .sigwrap i { font-family: "Kaiti SC", "STKaiti", "KaiTi", serif; font-style: normal; font-size: 24px; border-bottom: 1px solid #111; padding: 0 24px 1px 5px; }
+  .note { margin-top: 16px; border-top: 1px solid #999; padding-top: 6px; font-size: 13px; color: #555; display: flex; justify-content: space-between; font-family: "Heiti SC", "PingFang SC", sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="lft">表格编号 SDY-CY-07（2026年版）<br>科室留存联 / 患者联</div>
+  <div class="stamp"><b>SYNTHETIC — NOT A REAL MEDICAL RECORD</b>合成样张，非真实病历</div>
+</div>
+
+<div class="hosp">示例市第二人民医院</div>
+<div class="doctype">出院指导单</div>
+<div class="subline">本单请随身携带，复诊时交主诊医师查阅</div>
+<div class="rule"></div>
+
+<div class="meta">
+  <div class="row">
+    <div class="cell" style="width:296px;"><span class="hei">姓名</span> <span class="u">李某某</span></div>
+    <div class="cell" style="width:210px;"><span class="hei">性别</span> <span class="u w1">男</span></div>
+    <div class="cell" style="width:222px;"><span class="hei">年龄</span> <span class="u w1">69岁</span></div>
+    <div class="cell"><span class="hei">科室</span> <span class="u">心血管内科</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:296px;"><span class="hei">床号</span> <span class="u w1">XX</span></div>
+    <div class="cell" style="width:432px;"><span class="hei">住院号</span> <span class="u w3">XXXXXXXX</span></div>
+    <div class="cell"><span class="hei">住院天数</span> <span class="u w1">8天</span></div>
+  </div>
+  <div class="row">
+    <div class="cell" style="width:500px;"><span class="hei">入院日期</span> <span class="u w3">2026-08-26</span></div>
+    <div class="cell"><span class="hei">出院日期</span> <span class="u w3">2026-09-03</span></div>
+  </div>
+</div>
+<div class="rule thin" style="margin-top:7px;"></div>
+
+<div class="sec">
+  <div class="h">出院诊断</div>
+  <span class="ln">1. 冠状动脉粥样硬化性心脏病，稳定型心绞痛</span>
+  <span class="ln">2. 高血压病2级（高危）</span>
+  <span class="ln">3. 2型糖尿病</span>
+  <span class="ln">4. 高脂血症</span>
+</div>
+
+<div class="sec">
+  <div class="h">出院情况</div>
+  <span class="ln">患者一般情况可，胸痛未再发作，无胸闷气促，无头晕心慌，双下肢无水肿，进食睡眠可，二便正常。出院前血压 128/76mmHg，空腹血糖 6.8mmol/L，心率 68次/分。经上级医师查看，准予今日出院。</span>
+</div>
+
+<div class="sec orders">
+  <div class="h">出院医嘱</div>
+  <span class="ln">1. 低盐低脂饮食，每日食盐不超过5克，戒烟限酒</span>
+  <span class="ln">2. 适当活动，以室内散步为主，两周内避免提重物及剧烈运动</span>
+  <span class="ln">3. 每日晨起后测量血压并记录，复诊时携带血压记录本</span>
+  <span class="ln">4. 如出现胸痛持续不缓解，请立即到急诊科就诊</span>
+  <span class="ln">5. 如出现活动后气促明显加重，请立即到急诊科就诊</span>
+  <span class="ln">6. 如出现双下肢水肿加重，请立即到急诊科就诊</span>
+  <span class="ln">7. 出院带药按下方用药指导服用，不得自行增减药量，不适随诊</span>
+</div>
+
+<div class="sec">
+  <div class="h">用药指导</div>
+  <table class="rx">
+    <tr>
+      <th style="width:44px;">序号</th>
+      <th>药品名称</th>
+      <th style="width:96px;">规格</th>
+      <th style="width:100px;">单次用量</th>
+      <th style="width:430px;">用法频次</th>
+      <th style="width:96px;">数量</th>
+    </tr>
+    <tr><td class="n">1</td><td>苯磺酸氨氯地平片</td><td class="sp">5mg</td><td class="ds">1片</td><td class="fq">每日一次，早餐后口服</td><td class="qt">28片</td></tr>
+    <tr><td class="n">2</td><td>盐酸二甲双胍缓释片</td><td class="sp">0.5g</td><td class="ds">1片</td><td class="fq">每日两次，随餐口服</td><td class="qt">56片</td></tr>
+    <tr><td class="n">3</td><td>阿托伐他汀钙片</td><td class="sp">20mg</td><td class="ds">1片</td><td class="fq">每晚睡前口服</td><td class="qt">28片</td></tr>
+    <tr><td class="n">4</td><td>阿司匹林肠溶片</td><td class="sp">100mg</td><td class="ds">1片</td><td class="fq">每日一次，早餐前口服</td><td class="qt">28片</td></tr>
+    <tr><td class="n">5</td><td>对乙酰氨基酚片</td><td class="sp">0.5g</td><td class="ds">1片</td><td class="fq">疼痛时口服，每4小时一次，每日不超过4次</td><td class="qt">12片</td></tr>
+  </table>
+  <div class="rxnote">上述药品已于出院当日在门诊药房发放，请按本单服用，勿与他人药品混放。</div>
+</div>
+
+<div class="sec">
+  <div class="h">复诊时间</div>
+  <div class="kv"><div class="k">复诊科室：</div><div class="val">心血管内科门诊</div></div>
+  <div class="kv"><div class="k">复诊日期：</div><div class="val">2026年10月8日上午8:00</div></div>
+  <div class="kv"><div class="k">复查项目：</div><div class="val">血钾、肌酐、空腹血糖</div></div>
+  <div class="kv"><div class="k">注意事项：</div><div class="val">复诊当日请空腹前往，并携带本单及全部剩余药品。如需改期，请提前一日致电门诊预约处。</div></div>
+</div>
+
+<div class="sec">
+  <div class="h">用药注意事项</div>
+  <span class="ln">1. 请按上表剂量服用，不得自行增减或停用</span>
+  <span class="ln">2. 盐酸二甲双胍缓释片须整片吞服，不可掰开或嚼碎</span>
+  <span class="ln">3. 药品请置于阴凉干燥处保存，避免儿童取用</span>
+  <span class="ln">4. 如需服用其他药品或保健品，请先向医师或药师说明现用药品</span>
+</div>
+
+<div class="sec">
+  <div class="h">联系方式</div>
+  <span class="ln">联系电话：0XXX-XXXXXXX（心血管内科病房，24小时）</span>
+</div>
+
+<div class="signoff">
+  <div class="r">
+    <span><span class="cb">√</span>已向患者／家属逐项讲解出院医嘱及用药方法</span>
+    <span>讲解语言：<span class="cb">√</span>普通话 <span class="cb">&nbsp;</span>粤语 <span class="cb">&nbsp;</span>其他</span>
+    <span>覆述确认：<span class="cb">&nbsp;</span>已覆述 <span class="cb">√</span>未进行</span>
+  </div>
+  <div class="r">
+    <span>患者／家属签名：<span class="ul">&nbsp;</span></span>
+    <span>与患者关系：<span class="ul">&nbsp;</span></span>
+    <span>签收日期：<span class="ul">&nbsp;</span></span>
+  </div>
+</div>
+
+<div class="foot">
+  <div class="sigwrap">医师签名：<i>周××</i></div>
+  <div class="sigwrap">责任护士：<i>何××</i></div>
+  <div class="sigwrap">日期：2026-09-03</div>
+</div>
+
+<div class="note">
+  <span>本页为合成演示样张，患者与医院均为虚构，非真实病历。 SYNTHETIC — NOT A REAL MEDICAL RECORD.</span>
+  <span>SDY-CY-DEMO-03 &mdash; 第 1 页 / 共 1 页</span>
+</div>
+
+</body>
+</html>
