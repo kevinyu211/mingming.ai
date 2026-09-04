@@ -8,14 +8,14 @@
         "en": "The sheet says: if he feels faint or dizzy when he stands up."
       },
       "action": {
-        "yue": "就即刻返急症室，唔好等。",
-        "cmn": "就马上回急诊室，不要等。",
-        "en": "go straight back to A&E — don't wait."
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight to A&E — don't wait."
       },
       "source": {
-        "section": "ADVICE ON DISCHARGE",
-        "lineIndex": 3,
-        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+        "section": "WHEN TO RETURN TO HOSPITAL",
+        "lineIndex": 0,
+        "quote": "1. If you feel faint or dizzy when you stand up, go to the Accident & Emergency Department at once."
       }
     },
     {
@@ -25,31 +25,31 @@
         "en": "The sheet says: if his stools are black or tarry."
       },
       "action": {
-        "yue": "就即刻返急症室，唔好等。",
-        "cmn": "就马上回急诊室，不要等。",
-        "en": "go straight back to A&E — don't wait."
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight to A&E — don't wait."
       },
       "source": {
-        "section": "ADVICE ON DISCHARGE",
-        "lineIndex": 3,
-        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+        "section": "WHEN TO RETURN TO HOSPITAL",
+        "lineIndex": 1,
+        "quote": "2. If you pass black or tarry stools, go to the Accident & Emergency Department at once."
       }
     },
     {
       "symptom": {
-        "yue": "張紙上面寫，如果食極都留唔住嘢喺個胃度，飲水都嘔返出嚟。",
+        "yue": "張紙上面寫，如果食極、飲極都留唔住，全部嘔返出嚟。",
         "cmn": "这张纸上写着，如果吃下去、喝下去都留不住，全吐出来。",
         "en": "The sheet says: if he can't keep food or drink down."
       },
       "action": {
-        "yue": "就即刻返急症室，唔好等。",
-        "cmn": "就马上回急诊室，不要等。",
-        "en": "go straight back to A&E — don't wait."
+        "yue": "就即刻去急症室，唔好等。",
+        "cmn": "就马上去急诊室，不要等。",
+        "en": "go straight to A&E — don't wait."
       },
       "source": {
-        "section": "ADVICE ON DISCHARGE",
-        "lineIndex": 3,
-        "quote": "4. Return to the Accident & Emergency Department at once if you feel faint or dizzy when you stand up, if you pass black or tarry stools, or if you cannot keep food or fluid down."
+        "section": "WHEN TO RETURN TO HOSPITAL",
+        "lineIndex": 2,
+        "quote": "3. If you cannot keep food or fluid down, go to the Accident & Emergency Department at once."
       }
     }
   ],

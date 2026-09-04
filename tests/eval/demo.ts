@@ -565,10 +565,12 @@ async function main(): Promise<void> {
             ? `, ${s.diff.followUp.mismatches.map((m) => `[${m.index}].${m.field} want "${m.expected}" got "${m.actual}"`).join("; ")}`
             : ""),
       );
+      // Count matters as much as coverage: one card carrying three symptoms is not three cards,
+      // and the app reads warnings out one at a time.
       line(
         "warnings",
-        s.diff.warningSigns.coverage === 1,
-        `${s.diff.warningSigns.returnedCount} returned, quote coverage ${pct(s.diff.warningSigns.coverage)} of ${s.diff.warningSigns.expectedCount}`,
+        s.diff.warningSigns.countOk && s.diff.warningSigns.coverage === 1,
+        `${s.diff.warningSigns.returnedCount}/${s.diff.warningSigns.expectedCount} returned, quote coverage ${pct(s.diff.warningSigns.coverage)}`,
       );
       line(
         "diet / activity",
@@ -595,6 +597,8 @@ async function main(): Promise<void> {
         s.invented.length === 0 &&
         s.dangerous.length === 0 &&
         s.followUpMissing.length === 0 &&
+        s.diff.warningSigns.countOk &&
+        s.diff.warningSigns.coverage === 1 &&
         s.counted.every((c) => c.ok) &&
         s.bannedHits === 0;
       if (!demoOk) liveFailures += 1;
