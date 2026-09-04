@@ -192,6 +192,7 @@ export class ModelOutputError extends ModelError {
 export function toModelError(error: unknown): ModelError {
   if (error instanceof ModelError) return error;
   if (RetryError.isInstance(error)) return toModelError(error.lastError);
+  describeFailure(error);
   if (NoObjectGeneratedError.isInstance(error)) {
     if (error.finishReason === "length") return new ModelOutputError("truncated");
     return new ModelOutputError("invalid_json");
@@ -203,6 +204,24 @@ export function toModelError(error: unknown): ModelError {
     return new ModelRequestError(status);
   }
   return new ModelUnavailableError(null);
+}
+
+/**
+ * One log line naming the failure class and upstream status, so an outage can be told apart from
+ * a rejected credential in the function logs. Never the message: SDK messages can embed response
+ * text.
+ */
+function describeFailure(error: unknown): void {
+  const name = error instanceof Error ? error.name : typeof error;
+  const status =
+    error && typeof error === "object" && "statusCode" in error
+      ? (error as { statusCode?: unknown }).statusCode
+      : undefined;
+  const type =
+    error && typeof error === "object" && "type" in error
+      ? (error as { type?: unknown }).type
+      : undefined;
+  console.info({ model_failure: name, status: status ?? null, type: type ?? null });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -325,6 +344,8 @@ export class GatewayProvider implements ModelProvider {
     return {
       model: spec.model,
       messages,
+      // The system prompt is a message so it can carry the cache breakpoint; this is deliberate.
+      allowSystemInMessages: true,
       output: Output.object({ schema: spec.schema }),
       maxOutputTokens: MAX_TOKENS,
       maxRetries: 2,
