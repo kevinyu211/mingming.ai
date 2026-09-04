@@ -86,7 +86,7 @@ import { DEFAULT_SAMPLE, filterCards, isSampleId, loadSampleReading } from "@/li
 import type { Card, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import { downscale } from "@/lib/image/downscale";
 import { scriptForDialect, toScript } from "@/lib/i18n/script";
-import type { UiKey, UiLocale } from "@/lib/i18n/ui";
+import type { UiLocale } from "@/lib/i18n/ui";
 import { memoryBrief, rememberExchange, rememberReading } from "@/lib/memory";
 import { buildCards, cardTitle } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
@@ -175,6 +175,15 @@ function ChatScreen() {
   const driving = useRef(false);
   /** True from the moment the script starts playing until it ends or the reader cuts in. */
   const playing = useRef(false);
+  /**
+   * 明仔's 「好。」 waiting to be said as the opening of the NEXT bubble rather than as one of its own.
+   *
+   * An acknowledgement is one word. Giving it a bubble, a speaker button and an AI chip is three
+   * rows of furniture for it — exactly the "shooting out a lot of text" this reshape is undoing —
+   * and it costs a second round trip to the voice provider before the reader hears anything new.
+   * Consumed once, by the first `runBeat` after it is set.
+   */
+  const pendingAck = useRef<string | null>(null);
 
   const sheet = sheets.active;
   const reading = sheet?.reading ?? null;
@@ -273,6 +282,13 @@ function ChatScreen() {
         return;
       }
 
+      // Swallow a waiting acknowledgement into this bubble, so 「好。」 opens the next thing 明仔
+      // says instead of standing alone as a message.
+      const ack = pendingAck.current;
+      pendingAck.current = null;
+      const spoken = ack ? `${ack} ${beatSpeech(beat)}` : beatSpeech(beat);
+      const body = ack ? `${ack}\n${beat.text}` : beat.text;
+
       driving.current = true;
       setThinking(false);
       setNothingHeard(false);
@@ -284,10 +300,10 @@ function ChatScreen() {
       setBriefing("speaking", index);
       setSpeakingId("beat");
 
-      say(beatSpeech(beat), () => {
+      say(spoken, () => {
         appendMessage({
           role: "agent",
-          text: beat.text,
+          text: body,
           lead: beat.lead,
           origin: beat.origin,
           tone: beat.tone,
@@ -372,20 +388,6 @@ function ChatScreen() {
       return i;
     },
     [beats],
-  );
-
-  /** Say one fixed line, commit it, then do something. Used for the acknowledgements. */
-  const sayLine = useCallback(
-    (key: UiKey, then?: () => void) => {
-      const line = display(t(key));
-      setSpeakingId("ack");
-      say(line, () => {
-        appendMessage({ role: "agent", text: line, origin: "rule" });
-        setSpeakingId(null);
-        then?.();
-      });
-    },
-    [display, say, t],
   );
 
   /**
@@ -593,11 +595,13 @@ function ChatScreen() {
         const intent = classifyReply(text);
 
         if (intent === "continue") {
-          sayLine("brief.ackContinue", () => resumeFrom(step));
+          pendingAck.current = display(t("brief.ackContinue"));
+          resumeFrom(step);
           return;
         }
         if (intent === "repeat") {
-          sayLine("brief.ackRepeat", () => resumeFrom(sectionStart(step)));
+          pendingAck.current = display(t("brief.ackRepeat"));
+          resumeFrom(sectionStart(step));
           return;
         }
         // "question" carries on into the model path below, and the phase stays `waiting` — so
@@ -656,7 +660,7 @@ function ChatScreen() {
         });
       }
     },
-    [asking, cards, dialect, display, locale, reading, resumeFrom, say, sayLine, sectionStart, takeFloor],
+    [asking, cards, dialect, display, locale, reading, resumeFrom, say, sectionStart, t, takeFloor],
   );
 
   /* ------------------------------------------------------- getting a sheet */

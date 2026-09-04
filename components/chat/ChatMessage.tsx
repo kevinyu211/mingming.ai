@@ -133,12 +133,18 @@ export default function ChatMessage({
           ) : null}
 
           {warn ? (
-            <p className="flex items-start gap-2 text-[16.5px] leading-[1.55] font-medium break-words">
+            /* `whitespace-pre-line` on both: a bubble is a SECTION now, so its text carries real
+               newlines — one line per red flag, and a blank line before the question it ends with.
+               Without this CSS collapses them and four warning signs run together into a wall of
+               prose, which is the shape this change exists to get away from. */
+            <p className="flex items-start gap-2 text-[16.5px] leading-[1.55] font-medium break-words whitespace-pre-line">
               <WarningMark />
               <span className="min-w-0 flex-1">{message.text}</span>
             </p>
           ) : (
-            <p className="text-[16.5px] leading-[1.6] break-words">{message.text}</p>
+            <p className="text-[16.5px] leading-[1.6] break-words whitespace-pre-line">
+              {message.text}
+            </p>
           )}
 
           {message.stopped === true ? (
