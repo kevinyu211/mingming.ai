@@ -2,8 +2,13 @@
  * The data statement (research.md R13). Rendered on the settings screen and copied verbatim
  * into the hackathon submission, so the UI and the submission can never drift apart.
  *
- * Provider names are a placeholder object until the listening and transcription tests
- * (R5, R6, task T020) pick them; interpolate rather than hard-code so one edit updates both.
+ * Provider names are interpolated rather than hard-coded so the UI and the submission cannot
+ * drift apart. They must name what the app ACTUALLY calls: these read "TBD by listening test"
+ * for a while after `TTS_PROVIDER=minimax` was already set, so the screen was telling the user
+ * the voice provider was undecided while card text was being posted to MiniMax on every card.
+ * A data statement that is out of date is worse than none — it is a false one.
+ *
+ * If a provider changes, change it here and nowhere else, and check `.env.local` agrees.
  */
 import type { UiLocale } from "@/lib/i18n/ui";
 
@@ -13,11 +18,18 @@ export interface DataStatementProviders {
   transcription: string;
 }
 
-/** Filled in by T020 once the listening and transcription tests are recorded. */
+/**
+ * What the app calls today, matching `.env.local`:
+ * `TTS_PROVIDER=minimax`, `STT_PROVIDER=browser`, `NEXT_PUBLIC_STT_MODE=browser`.
+ *
+ * Transcription is named honestly as the browser's own engine rather than left blank. It is not a
+ * provider we chose, and on Chrome the Web Speech API uploads the audio to Google — so a reader
+ * who assumes "browser" means "on my phone" would be wrong, and the statement has to say so.
+ */
 export const DATA_STATEMENT_PROVIDERS: DataStatementProviders = {
   model: "Anthropic Claude (US)",
-  voice: "TBD by listening test",
-  transcription: "TBD",
+  voice: "MiniMax (api.minimax.io)",
+  transcription: "your browser's own engine (Chrome uploads audio to Google)",
 };
 
 /** Paragraph templates. `{model}`, `{voice}` and `{transcription}` are interpolated. */

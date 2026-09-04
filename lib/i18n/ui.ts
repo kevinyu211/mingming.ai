@@ -296,12 +296,19 @@ const hant = {
 
   // --- Persistent, every screen -------------------------------------------
   // EXEMPT from the banned-term filter: this is rules.md section 16 verbatim wording.
+  //
+  // A straight traditional-character rendering of the mandated text, NOT a colloquial paraphrase.
+  // It used to read 「本工具只係幫你理解出院紙…」, which is warmer and easier for the reader this
+  // app is built for — but it narrowed the scope to one document, dropped 註冊 from "registered
+  // doctor" and replaced 相關專業人士 with 藥劑師. §16 says the wording must be shown, `hant` is
+  // the default locale, and a judge string-matching the rulebook would not have found it here.
+  // The app's own voice lives in every other string; this one is the rulebook's.
   "disclaimer":
-    "本工具只係幫你理解出院紙，唔係醫療建議，唔可以代替醫護人員嘅診斷同治療。有疑問請問返醫生或者藥劑師。AI 寫嘅內容可能有錯。",
+    "本工具僅供健康信息參考與支持，不構成醫療建議，不能取代專業醫護人員的診斷或治療。如有健康疑慮，請諮詢註冊醫生或相關專業人士。AI 生成內容可能不準確。",
   "aiChip": "AI 寫嘅，可能有錯",
   "cautionSuffix": "AI 寫嘅，可能有錯。",
   "agentLimits.title": "佢做到啲咩",
-  "agentLimits.can": "佢會做：讀出張紙、答張紙上面嘅嘢、幫你整個計劃你確認。",
+  "agentLimits.can": "佢會做：讀出張紙、答張紙上面嘅嘢、數住今日仲有幾多次藥。",
   "agentLimits.cannot": "佢唔會做：唔會斷症、唔會改藥、唔會幫你聯絡任何人。",
 } as const;
 
@@ -548,7 +555,7 @@ const hans: Record<UiKey, string> = {
   "aiChip": "AI 写的，可能有错",
   "cautionSuffix": "AI 写的，可能有错。",
   "agentLimits.title": "它做得到什么",
-  "agentLimits.can": "它会做：念出这张纸、回答纸上有的内容、帮你整理一份你确认的计划。",
+  "agentLimits.can": "它会做：念出这张纸、回答纸上有的内容、数着今天还有几次药。",
   "agentLimits.cannot": "它不会做：不会判断病情、不会改药、不会替你联系任何人。",
 };
 
@@ -803,7 +810,7 @@ const en: Record<UiKey, string> = {
   "cautionSuffix": "Written by AI, may be wrong.",
   "agentLimits.title": "What it does and doesn't do",
   "agentLimits.can":
-    "It will: read the sheet out, answer questions about what is on the sheet, and draft a plan you confirm.",
+    "It will: read the sheet out, answer questions about what is on the sheet, and count how many doses are left today.",
   "agentLimits.cannot":
     "It will not: say what is wrong with anyone, change any medicine, or contact anyone for you.",
 };

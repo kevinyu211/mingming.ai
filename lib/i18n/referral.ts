@@ -32,16 +32,39 @@ export const REFERRAL: Record<InputLanguage, string> = {
 };
 
 /**
- * PLACEHOLDER LIST. The organisers publish their own referral resources at the kickoff briefing;
- * the last row is the slot for them and MUST be replaced before the submission.
+ * Every Hong Kong number below is taken from the Centre for Health Protection's own "Seek help"
+ * page (Department of Health), checked on 4 September 2026:
+ * https://www.chp.gov.hk/en/features/48085.html
  *
- * Hong Kong and mainland numbers are the publicly listed 24-hour lines, kept here so the demo
- * path is never empty.
+ * They are verified rather than remembered on purpose. This list is the one place in the product
+ * where a wrong character sends a person in trouble to a dead line, and a plausible-looking
+ * hotline number is exactly the kind of thing that survives a review unchallenged — a search
+ * summary consulted while writing this file confidently gave the Hospital Authority's line as
+ * 2382 0000, which is Suicide Prevention Services. The CHP page settled it.
+ *
+ * Hospital Authority Mental Health Direct leads the list because this is a hospital-discharge
+ * product: it is the line staffed by the same organisation that printed the sheet in the reader's
+ * hand.
+ *
+ * There is deliberately NO placeholder row. The organisers publish their own referral resources at
+ * the kickoff briefing on 5 September; until one is added, `REFERRAL_LIST_IS_PLACEHOLDER` is true
+ * and the submission checklist says so. What must never happen is a card rendering the literal
+ * word "TODO" to somebody in crisis, which is what the previous placeholder did.
  */
 export const REFERRAL_RESOURCES: readonly ReferralResource[] = [
   {
+    name: "醫院管理局精神健康專線 · Hospital Authority Mental Health Direct (24h)",
+    number: "2466 7350",
+    region: "hk",
+  },
+  {
     name: "香港撒瑪利亞防止自殺會 · Samaritan Befrienders Hong Kong (24h)",
     number: "2389 2222",
+    region: "hk",
+  },
+  {
+    name: "生命熱線 · Suicide Prevention Services (24h)",
+    number: "2382 0000",
     region: "hk",
   },
   {
@@ -64,14 +87,13 @@ export const REFERRAL_RESOURCES: readonly ReferralResource[] = [
     number: "120",
     region: "cn",
   },
-  {
-    name: "TODO: replace with organiser list — 主辦方公布嘅轉介資源 (kickoff briefing)",
-    number: "TODO",
-    region: "organiser",
-  },
 ];
 
-/** True while the organiser row is still a placeholder; the submission checklist reads this. */
-export const REFERRAL_LIST_IS_PLACEHOLDER: boolean = REFERRAL_RESOURCES.some(
-  (r) => r.region === "organiser" && r.number === "TODO",
+/**
+ * True until the organisers' own referral list has been added after the kickoff briefing
+ * (rules.md §12). The submission checklist reads this; nothing in the UI does, so the card always
+ * renders real, staffed numbers whatever the answer.
+ */
+export const REFERRAL_LIST_IS_PLACEHOLDER: boolean = !REFERRAL_RESOURCES.some(
+  (r) => r.region === "organiser",
 );

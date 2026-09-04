@@ -18,7 +18,7 @@ npm run dev
 ```
 
 Open the LAN URL on a phone. Without an API key the model routes return 502 and the app offers the
-bundled sample sheets (`/read?sample=hk_en`), which exercise the whole UI.
+bundled sample sheets (`/chat?sample=hk_en`), which exercise the whole UI.
 
 ## Scripts
 
@@ -67,7 +67,7 @@ Playwright uses the installed Google Chrome (`channel: "chrome"`); run
 ## Layout
 
 ```
-app/            pages (/, /read, /ask, /setup, /plan, /settings) and API routes (read, ask, phrase, tts, stt)
+app/            pages (/ 記錄, /chat 傾偈, /track 跟進, /capture, /settings; /read, /ask and /plan redirect) and API routes (read, ask, phrase, tts, stt)
 components/     UI
 lib/domain/     Zod schemas (single source of truth)
 lib/model/      Anthropic client and frozen prompts (server only)

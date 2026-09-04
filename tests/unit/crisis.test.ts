@@ -155,11 +155,38 @@ describe("referral card", () => {
     expect(numbers).toContain("120");
   });
 
-  it("keeps a clearly marked slot for the organisers' list", () => {
-    const organiser = REFERRAL_RESOURCES.filter((r) => r.region === "organiser");
-    expect(organiser.length).toBe(1);
-    expect(organiser[0].name).toContain("TODO: replace with organiser list");
+  /**
+   * The organisers publish their own referral resources at the kickoff briefing, and until one is
+   * added the submission checklist has to know. What it must NOT do is reach the screen: the slot
+   * used to be a row whose name was the literal string "TODO: replace with organiser list" and
+   * whose number was "TODO", and the referral card renders every row — so a person in crisis was
+   * one match away from being handed the word TODO instead of a number.
+   *
+   * The flag now means "no organiser row yet" rather than "a broken row is present", so the list
+   * can only ever contain lines somebody answers.
+   */
+  it("flags the missing organiser list without ever rendering a placeholder", () => {
+    expect(REFERRAL_RESOURCES.filter((r) => r.region === "organiser")).toHaveLength(0);
     expect(REFERRAL_LIST_IS_PLACEHOLDER).toBe(true);
+
+    for (const resource of REFERRAL_RESOURCES) {
+      expect(resource.number).not.toMatch(/TODO/i);
+      expect(resource.name).not.toMatch(/TODO/i);
+      // Every row is a dialable number: digits and spaces only.
+      expect(resource.number).toMatch(/^[0-9][0-9 ]*[0-9]$/);
+    }
+  });
+
+  /**
+   * Verified against the Centre for Health Protection's own "Seek help" page, not from memory.
+   * A search summary consulted while writing this list gave the Hospital Authority's line as
+   * 2382 0000, which is Suicide Prevention Services — a plausible wrong number is exactly what
+   * survives review, and on this list it sends someone in trouble to the wrong place.
+   */
+  it("carries the Hospital Authority's own mental health line, correctly", () => {
+    const ha = REFERRAL_RESOURCES.find((r) => r.name.includes("Mental Health Direct"));
+    expect(ha?.number).toBe("2466 7350");
+    expect(REFERRAL_RESOURCES.map((r) => r.number)).toContain("2382 0000");
   });
 
   it("carries no banned term and no diagnosis language (constitution VI)", () => {
