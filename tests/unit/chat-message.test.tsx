@@ -43,6 +43,7 @@ function render(m: ThreadMessage): string {
         dialect="yue"
         onOpenSource={() => {}}
         onOpenTrack={() => {}}
+        onSpeak={() => {}}
       />
     </LocaleProvider>,
   );

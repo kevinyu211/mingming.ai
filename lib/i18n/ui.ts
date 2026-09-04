@@ -241,16 +241,38 @@ const hant = {
   "chat.today": "今日",
   "chat.reading": "讀住",
   "chat.readingThis": "讀住呢段",
+  "chat.speakAgain": "讀多次",
+  "chat.listening": "聽住…",
+  "chat.nothingHeard": "我冇聽到，撳住個掣再講多次。",
+  "chat.typing": "明仔諗緊…",
 
   // --- V2 The briefing -----------------------------------------------------
-  "brief.intro": "我睇完你張紙。最緊要嘅先講。",
+  // The opening is two beats, the way a person opens a conversation: hello and who is talking,
+  // then what is about to happen. {title} is `sheetTitle()` — derived from the page by rule, or
+  // the plain word 出院紙 when the page named no hospital. Never a person's name: the profile
+  // stores a relationship label and nothing here addresses anybody by name.
+  "brief.hello": "你好呀，我係明仔。你張{title}我已經睇咗喇。",
+  "brief.intro": "我一樣一樣咁講俾你聽，唔急。最緊要嘅擺喺最前。",
+  "brief.warnLead": "先講最緊要嗰樣。張紙寫住，如果有下面呢啲情況，唔好等，即刻返醫院。",
+  // The teach-back beat. It is a question, not a form: there is no 明白 button to press, because
+  // the answer this app wants is the reader talking back into the same thread.
+  "brief.checkUnderstand": "講到呢度，明唔明？有邊句唔明白，撳住下面個掣話我知，我再講一次。",
+  "brief.end": "張紙上面嘅嘢，我講晒喇。想知多啲乜嘢，撳住下面個掣同我講就得。",
+  "brief.trackLink": "睇「跟進」嘅藥同覆診",
+  // The quiet connectives above each bubble. App copy, never a model turn — they are what makes
+  // the briefing sound like somebody talking rather than a list being read out.
+  "lead.medicine": "跟住講藥。",
+  "lead.followUp": "覆診方面。",
+  "lead.diet": "食嘢方面。",
+  "lead.activity": "郁動同休息。",
+  "lead.unreadable": "有一部分我睇唔清楚。",
+  // Kept so a sheet stored by an earlier build still finds its strings. Nothing renders these now:
+  // the amber block became amber bubbles and the 明白 / 再講一次 pair is gone.
   "brief.warnTitle": "有呢啲情況，即刻返醫院",
   "brief.understandQuestion": "明唔明？",
   "brief.repeat": "再講一次",
   "brief.understand": "明白",
   "brief.left": "仲有 {n} 段",
-  "brief.end": "講完晒。有咩想問，按住下面個框講。",
-  "brief.trackLink": "睇「跟進」嘅藥同覆診",
 
   // --- V2 The bar: hold to talk, tap to type -------------------------------
   "bar.hold": "按住講嘢",
@@ -503,16 +525,28 @@ const hans: Record<UiKey, string> = {
   "chat.today": "今天",
   "chat.reading": "读着",
   "chat.readingThis": "读着这段",
+  "chat.speakAgain": "再读一次",
+  "chat.listening": "听着…",
+  "chat.nothingHeard": "我没听到，按住那个键再说一次。",
+  "chat.typing": "明仔在想…",
 
   // --- V2 The briefing -----------------------------------------------------
-  "brief.intro": "我看完你的纸了。最要紧的先讲。",
+  "brief.hello": "你好，我是明仔。你的{title}我已经看过了。",
+  "brief.intro": "我一样一样讲给你听，不急。最要紧的放在最前面。",
+  "brief.warnLead": "先讲最要紧的。纸上写着，如果有下面这些情况，别等，马上回医院。",
+  "brief.checkUnderstand": "讲到这里，明白吗？哪一句不明白，按住下面那个键告诉我，我再讲一次。",
+  "brief.end": "纸上的内容，我讲完了。想知道什么，按住下面那个键跟我说就行。",
+  "brief.trackLink": "看「跟进」里的药和复诊",
+  "lead.medicine": "接着讲药。",
+  "lead.followUp": "复诊方面。",
+  "lead.diet": "吃东西方面。",
+  "lead.activity": "活动和休息。",
+  "lead.unreadable": "有一部分我看不清楚。",
   "brief.warnTitle": "有这些情况，马上回医院",
   "brief.understandQuestion": "明白吗？",
   "brief.repeat": "再讲一次",
   "brief.understand": "明白",
   "brief.left": "还有 {n} 段",
-  "brief.end": "讲完了。有什么想问，按住下面那个框讲。",
-  "brief.trackLink": "看「跟进」里的药和复诊",
 
   // --- V2 The bar ----------------------------------------------------------
   "bar.hold": "按住说话",
@@ -757,16 +791,28 @@ const en: Record<UiKey, string> = {
   "chat.today": "Today",
   "chat.reading": "Reading aloud",
   "chat.readingThis": "Reading this out",
+  "chat.speakAgain": "Read it again",
+  "chat.listening": "Listening…",
+  "chat.nothingHeard": "I didn't catch that. Hold the bar and say it again.",
+  "chat.typing": "Ming is thinking…",
 
   // --- V2 The briefing -----------------------------------------------------
-  "brief.intro": "I've read your sheet. The most important part first.",
+  "brief.hello": "Hello — I'm Ming. I've been through your {title}.",
+  "brief.intro": "I'll take it one piece at a time, no rush. The part that matters most comes first.",
+  "brief.warnLead": "Here's the most important part. The sheet says that if any of these happen, don't wait — go straight back to the hospital.",
+  "brief.checkUnderstand": "That's the important bit. Is it clear so far? If any of it isn't, hold the bar below and tell me — I'll go over it again.",
+  "brief.end": "That's everything the sheet says. Hold the bar below and ask me anything about it.",
+  "brief.trackLink": "See the medicines and the visit in Follow-up",
+  "lead.medicine": "Now the medicines.",
+  "lead.followUp": "About the follow-up visit.",
+  "lead.diet": "About food and drink.",
+  "lead.activity": "Moving about and resting.",
+  "lead.unreadable": "There's a part I couldn't read clearly.",
   "brief.warnTitle": "With any of these, go back to the hospital now",
   "brief.understandQuestion": "Is that clear?",
   "brief.repeat": "Say it again",
   "brief.understand": "Got it",
   "brief.left": "{n} more to go",
-  "brief.end": "That's everything. Hold the bar below and ask me anything.",
-  "brief.trackLink": "See the medicines and the visit in Follow-up",
 
   // --- V2 The bar ----------------------------------------------------------
   "bar.hold": "Hold to talk",

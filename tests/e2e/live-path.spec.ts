@@ -120,9 +120,9 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
     await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
       timeout: TYPING_TIMEOUT,
     });
-    await expect(
-      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
 
     // 5. Privacy is structural (FR-019, SC-009): the body carries the pixels and nothing else.
     expect(log.count).toBe(1);
@@ -268,10 +268,27 @@ test.describe("Asking the sheet (V5, V9)", () => {
     });
     // No AI chip on it: the sentence is a fixed template, not something a model wrote.
     await expect(page.getByText(UI.hant.aiChip)).toHaveCount(0);
-    // And the sheet itself is untouched — the red flags are still on the screen and still traceable.
-    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
-    await expect(block).toBeVisible();
-    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first()).toBeVisible();
+    // And the conversation is not dead: the next question still goes through.
+    //
+    // That is the regression this guards. `runBeat` claims a "somebody is talking" flag and
+    // releases it in the callback the typing chain runs when the last clause lands — and taking
+    // the floor cancels that chain, so the callback never runs. Until `takeFloor()` cleared the
+    // flag itself, the first interruption of the session latched it forever and every later turn
+    // returned at its first guard: 明仔 answered once and then went silent for good.
+    //
+    // Wait for it to be COMMITTED first — the speaker control only appears on a message that has
+    // landed. Interrupting a line still typing itself out drops it, which is what taking the
+    // floor means, and asking again too early would make the count below a race rather than a
+    // test.
+    await expect(page.getByRole("button", { name: UI.hant["chat.speakAgain"] }).first()).toBeVisible(
+      { timeout: TYPING_TIMEOUT },
+    );
+
+    await askQuestion(page, "覆診要帶咩？");
+    await expect(page.getByText("覆診要帶咩？", { exact: true })).toBeVisible();
+    await expect(page.getByText(ASK_UNAVAILABLE, { exact: true })).toHaveCount(2, {
+      timeout: TYPING_TIMEOUT,
+    });
   });
 });
 
@@ -302,13 +319,13 @@ test.describe("The language switch (V1)", () => {
     await page.goto("/chat?sample=cn_zh");
 
     // Cantonese first, which is the default: what 明仔 says is the card's Cantonese body.
-    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
-    await expect(block).toBeVisible({ timeout: TYPING_TIMEOUT });
-    await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
+    await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
 
     // …and even here, with the interface in traditional characters, the QUOTE is the simplified
     // line the page printed (constitution IV, FR-003).
-    await block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
+    await page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
     const first = page.getByRole("dialog", { name: UI.hant["source.title"] });
     await expect(first.getByText(source.quote, { exact: true })).toBeVisible();
     await first.getByRole("button", { name: UI.hant["source.close"], exact: true }).click();
@@ -320,14 +337,16 @@ test.describe("The language switch (V1)", () => {
       .getByRole("button", { name: UI.hant["language.cmn"], exact: true })
       .click();
 
-    // Everything the app WROTE follows the choice: the interface, and the words on the card.
+    // Everything the app WROTE follows the choice: the interface, and the words 明仔 says. The
+    // switch starts the sheet again in the chosen language rather than rewriting what was already
+    // said in the other one — see the comment on `spokenIn` in app/chat/page.tsx.
     await expect(page.getByText(UI.hans["cards.sampleBanner"], { exact: true })).toBeVisible();
-    const hans = page.getByRole("region", { name: UI.hans["brief.warnTitle"], exact: true });
-    await expect(hans).toBeVisible();
-    await expect(hans.getByText(warning.body.cmn, { exact: true })).toBeVisible();
+    await expect(page.getByText(warning.body.cmn, { exact: true })).toBeVisible({
+      timeout: TYPING_TIMEOUT,
+    });
 
     // Everything the PAGE printed does not. Byte for byte the same quote as before the switch.
-    await hans.getByRole("button", { name: UI.hans["card.sourceLink"] }).first().click();
+    await page.getByRole("button", { name: UI.hans["card.sourceLink"] }).first().click();
     const second = page.getByRole("dialog", { name: UI.hans["source.title"] });
     await expect(second.getByText(source.quote, { exact: true })).toBeVisible();
   });

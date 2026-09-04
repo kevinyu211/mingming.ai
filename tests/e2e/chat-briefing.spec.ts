@@ -1,10 +1,11 @@
 /**
  * `/chat` — the conversation with 明仔, end to end (v2 build brief §6).
  *
- * What is worth proving in a browser rather than in a unit test is the *sequence*: that the amber
- * block reads itself before anything else is said, that nothing on the screen is a play button,
- * that a refusal lands in the thread instead of on another screen, and that a question never
- * reaches the network when a rule has already answered it.
+ * What is worth proving in a browser rather than in a unit test is the *sequence*: that the red
+ * flags are said before anything else, that the script plays itself to the end with no button to
+ * press, that what the microphone hears appears in the thread before it is sent, that a refusal
+ * lands in the thread instead of on another screen, and that a question never reaches the network
+ * when a rule has already answered it.
  *
  * The read-failure cases at the bottom are the ones `tests/e2e/fallbacks.spec.ts` covered on the
  * v1 `/read` screen. They are re-covered here because that screen is gone: `/read` redirects, and
@@ -36,6 +37,12 @@ const pieces = cards.filter((c) => c.type !== "warning" && c.type !== "noWarning
 
 /** How long the whole briefing takes to type itself out: 6 pieces at ~360 ms a clause. */
 const BRIEFING_TIMEOUT = 180_000;
+
+/** Long enough for the script to reach any one beat on a slow machine. */
+const BEAT = 90_000;
+
+/** The greeting, with the plain word for the document in its slot (never the sheet's filed title). */
+const HELLO = UI.hant["brief.hello"].replace("{title}", UI.hant["cards.header"]);
 
 /**
  * Puts one real JPEG into the hand-off slot, as if the camera had just downscaled a page.
@@ -75,31 +82,42 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     await seedConsent(page);
   });
 
-  test("opens with the fixed intro, then the amber block, then 明唔明？", async ({ page }) => {
+  test("opens with a greeting, then the red flags, then one teach-back question", async ({
+    page,
+  }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
 
-    // 1. The intro is a fixed template, not a model turn.
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    // 1. 明仔 says hello and says what is about to happen. Both are fixed templates.
+    await expect(page.getByText(HELLO, { exact: true })).toBeVisible({ timeout: BEAT });
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
 
-    // 2. The warning block renders and is never behind a tap (constitution II).
-    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
-    await expect(block).toBeVisible();
+    // 2. The red flags come next — before any medicine, diet or follow-up line, and never behind
+    //    a tap (constitution II). The lead-in is the app's own, the bodies are the page's.
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
     for (const warning of warnings) {
-      await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
+      await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
+        timeout: BEAT,
+      });
     }
+    // Nothing from the rest of the sheet has been said yet.
+    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toHaveCount(0);
+    // Each red flag traces to its own printed line (constitution IV).
+    await expect(
+      page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first(),
+    ).toBeVisible();
 
-    // Every red flag traces to its own line on the page (constitution IV).
-    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
-      warnings.length,
-    );
-
-    // 3. Teach-back, one piece at a time.
-    const ask = page.getByRole("region", { name: UI.hant["brief.understandQuestion"], exact: true });
-    await expect(ask).toBeVisible();
-    await expect(ask.getByRole("button", { name: UI.hant["brief.repeat"] })).toBeVisible();
-    await expect(ask.getByRole("button", { name: UI.hant["brief.understand"] })).toBeVisible();
-    // Nothing counts down before the first piece has been said.
-    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "6"))).toHaveCount(0);
+    // 3. Teach-back is asked ONCE, in words, and there is no button to press to make it continue.
+    await expect(page.getByText(UI.hant["brief.checkUnderstand"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
+    for (const gone of ["brief.understand", "brief.repeat"] as const) {
+      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
+    }
   });
 
   test("nothing on the screen is a play button", async ({ page }) => {
@@ -115,37 +133,39 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     ).toBeVisible();
   });
 
-  test("明白 walks the whole sheet and ends with 講完晒", async ({ page }) => {
+  test("the script plays itself to the end, with nothing to press", async ({ page }) => {
     test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
 
-    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
-    await expect(understand).toBeVisible();
-
-    for (let i = 0; i < pieces.length; i += 1) {
-      await understand.click();
-      // The piece lands in the thread as its own message, in the card's own words.
-      await expect(page.getByText(pieces[i].body.yue, { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
-      if (i < pieces.length - 1) await expect(understand).toBeVisible({ timeout: 30_000 });
+    for (const piece of pieces) {
+      await expect(page.getByText(piece.body.yue, { exact: true })).toBeVisible({ timeout: BEAT });
     }
-
     await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
-      timeout: 30_000,
+      timeout: BEAT,
     });
-    await expect(understand).toHaveCount(0);
+
+    // The connectives are the app's own and appear once per RUN of a kind, not once per card:
+    // this sheet lists three medicines and gets one 「跟住講藥。」 between them.
+    await expect(page.getByText(UI.hant["lead.medicine"], { exact: true })).toHaveCount(1);
+
+    // Every card that quotes a printed line still offers that line (constitution IV).
+    const quoting = cards.filter((card) => card.source !== null).length;
+    await expect(page.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
+      quoting,
+    );
 
     // The 睇「跟進」 offer appears exactly once, under the last medicine.
     await expect(page.getByRole("button", { name: UI.hant["brief.trackLink"] })).toHaveCount(1);
   });
 
   test("a spoken fact opens the line it came from", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
-    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
-    await expect(block).toBeVisible();
+    await expect(page.getByText(warnings[0].body.yue, { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
 
-    await block.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
+    await page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
 
     const sheet = page.getByRole("dialog");
     await expect(sheet).toBeVisible();
@@ -154,25 +174,23 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     await expect(sheet.getByText(expectedSource("hk_en", "warning-0").quote)).toBeVisible();
   });
 
-  test("the briefing resumes where it stopped after a reload", async ({ page }) => {
+  test("what has been said survives a reload, and the rest still arrives", async ({ page }) => {
     test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
-
-    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
-    await expect(understand).toBeVisible();
-    await understand.click();
     await expect(page.getByText(pieces[0].body.yue, { exact: true })).toBeVisible({
-      timeout: 30_000,
+      timeout: BEAT,
     });
-    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "5"))).toBeVisible();
 
     await page.reload();
 
-    // The piece already said is still in the thread, and the briefing is waiting at the same place
-    // rather than starting over.
-    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toBeVisible();
-    await expect(page.getByText(UI.hant["brief.left"].replace("{n}", "5"))).toBeVisible();
-    await expect(page.getByText(pieces[1].body.yue, { exact: true })).toHaveCount(0);
+    // What was already said is still in the thread, exactly once…
+    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toHaveCount(1, {
+      timeout: BEAT,
+    });
+    // …and the script picks itself up rather than starting over or stopping.
+    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
   });
 });
 
@@ -362,17 +380,9 @@ test.describe("The check-in counts times, never clock times", () => {
     await seedConsent(page);
     await page.goto("/chat?sample=hk_en");
 
-    const understand = page.getByRole("button", { name: UI.hant["brief.understand"], exact: true });
-    await expect(understand).toBeVisible();
-    for (let i = 0; i < pieces.length; i += 1) {
-      await expect(understand).toBeVisible({ timeout: 30_000 });
-      await understand.click();
-      await expect(page.getByText(pieces[i].body.yue, { exact: true })).toBeVisible({
-        timeout: 30_000,
-      });
-    }
+    // The script plays itself out; the check-in becomes available only once it is over.
     await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
-      timeout: 30_000,
+      timeout: BEAT,
     });
 
     // Only now does the in-app check-in become available (brief §6).
@@ -445,14 +455,31 @@ async function stubRecognition(page: Page, transcript: string): Promise<void> {
       private heard = false;
 
       start(): void {
+        // A partial first, then the whole thing — the shape a real recogniser reports in, and the
+        // only way to prove the transcript reaches the thread BEFORE anything is sent.
+        window.setTimeout(() => {
+          const half = said.slice(0, Math.max(1, Math.ceil(said.length / 2)));
+          const partial = Object.assign([{ transcript: half }], { isFinal: false });
+          this.onresult?.({ resultIndex: 0, results: [partial] });
+        }, 40);
         window.setTimeout(() => {
           const result = Object.assign([{ transcript: said }], { isFinal: true });
           this.heard = true;
           this.onresult?.({ resultIndex: 0, results: [result] });
-        }, 60);
+        }, 140);
       }
       stop(): void {
-        window.setTimeout(() => this.onend?.(), 10);
+        // A real recogniser delivers whatever it has settled on BEFORE it ends. Without this the
+        // stub loses the transcript on any release that beats its own final-result timer — which
+        // is every release a person would actually make.
+        window.setTimeout(() => {
+          if (!this.heard) {
+            this.heard = true;
+            const result = Object.assign([{ transcript: said }], { isFinal: true });
+            this.onresult?.({ resultIndex: 0, results: [result] });
+          }
+          this.onend?.();
+        }, 10);
       }
       abort(): void {
         this.heard = false;
@@ -465,12 +492,16 @@ async function stubRecognition(page: Page, transcript: string): Promise<void> {
 }
 
 test.describe("The bar is one control: hold to talk, tap to type", () => {
-  test("holding past the threshold listens, and letting go sends", async ({ page }) => {
+  test("what the microphone hears appears in the thread before anything is sent", async ({
+    page,
+  }) => {
     const log = await mockAsk(page, "answered");
     await seedConsent(page);
     await stubRecognition(page, "覆診要帶咩？");
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
 
     const bar = page.getByRole("button", { name: UI.hant["bar.hold"] });
     const box = await bar.boundingBox();
@@ -481,8 +512,44 @@ test.describe("The bar is one control: hold to talk, tap to type", () => {
     await page.mouse.down();
     // Past 220 ms the microphone opens and the bar says what it is doing.
     await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible();
-    await page.mouse.up();
+    // …and the words land on the reader's own side of the thread as they are heard. This is the
+    // bug the first build had: the transcript was drawn inside the button, in a clipped 72 px box,
+    // where nobody was looking and half of it did not fit.
+    await expect(page.getByText(UI.hant["chat.listening"], { exact: true })).toBeVisible();
+    await expect(page.getByText("覆診要", { exact: true })).toBeVisible();
+    // Nothing has been sent yet: the reader sees what was heard before it goes anywhere (R6).
+    expect(log.count).toBe(0);
 
+    await page.mouse.up();
+    await expect(page.getByText("覆診要帶咩？", { exact: true })).toBeVisible();
+    expect(log.count).toBe(1);
+  });
+
+  test("a thumb that drifts off the bar keeps recording", async ({ page }) => {
+    const log = await mockAsk(page, "answered");
+    await seedConsent(page);
+    await stubRecognition(page, "覆診要帶咩？");
+    await page.goto("/chat?sample=hk_en");
+    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
+
+    const bar = page.getByRole("button", { name: UI.hant["bar.hold"] });
+    const box = await bar.boundingBox();
+    expect(box).not.toBeNull();
+    if (!box) return;
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible();
+
+    // Off the bar entirely. The old build bound `onPointerLeave` to the release handler, and the
+    // bar reflows the moment a hold starts — so a press routinely ended itself a frame later and
+    // the question was lost with no error anywhere. Pointer capture is what fixed it.
+    await page.mouse.move(box.x + box.width / 2, box.y - 220);
+    await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible();
+
+    await page.mouse.up();
     await expect(page.getByText("覆診要帶咩？", { exact: true })).toBeVisible();
     expect(log.count).toBe(1);
   });
@@ -519,10 +586,11 @@ test.describe("The speaker toggle is the only voice control", () => {
       page.getByRole("button", { name: UI.hant["chat.unmuteSpeaker"], exact: true }),
     ).toBeVisible();
     await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: 30_000,
+      timeout: BEAT,
     });
-    await expect(
-      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
-    ).toBeVisible({ timeout: 30_000 });
+    // With the sound off the script keeps playing: the red flags still reach the thread.
+    await expect(page.getByText(warnings[0].body.yue, { exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
   });
 });

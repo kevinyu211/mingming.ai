@@ -14,10 +14,16 @@ import type { SourceReference, StoredReading } from "@/lib/domain/schemas";
 import type { DraftPlan } from "@/lib/rules/plan-from-reading";
 
 /**
- * Where the opening briefing has got to. It is a rule-driven sequence, not a conversation:
- * `idle` before anything is said, `intro` for the fixed opening line, `warn` while the amber
- * warning block reads itself (always first — constitution II), `ask` while 明唔明？ waits,
- * `speaking` while one card is being typed out, `end` once every card has been spoken.
+ * Where the opening briefing has got to.
+ *
+ * It is a rule-driven sequence, not a conversation. `briefing.step` counts the beats already
+ * committed to the thread, so it is also the index of the next one; the phase says what is
+ * happening at that index: `idle` before anything, `speaking` while a beat is typing itself out,
+ * `ask` in the pause between beats, `end` once the last one has been said.
+ *
+ * `intro` and `warn` are kept only so a sheet stored by an earlier build still parses. Nothing
+ * writes them any more — the greeting and the warning signs are ordinary beats now, and the
+ * warning beats come first by construction (constitution II).
  */
 export type BriefPhase = "idle" | "intro" | "warn" | "ask" | "speaking" | "end";
 
@@ -52,6 +58,20 @@ export interface ThreadMessage {
   link?: "track" | null;
   /** Styles a refusal, a not-on-sheet answer or a crisis referral as itself, not as an answer. */
   outcome?: AnswerOutcome | null;
+  /**
+   * A short connective the app wrote — 「跟住講藥。」 — shown as a quiet line above the body inside
+   * the same bubble, and spoken in front of it.
+   *
+   * It is always app copy from `lib/i18n/ui.ts`, never a model turn, which is why it can share a
+   * bubble with a model-written body without muddling the AI label: the label sits under the body
+   * it describes, and the lead is visibly chrome (13 px, muted) rather than part of the sentence.
+   */
+  lead?: string | null;
+  /**
+   * `warn` paints the bubble amber. It is set only for the warning-sign beats, which the briefing
+   * puts first by construction — the tone follows the position, it does not create it.
+   */
+  tone?: "warn" | null;
   /** The page says this medicine has been stopped: spoken as ended, never as a dose that is due. */
   stopped?: boolean;
   /** The card and its own quote disagree — the reader is told to check this line on the paper. */

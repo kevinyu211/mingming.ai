@@ -16,15 +16,18 @@ import {
   checkinTarget,
   chunks,
   countableTargets,
+  beatSpeech,
+  buildBeats,
   fill,
   hasCountableDose,
-  phaseAfterPiece,
+  pauseAfter,
   pieceSpeech,
   splitCards,
   trackLinkIndex,
-  warningSpeech,
+  type Beat,
 } from "@/components/chat/briefing";
 import type { Card, Medicine, StoredReading, WarningSign } from "@/lib/domain/schemas";
+import type { UiKey } from "@/lib/i18n/ui";
 import { buildCards } from "@/lib/rules/card-order";
 import { CAUTION_SUFFIX } from "@/lib/rules/template-fallback";
 
@@ -183,12 +186,6 @@ describe("the briefing order is the card order, and red flags are never a piece"
     expect(trackLinkIndex(pieces)).toBe(-1);
   });
 
-  it("asks 明唔明？ after every piece and ends only after the last", () => {
-    expect(phaseAfterPiece(1, 3)).toBe("ask");
-    expect(phaseAfterPiece(2, 3)).toBe("ask");
-    expect(phaseAfterPiece(3, 3)).toBe("end");
-    expect(phaseAfterPiece(0, 0)).toBe("end");
-  });
 });
 
 describe("what one piece says out loud", () => {
@@ -207,20 +204,128 @@ describe("what one piece says out loud", () => {
     expect(pieceSpeech(doubtful, "yue")).toBe(`${card.body.yue} ${CAUTION_SUFFIX.yue}`);
     expect(pieceSpeech(doubtful, "en")).toBe(`${card.body.en} ${CAUTION_SUFFIX.en}`);
   });
-
-  it("reads every warning as one utterance, in the order the rules put them", () => {
-    const { warnings } = splitCards(
-      buildCards(reading({ warningSigns: [warning("發燒"), warning("氣促")] })),
-    );
-    const spoken = warningSpeech(warnings, "yue");
-    expect(spoken.indexOf("發燒")).toBeGreaterThanOrEqual(0);
-    expect(spoken.indexOf("發燒")).toBeLessThan(spoken.indexOf("氣促"));
-    // English joins with a space; Chinese does not, because the bodies carry their own 。
-    expect(warningSpeech(warnings, "en")).toContain(" ");
-  });
 });
 
 /* ------------------------------------------------------------------ check-in */
+
+/* -------------------------------------------------------------------- script */
+
+/**
+ * The whole briefing, as an array, before a word of it has been said.
+ *
+ * This is where constitution II now lives. The old build put the red flags in a block that was
+ * rendered outside the thread, so their position was a fact about JSX; here it is a fact about an
+ * array, which is the only thing the driver can walk. Everything below is about that array.
+ *
+ * `t` and `display` are the identity-ish stand-ins a test wants: `t` returns the key so a beat's
+ * provenance is readable in an assertion, and `display` is the no-conversion case.
+ */
+const CTX = {
+  dialect: "yue" as const,
+  t: (key: UiKey) => key,
+  display: (text: string) => text,
+  sheetWord: "出院紙",
+};
+
+describe("the script 明仔 plays", () => {
+  const cards = buildCards(
+    reading({
+      warningSigns: [warning("胸口痛"), warning("氣促")],
+      medicines: [medicine(), medicine({ name: "Aspirin" })],
+    }),
+  );
+  const beats = buildBeats(cards, CTX);
+  const at = (key: string) => beats.findIndex((beat) => beat.key === key);
+
+  it("opens with a greeting that names the document and nobody at all", () => {
+    expect(beats[0].key).toBe("hello");
+    expect(beats[0].origin).toBe("rule");
+    expect(beats[1].key).toBe("intro");
+  });
+
+  it("puts every red flag ahead of every other card (constitution II)", () => {
+    const lastWarning = Math.max(at("warn-0"), at("warn-1"));
+    const firstPiece = at("piece-0");
+    expect(lastWarning).toBeGreaterThan(-1);
+    expect(firstPiece).toBeGreaterThan(lastWarning);
+    // And the lead-in that promises them comes before the first of them, not after.
+    expect(at("warn-lead")).toBeLessThan(at("warn-0"));
+  });
+
+  it("paints the red flags themselves amber, and nothing else — not even their lead-in", () => {
+    const amber = beats.filter((beat) => beat.tone === "warn").map((beat) => beat.key);
+    expect(amber).toEqual(["warn-0", "warn-1"]);
+  });
+
+  it("carries each card's own printed line with it (constitution IV)", () => {
+    const quoting = cards.filter((card) => card.source !== null).length;
+    expect(beats.filter((beat) => beat.source !== null)).toHaveLength(quoting);
+  });
+
+  it("asks teach-back once, and only when there is more to come", () => {
+    expect(beats.filter((beat) => beat.key === "check")).toHaveLength(1);
+    expect(at("check")).toBeGreaterThan(at("warn-1"));
+    expect(at("check")).toBeLessThan(at("piece-0"));
+
+    // A sheet with red flags and nothing else has nowhere to go after the question, so it is not
+    // asked: 「明唔明？」 immediately before 「講完喇」 is a question with no purpose.
+    const onlyWarnings = buildBeats(buildCards(reading({ warningSigns: [warning("胸口痛")] })), CTX);
+    expect(onlyWarnings.some((beat) => beat.key === "check")).toBe(false);
+  });
+
+  it("signposts a RUN of one kind of card once, not every card in it", () => {
+    const leads = beats.filter((beat) => beat.lead === "lead.medicine");
+    expect(leads).toHaveLength(1);
+    // Two medicines, one connective: the second one just carries on.
+    expect(beats.filter((beat) => beat.key.startsWith("piece-")).length).toBeGreaterThan(1);
+  });
+
+  it("says the page printed no red flags rather than dressing that up as one", () => {
+    const quiet = buildBeats(buildCards(reading({ medicines: [medicine()] })), CTX);
+    // The slot is still filled (`noWarnings` takes it) but it is not amber, and the「go now」
+    // lead-in is not said over a page that never printed one.
+    expect(quiet.some((beat) => beat.tone === "warn")).toBe(false);
+    expect(quiet.some((beat) => beat.key === "warn-lead")).toBe(false);
+    expect(quiet.some((beat) => beat.key === "warn-0")).toBe(true);
+  });
+
+  it("ends by handing the conversation over, with no button anywhere in it", () => {
+    expect(beats[beats.length - 1].key).toBe("end");
+    expect(beats[beats.length - 1].origin).toBe("rule");
+  });
+});
+
+describe("what a beat says out loud, and how long it is given", () => {
+  const beat = (overrides: Partial<Beat>): Beat => ({
+    key: "b",
+    lead: null,
+    text: "張紙寫住每日兩次。",
+    origin: "model",
+    tone: null,
+    source: null,
+    link: null,
+    stopped: false,
+    unverified: false,
+    ...overrides,
+  });
+
+  it("speaks the connective and the body as one sentence", () => {
+    expect(beatSpeech(beat({ lead: "跟住講藥。" }))).toBe("跟住講藥。張紙寫住每日兩次。");
+  });
+
+  it("puts a space after an English connective and none after a Chinese one", () => {
+    // A space after 「跟住講藥。」 is a gap a voice reads as a pause in the wrong place, and it
+    // shows on screen as a hole between two characters.
+    expect(beatSpeech(beat({ lead: "跟住講藥。" }))).not.toContain(" ");
+    expect(beatSpeech(beat({ lead: "Now the medicines.", text: "Take one twice a day." }))).toBe(
+      "Now the medicines. Take one twice a day.",
+    );
+  });
+
+  it("gives a red flag longer to land than anything else", () => {
+    expect(pauseAfter(beat({ tone: "warn" }))).toBeGreaterThan(pauseAfter(beat({})));
+  });
+});
 
 describe("the check-in only counts what the page actually printed", () => {
   it("counts a recognised frequency", () => {

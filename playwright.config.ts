@@ -10,6 +10,19 @@ import { defineConfig, devices } from "@playwright/test";
 const port = process.env.E2E_PORT ?? "3000";
 const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`;
 
+/**
+ * Where the browser comes from.
+ *
+ * On Kevin's Mac there is a real Google Chrome and `channel: "chrome"` finds it. In a container
+ * there is not, and Playwright's own download lives at a path the runner already knows — so
+ * `E2E_CHROME` points at it and takes precedence. Setting one clears the other: passing both a
+ * channel and an executablePath is an error.
+ */
+const executablePath = process.env.E2E_CHROME;
+const browser = executablePath
+  ? { launchOptions: { executablePath } }
+  : { channel: "chrome" as const };
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60_000,
@@ -31,7 +44,7 @@ export default defineConfig({
       name: "iphone",
       use: {
         ...devices["Pixel 7"],
-        channel: "chrome",
+        ...browser,
         viewport: { width: 390, height: 844 },
         deviceScaleFactor: 3,
         userAgent: devices["iPhone 14"].userAgent,
@@ -39,7 +52,7 @@ export default defineConfig({
     },
     {
       name: "android",
-      use: { ...devices["Pixel 7"], channel: "chrome", viewport: { width: 360, height: 800 } },
+      use: { ...devices["Pixel 7"], ...browser, viewport: { width: 360, height: 800 } },
     },
   ],
   webServer: {

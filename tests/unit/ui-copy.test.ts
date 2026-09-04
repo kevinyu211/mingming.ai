@@ -124,7 +124,16 @@ describe("placeholders survive translation", () => {
   });
 
   it("uses only slots the callers know how to fill", () => {
-    const allowed = new Set(["{n}", "{name}", "{printed}", "{text}", "{date}", "{label}"]);
+    // {title} is `sheetTitle()` — derived from the page by rule, filled by the greeting beat.
+    const allowed = new Set([
+      "{n}",
+      "{name}",
+      "{printed}",
+      "{text}",
+      "{date}",
+      "{label}",
+      "{title}",
+    ]);
     for (const locale of UI_LOCALES) {
       for (const key of UI_KEYS) {
         for (const slot of placeholders(UI[locale][key])) {

@@ -3,23 +3,31 @@
 /**
  * 傾偈 — the whole product, as one conversation with 明仔 (v2 build brief §6).
  *
- * The sheet does not arrive as a stack of cards any more. It arrives as messages: 明仔 types
- * himself out clause by clause and speaks at the same time, stops after every piece to ask
- * 明唔明？, and takes questions in the same thread. There is **no play button anywhere** — the
- * 讀住 waveform is a status indicator and the only voice control is the speaker toggle in the
- * header.
+ * The sheet does not arrive as a stack of cards. It arrives as messages: 明仔 types himself out
+ * clause by clause and speaks at the same time, one thing at a time, and takes questions in the
+ * same thread. There is **no play button anywhere** — the 讀住 waveform is a status indicator, the
+ * per-message speaker is the only repeat control, and the header toggle silences the lot.
  *
- * ── What is a rule here and what is a model turn ────────────────────────────────────────────
+ * ── What changed from the first build, and why ───────────────────────────────────────────────
  *
- * The **order** is `lib/rules/card-order.ts` and nothing else. Warning signs are spoken first, by
- * construction: the amber block renders and reads itself before the first 明唔明？, and no model
- * output can reorder, delay or bury it (constitution II). The **check-in question**, the intro,
- * the refusals and every reply to 食咗 / 未食 are fixed templates from `lib/i18n/ui.ts` with the
- * page's own clause dropped into the slot verbatim — a model never assembles one of those
- * sentences. The **crisis and medicine-change gates run before any network call**, exactly as
- * they did on `/read`, and a crisis question is answered from a fixed list with nothing sent.
- * The only model-written strings on this screen are the card bodies and the answers, and both
- * carry the AI chip.
+ * It stopped after every card and waited for a 明白 button. That is not a conversation, it is a
+ * form with a progress bar, and it read as an interrogation: 明唔明？ 明唔明？ 明唔明？ So the
+ * briefing is a **script that plays itself** now (`buildBeats`): a greeting, the red flags one at a
+ * time, ONE teach-back question with no button behind it, then the rest of the page with a quiet
+ * connective in front of each run, then a closing line. The reader takes the floor by holding the
+ * bar, at any point, which is what stops the talking — not a button that exists to be pressed.
+ *
+ * ── What is a rule here and what is a model turn ─────────────────────────────────────────────
+ *
+ * The **order** is `lib/rules/card-order.ts` and nothing else, and `buildBeats` walks it. Warning
+ * signs are spoken first by construction, and no model output and no reader action can reorder,
+ * delay or bury them (constitution II). The greeting, the connectives, the teach-back question,
+ * the closing line, the refusals and every reply to 食咗 / 未食 are fixed templates from
+ * `lib/i18n/ui.ts` with the page's own clause dropped into the slot verbatim — a model never
+ * assembles one of those sentences. The **crisis and medicine-change gates run before any network
+ * call**, and a crisis question is answered from a fixed list with nothing sent. The only
+ * model-written strings on this screen are the card bodies and the answers, and both carry the AI
+ * chip.
  *
  * ── The three things that are deliberately NOT the design canvas ────────────────────────────
  *
@@ -30,7 +38,8 @@
  *      own voice, and a promise of a notification that cannot exist. 未食 quotes the printed
  *      clause back and stops.
  *   3. The canvas addresses the reader as 「陳太」. The profile stores a relationship label and
- *      never a name; nothing here addresses anybody.
+ *      never a name, so the greeting addresses nobody: it names the DOCUMENT — 「你張出院紙我已經
+ *      睇咗喇」 — and the sheet's own filed title stays in the header where it belongs.
  *
  * `/read` and `/ask` redirect here.
  */
@@ -46,7 +55,6 @@ import {
 import AgentLimits from "@/components/AgentLimits";
 import DeclineState, { type DeclineVariant } from "@/components/DeclineState";
 import { useLocale } from "@/components/LocaleProvider";
-import Mascot from "@/components/Mascot";
 import SampleBanner from "@/components/SampleBanner";
 import SourceSheet from "@/components/SourceSheet";
 import { PENDING_IMAGES_KEY } from "@/components/Capture";
@@ -54,20 +62,21 @@ import ChatBar from "@/components/chat/ChatBar";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ReadingProgress from "@/components/chat/ReadingProgress";
-import Waveform from "@/components/chat/Waveform";
-import WarningBlock from "@/components/chat/WarningBlock";
-import { CheckinPrompt, UnderstandPrompt } from "@/components/chat/Prompts";
 import {
-  CLAUSE_MS,
-  COMMIT_MS,
+  ListeningBubble,
+  SpeakingBubble,
+  TypingBubble,
+} from "@/components/chat/Bubbles";
+import { CheckinPrompt } from "@/components/chat/Prompts";
+import {
+  OPENING_MS,
+  type Beat,
+  beatSpeech,
+  buildBeats,
   checkinTarget,
-  chunks,
   fill,
   hasCountableDose,
-  pieceSpeech,
-  splitCards,
-  trackLinkIndex,
-  warningSpeech,
+  pauseAfter,
 } from "@/components/chat/briefing";
 import { useVoice } from "@/components/chat/useVoice";
 import { ask } from "@/lib/client/ask-stream";
@@ -113,15 +122,6 @@ const LOCAL: Record<"askUnavailable", Record<UiLocale, string>> = {
 /** Long edge for the one retry after a 413 (contracts/api-read.md). 1200 px keeps 9 pt print legible. */
 const RETRY_LONG_EDGE = 1200;
 
-/**
- * The least time the amber block stays on screen before 明唔明？ appears over it, whether or not
- * there is a voice on this phone. A silent device must not skip past the red flags in 200 ms.
- */
-const MIN_WARN_MS = 4200;
-
-/** The beat between the thread painting and 明仔 starting to speak. The canvas waits about this long. */
-const START_MS = 400;
-
 export default function ChatPage() {
   return (
     <Suspense fallback={<Booting />}>
@@ -151,8 +151,17 @@ function ChatScreen() {
     null,
   );
   const [asking, setAsking] = useState(false);
-  /** Which thing is making noise right now: a thread message id, "warn", or null. */
+  /** Which thing is making noise right now: a thread message id, or one of the driver's own tags. */
   const [speakingId, setSpeakingId] = useState<string | null>(null);
+  /** The beat being typed out, so its bubble can carry the right connective and tone. */
+  const [beatOnAir, setBeatOnAir] = useState<Beat | null>(null);
+  /** 明仔 is between two things he is about to say: the three dots. */
+  const [thinking, setThinking] = useState(false);
+  /** The microphone is open, and what it has heard so far. */
+  const [listening, setListening] = useState(false);
+  const [interim, setInterim] = useState("");
+  /** One transient line after a hold that produced nothing. Cleared the moment anything happens. */
+  const [nothingHeard, setNothingHeard] = useState(false);
 
   const voice = useVoice(dialect, speakerOn);
   const { say, resay, cancel } = voice;
@@ -161,8 +170,10 @@ function ChatScreen() {
   const started = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const request = useRef<AbortController | null>(null);
-  /** True while an automatic step of the briefing is running, so an effect cannot start a second. */
+  /** True while 明仔 is mid-sentence, so nothing else may start talking over him. */
   const driving = useRef(false);
+  /** True from the moment the script starts playing until it ends or the reader cuts in. */
+  const playing = useRef(false);
 
   const sheet = sheets.active;
   const reading = sheet?.reading ?? null;
@@ -177,6 +188,11 @@ function ChatScreen() {
 
   const at = useCallback((ms: number, fn: () => void) => {
     timers.current.push(setTimeout(fn, ms));
+  }, []);
+
+  const dropTimers = useCallback(() => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
   }, []);
 
   useEffect(
@@ -197,8 +213,6 @@ function ChatScreen() {
     () => (reading ? filterCards(buildCards(reading)) : []),
     [reading],
   );
-  const { warnings, pieces, empty } = useMemo(() => splitCards(cards), [cards]);
-  const trackIndex = useMemo(() => trackLinkIndex(pieces), [pieces]);
 
   /** Converts display text into the reader's script. Verbatim page quotes are never converted. */
   const display = useCallback(
@@ -206,13 +220,23 @@ function ChatScreen() {
     [dialect, script],
   );
 
-  const warnLines = useMemo(
-    () => warnings.map((card) => display(card.body[dialect])),
-    [warnings, display, dialect],
+  // Derived live rather than read off `sheet.title`, so flipping the interface language also
+  // flips the fallback 出院紙 / 出院纸 / Discharge sheet. Still `sheetTitle()`, still never invented.
+  const title = useMemo(() => sheetTitle(reading, locale), [reading, locale]);
+
+  /** The whole briefing, in order, before a word of it has been said. */
+  const beats = useMemo<Beat[]>(
+    () =>
+      cards.length > 0
+        ? buildBeats(cards, { dialect, t, display, sheetWord: t("cards.header") })
+        : [],
+    [cards, dialect, display, t],
   );
 
+  // `briefing.step` is deliberately NOT read into a render value: the driver reads it back out of
+  // storage at the moment it starts a beat (`play`), so a re-render in the middle of a sentence
+  // cannot make the script jump. Only the phase is needed up here, to know when it is over.
   const phase = sheet?.briefing.phase ?? "idle";
-  const step = sheet?.briefing.step ?? 0;
   const thread = useMemo(() => sheet?.thread ?? [], [sheet]);
 
   /* --------------------------------------------------------- the briefing */
@@ -221,130 +245,137 @@ function ChatScreen() {
     updateActive(() => ({ briefing: { phase: nextPhase, step: nextStep } }));
   }, []);
 
-  /** Speaks the amber block. It is already on screen — a rendered block is never re-typed. */
-  const readWarnings = useCallback(
-    (list: Card[], onDone?: () => void) => {
-      const text = warningSpeech(list, dialect);
-      setSpeakingId("warn");
-      resay(text);
-      // Long enough to read, and at least as long as the clause chain would have taken, so a
-      // phone with no voice still holds the red flags on screen instead of flashing past them.
-      const held = Math.max(MIN_WARN_MS, chunks(text).length * CLAUSE_MS + COMMIT_MS);
-      at(held, () => {
-        setSpeakingId(null);
-        onDone?.();
-      });
-    },
-    [at, dialect, resay],
-  );
-
-  /** Types out one piece, commits it to the thread, and lines up the next 明唔明？ (or the end). */
-  const sayPiece = useCallback(
-    (index: number) => {
-      const card = pieces[index];
-      if (!card) return;
-      driving.current = true;
-      setBriefing("speaking", index + 1);
-      const text = display(pieceSpeech(card, dialect));
-      setSpeakingId("piece");
-      say(text, () => {
-        appendMessage({
-          role: "agent",
-          text,
-          origin: card.aiGenerated ? "model" : "rule",
-          source: card.source ?? null,
-          link: index === trackIndex ? "track" : null,
-          outcome: null,
-          stopped: card.stopped === true,
-          unverified: card.unverified === true,
-        });
-        setSpeakingId(null);
-        const done = index + 1 >= pieces.length;
-        setBriefing(done ? "end" : "ask", index + 1);
-        // The in-app check-in becomes available only once the whole sheet has been said, and only
-        // when the page actually printed a frequency this app can count (brief §6).
-        if (done) {
-          updateActive((s) =>
-            s.checkin === "none" && hasCountableDose(s.reading)
-              ? { checkin: "pending" }
-              : {},
-          );
-        }
-        driving.current = false;
-      });
-    },
-    [dialect, display, pieces, say, setBriefing, trackIndex],
-  );
+  /** Once the whole sheet has been said, and only when the page printed a countable frequency. */
+  const openCheckinIfEarned = useCallback(() => {
+    updateActive((s) =>
+      s.checkin === "none" && hasCountableDose(s.reading) ? { checkin: "pending" } : {},
+    );
+  }, []);
 
   /**
-   * Picks the briefing up wherever it stopped. Called once per sheet.
+   * The driver, as one recursive step: say beat `index`, commit it, pause, say the next.
    *
-   * `speaking` means the reader left while a piece was being typed: nothing was committed, so
-   * that piece is said again from the top, which is what "resumes exactly where it stopped" has
-   * to mean for a message that never finished arriving.
+   * Held in a ref because it calls itself from inside a timeout, and a `useCallback` cannot name
+   * itself. The ref is written in an effect rather than during render — the React Compiler is on
+   * for this project and a ref written while rendering is not a safe thing for it to reason about.
    */
-  const resumeBriefing = useCallback(() => {
-    if (driving.current) return;
-    const current = loadSheets().active;
-    if (!current) return;
-    const { phase: p, step: s } = current.briefing;
+  const runRef = useRef<((index: number) => void) | null>(null);
 
-    if (p === "idle") {
+  const runBeat = useCallback(
+    (index: number) => {
+      const beat = beats[index];
+      if (!beat) {
+        playing.current = false;
+        setThinking(false);
+        setBriefing("end", beats.length);
+        openCheckinIfEarned();
+        return;
+      }
+
       driving.current = true;
-      const introText = display(t("brief.intro"));
-      setSpeakingId("intro");
-      say(introText, () => {
-        appendMessage({ role: "agent", text: introText, origin: "rule" });
+      setThinking(false);
+      setNothingHeard(false);
+      setBeatOnAir(beat);
+      // The step stored while a beat is in flight is the index of THAT beat, not the next one:
+      // nothing has been committed yet, so a reader who leaves mid-sentence comes back to it
+      // being said again from the top, which is the only honest meaning of "resume where it
+      // stopped" for a message that never finished arriving.
+      setBriefing("speaking", index);
+      setSpeakingId("beat");
+
+      say(beatSpeech(beat), () => {
+        appendMessage({
+          role: "agent",
+          text: beat.text,
+          lead: beat.lead,
+          origin: beat.origin,
+          tone: beat.tone,
+          source: beat.source,
+          link: beat.link,
+          outcome: null,
+          stopped: beat.stopped,
+          unverified: beat.unverified,
+        });
         setSpeakingId(null);
-        setBriefing("intro", 0);
-        readWarnings(warnings, () => {
-          setBriefing("ask", 0);
-          driving.current = false;
+        setBeatOnAir(null);
+        driving.current = false;
+
+        const next = index + 1;
+        if (next >= beats.length) {
+          playing.current = false;
+          setBriefing("end", beats.length);
+          openCheckinIfEarned();
+          return;
+        }
+
+        setBriefing("ask", next);
+        setThinking(true);
+        at(pauseAfter(beat), () => {
+          // The reader cut in during the pause: the floor is theirs and the script waits.
+          if (driving.current || !playing.current) {
+            setThinking(false);
+            return;
+          }
+          runRef.current?.(next);
         });
       });
-      return;
-    }
+    },
+    [at, beats, openCheckinIfEarned, say, setBriefing],
+  );
 
-    if (p === "intro") {
-      driving.current = true;
-      setBriefing("warn", s);
-      readWarnings(warnings, () => {
-        setBriefing("ask", s);
-        driving.current = false;
+  useEffect(() => {
+    runRef.current = runBeat;
+  }, [runBeat]);
+
+  /**
+   * Starts, or picks up, the script.
+   *
+   * `opening` is the beat before the first dots appear — the two seconds the reader gets to land
+   * on the screen and see who is talking before anything starts moving.
+   */
+  const play = useCallback(
+    (opening = false) => {
+      if (playing.current || driving.current) return;
+      const current = loadSheets().active;
+      if (!current || beats.length === 0) return;
+      if (current.briefing.phase === "end") return;
+
+      playing.current = true;
+      const from = Math.min(Math.max(0, current.briefing.step), beats.length);
+      setThinking(true);
+      at(opening ? OPENING_MS : 350, () => {
+        if (!playing.current || driving.current) return;
+        runRef.current?.(from);
       });
-      return;
-    }
+    },
+    [at, beats.length],
+  );
 
-    // The block is already on screen and has already been read: 再講一次 is how it repeats.
-    if (p === "warn") {
-      setBriefing("ask", s);
-      return;
-    }
+  /** The reader has the floor: 明仔 stops mid-sentence and the script waits where it is. */
+  const takeFloor = useCallback(() => {
+    playing.current = false;
+    // `driving` is claimed by `runBeat` and released in the callback `say()` runs when the last
+    // clause lands. Cancelling the utterance means that callback never runs — so without this
+    // line the flag stays raised for the rest of the session and every later `play()` returns at
+    // its first guard. The symptom was the conversation dying silently the first time anybody
+    // held the bar: the reader's question was answered, and 明仔 never said another word.
+    driving.current = false;
+    dropTimers();
+    cancel();
+    setSpeakingId(null);
+    setBeatOnAir(null);
+    setThinking(false);
+    setNothingHeard(false);
+  }, [cancel, dropTimers]);
 
-    if (p === "speaking") sayPiece(Math.max(0, s - 1));
-  }, [display, readWarnings, say, sayPiece, setBriefing, t, warnings]);
-
-  const onUnderstand = useCallback(() => {
-    if (step >= pieces.length) {
-      setBriefing("end", step);
-      updateActive((s) =>
-        s.checkin === "none" && hasCountableDose(s.reading) ? { checkin: "pending" } : {},
-      );
-      return;
-    }
-    sayPiece(step);
-  }, [pieces.length, sayPiece, setBriefing, step]);
-
-  /** 再講一次: says the last thing again, out loud, without re-typing a word of it. */
-  const onRepeat = useCallback(() => {
-    const lastAgent = [...thread].reverse().find((m) => m.role === "agent" && m.origin !== "user");
-    if (step === 0 || !lastAgent) {
-      readWarnings(warnings);
-      return;
-    }
-    setSpeakingId(lastAgent.id);
-    resay(lastAgent.text);
-  }, [readWarnings, resay, step, thread, warnings]);
+  /** The per-message speaker: says one thing again, out loud, without re-typing a word of it. */
+  const speakAgain = useCallback(
+    (message: ThreadMessage) => {
+      setSpeakingId(message.id);
+      resay(message.lead ? `${message.lead} ${message.text}` : message.text);
+    },
+    [resay],
+  );
 
   /* ---------------------------------------------------------- the check-in */
 
@@ -425,12 +456,10 @@ function ChatScreen() {
       const text = raw.trim();
       if (text.length === 0 || asking || !reading) return;
 
-      // The reader interrupting has the floor: whatever 明仔 was saying stops, and — this is the
-      // part that is easy to miss — the automatic driver must not start the briefing on top of the
-      // answer while the request is in flight. `driving` is claimed here and released on every
-      // way out, so the two never speak over each other. The briefing picks itself up afterwards.
-      cancel();
-      setSpeakingId(null);
+      // The reader interrupting has the floor: whatever 明仔 was saying stops, and the script must
+      // not start the next beat on top of the answer while the request is in flight. `driving` is
+      // claimed here and released on every way out; the script picks itself up afterwards.
+      takeFloor();
       driving.current = true;
       appendMessage({ role: "user", text, origin: "user" });
 
@@ -463,6 +492,7 @@ function ChatScreen() {
       }
 
       setAsking(true);
+      setThinking(true);
       const controller = new AbortController();
       request.current = controller;
 
@@ -472,6 +502,7 @@ function ChatScreen() {
       );
       request.current = null;
       setAsking(false);
+      setThinking(false);
 
       const failed = result.outcome === "bad_request" || result.outcome === "model_unavailable";
       const answerText = failed
@@ -508,7 +539,7 @@ function ChatScreen() {
         });
       }
     },
-    [asking, cancel, cards, dialect, display, locale, reading, say],
+    [asking, cards, dialect, display, locale, reading, say, takeFloor],
   );
 
   /* ------------------------------------------------------- getting a sheet */
@@ -610,57 +641,78 @@ function ChatScreen() {
   }, [searchParams]);
 
   /**
-   * One driver, one guard: it starts (or picks up) the briefing when a sheet is ready, and asks
-   * the check-in question once the notification has been opened. Never both at once, never twice.
-   *
-   * The step is queued rather than run inline. That is not a lint dodge: 明仔 starting to speak in
-   * the same frame the thread paints reads as a jump cut, the design canvas waits ~400 ms before
-   * `startBriefing` for the same reason, and the timeout is cleared on unmount so a briefing that
-   * was about to start on a screen the reader has left never starts at all.
+   * The one kick-off. It fires when a sheet becomes ready and never again for that sheet: from
+   * there the script drives itself, and `play()` is called by hand after an interruption.
    */
   const sheetId = sheet?.id ?? null;
-  const checkinState = sheet?.checkin ?? "none";
+  const kicked = useRef<string | null>(null);
+  useEffect(() => {
+    if (status !== "ready" || sheetId === null || beats.length === 0) return;
+    if (kicked.current === sheetId) return;
+    kicked.current = sheetId;
+    play(true);
+  }, [beats.length, play, sheetId, status]);
+
+  /**
+   * Changing the spoken language starts the sheet again, in the language just chosen.
+   *
+   * A committed message is a record of what was actually said, and rewriting one in another
+   * language would be forging it — but leaving the reader with a thread they cannot read is
+   * worse, and somebody who reaches for the language chip has just told you they did not
+   * understand a word of it. So the thread is cleared and 明仔 says the sheet again from the top.
+   * Only an in-session change does this: the ref starts empty, so the first render never resets
+   * anything, and a reload leaves what was said alone.
+   */
+  const spokenIn = useRef<typeof dialect | null>(null);
   useEffect(() => {
     if (status !== "ready" || sheetId === null) return;
-    if (driving.current) return;
+    const previous = spokenIn.current;
+    spokenIn.current = dialect;
+    if (previous === null || previous === dialect) return;
+    takeFloor();
+    askedCheckin.current = null;
+    updateActive(() => ({ thread: [], briefing: { phase: "idle", step: 0 } }));
+    setSheets(loadSheets());
+    play(true);
+  }, [dialect, play, sheetId, status, takeFloor]);
+
+  /**
+   * Picking the script back up after the reader has had their turn. It waits for the answer to
+   * finish speaking (`asking` false, nothing driving) and for the thread to have settled.
+   */
+  useEffect(() => {
+    if (status !== "ready" || phase === "end" || asking || listening) return;
+    if (playing.current || driving.current) return;
     const queued = setTimeout(() => {
-      if (driving.current) return;
-      if (phase !== "ask" && phase !== "end") {
-        resumeBriefing();
-        return;
-      }
-      if (checkinState !== "open") {
-        askedCheckin.current = null;
-        return;
-      }
-      if (
-        checkinQuestion.length > 0 &&
-        lastAgentText !== checkinQuestion &&
-        askedCheckin.current !== checkinQuestion
-      ) {
-        askCheckin();
-      }
-    }, START_MS);
+      if (playing.current || driving.current) return;
+      play();
+    }, 900);
     return () => clearTimeout(queued);
-  }, [
-    askCheckin,
-    checkinQuestion,
-    checkinState,
-    lastAgentText,
-    phase,
-    resumeBriefing,
-    sheetId,
-    status,
-  ]);
+  }, [asking, listening, phase, play, status, thread.length]);
+
+  /** Once the briefing is over, the check-in question is asked at most once per opening. */
+  const checkinState = sheet?.checkin ?? "none";
+  useEffect(() => {
+    if (status !== "ready" || phase !== "end") return;
+    if (checkinState !== "open") {
+      askedCheckin.current = null;
+      return;
+    }
+    if (driving.current || checkinQuestion.length === 0) return;
+    if (lastAgentText === checkinQuestion || askedCheckin.current === checkinQuestion) return;
+    const queued = setTimeout(askCheckin, 500);
+    return () => clearTimeout(queued);
+  }, [askCheckin, checkinQuestion, checkinState, lastAgentText, phase, status]);
 
   /* ----------------------------------------------------------------- view */
 
-  // Follow the conversation down as it grows, and while a clause is being revealed.
+  // Follow the conversation down as it grows, while a clause is being revealed, and while the
+  // microphone is filling in the reader's own bubble.
   useEffect(() => {
     const node = threadRef.current;
     if (!node) return;
     node.scrollTop = node.scrollHeight;
-  }, [thread.length, voice.typing, phase, checkinOpen]);
+  }, [thread.length, voice.typing, thinking, listening, interim, checkinOpen]);
 
   const openSource = useCallback(
     (source: SourceReference, card: Card | null) => {
@@ -700,9 +752,16 @@ function ChatScreen() {
     [cardForSource, script, t],
   );
 
-  // Derived live rather than read off `sheet.title`, so flipping the interface language also
-  // flips the fallback 出院紙 / 出院纸 / Discharge sheet. Still `sheetTitle()`, still never invented.
-  const title = useMemo(() => sheetTitle(reading, locale), [reading, locale]);
+  const onListeningChange = useCallback(
+    (open: boolean) => {
+      setListening(open);
+      // Holding the bar is how the reader takes the floor. Nothing else stops 明仔 mid-sentence,
+      // and nothing should have to: the gesture that starts a question is the gesture that
+      // interrupts the answer to the last one.
+      if (open) takeFloor();
+    },
+    [takeFloor],
+  );
 
   if (status === "reading") {
     return (
@@ -727,22 +786,6 @@ function ChatScreen() {
 
   if (status === "boot" || !sheet) return <Booting />;
 
-  const showWarn = phase !== "idle" && phase !== "intro" && warnings.length > 0;
-  const warnReading = speakingId === "warn" && voice.speaking;
-
-  /** One thread bubble. Shared by the two slices either side of the amber block. */
-  const renderMessage = (message: ThreadMessage) => (
-    <ChatMessage
-      key={message.id}
-      message={message}
-      reading={speakingId === message.id && voice.speaking}
-      sourceTitle={sourceTitleFor(message)}
-      dialect={dialect}
-      onOpenSource={(m) => m.source && openSource(m.source, cardForSource(m.source))}
-      onOpenTrack={() => router.push("/track")}
-    />
-  );
-
   return (
     <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col overflow-hidden">
       <ChatHeader
@@ -756,87 +799,72 @@ function ChatScreen() {
         onCloseLang={() => setLangOpen(false)}
       />
 
-      <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto px-[22px] pt-5 pb-2">
-        <p className="mb-[22px] text-center text-meta text-faint">{t("chat.today")}</p>
+      <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-2">
+        <p className="mb-3 text-center text-fine text-faint">{t("chat.today")}</p>
 
         {reading?.sample === true ? (
-          <div className="mb-[22px] flex justify-center">
+          <div className="mb-3 flex justify-center">
             <SampleBanner />
           </div>
         ) : null}
 
         {/*
-         * 明仔 greets, and THEN the amber block appears. The order is the whole point of the
-         * greeting: 「我睇完你張紙。最緊要嘅先講。」 promises that the most important thing comes
-         * next, so rendering the warnings above it makes the sentence describe something the
-         * reader has already scrolled past. The canvas has the intro bubble first for the same
-         * reason (design-canvas/workflow-v2.dc.html, the `isChat` block).
-         *
-         * The intro is thread message 0 and the warnings occupy the slot straight after it, so the
-         * split is at 1 rather than at a phase: on a resumed sheet the thread already has its later
-         * messages, and they belong below the block exactly as they did when they were first said.
-         */}
-        {thread.slice(0, 1).map(renderMessage)}
+          FR-022: what the agent will and will not do, on the screen with the microphone, never
+          behind a disclosure. It sits at the TOP of the thread rather than the bottom — the thread
+          scrolls itself to the newest message, so a block pinned after the last message was on
+          screen for the whole conversation and took a third of it. Here it is read once, before
+          anything has been said, and then scrolls away like everything else.
+        */}
+        <AgentLimits className="mb-4" />
 
-        {showWarn ? (
-          <WarningBlock
-            cards={warnings}
-            lines={warnLines}
-            empty={empty}
-            reading={warnReading}
-            onOpenSource={(source, card) => openSource(source, card)}
+        {thread.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            reading={speakingId === message.id && voice.speaking}
+            sourceTitle={sourceTitleFor(message)}
+            dialect={dialect}
+            onOpenSource={(m) => m.source && openSource(m.source, cardForSource(m.source))}
+            onOpenTrack={() => router.push("/track")}
+            onSpeak={speakAgain}
+          />
+        ))}
+
+        {voice.typing !== null ? (
+          <SpeakingBubble
+            lead={beatOnAir?.lead ?? null}
+            text={voice.typing}
+            warn={beatOnAir?.tone === "warn"}
+            speaking={voice.speaking}
           />
         ) : null}
 
-        {thread.slice(1).map(renderMessage)}
+        {thinking && voice.typing === null ? <TypingBubble /> : null}
 
-        {voice.typing !== null ? (
-          <div className="mb-[22px] flex items-start gap-[11px]">
-            <Mascot size={44} state="speaking" className="mt-0.5" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[20px] leading-[1.68] break-words text-ink">
-                {voice.typing}
-                <span
-                  aria-hidden="true"
-                  className="animate-blink ml-[3px] inline-block h-5 w-[3px] translate-y-[3px] bg-jade"
-                />
-              </p>
-              {voice.speaking ? (
-                <p className="mt-2.5 flex items-center gap-[9px] text-meta font-medium text-jade-ink">
-                  <Waveform />
-                  {t("chat.reading")}
-                </p>
-              ) : null}
-            </div>
-          </div>
+        {listening ? <ListeningBubble text={interim} /> : null}
+
+        {nothingHeard && !listening ? (
+          <p role="status" className="mb-2.5 px-1 text-fine text-muted">
+            {t("chat.nothingHeard")}
+          </p>
         ) : null}
 
         {checkinOpen ? <CheckinPrompt onTook={onTook} onNotYet={onNotYet} /> : null}
 
-        {phase === "ask" && voice.typing === null && !checkinOpen ? (
-          <UnderstandPrompt
-            remaining={pieces.length - step}
-            showRemaining={step > 0}
-            onRepeat={onRepeat}
-            onUnderstand={onUnderstand}
-          />
-        ) : null}
-
-        {phase === "end" && voice.typing === null && !checkinOpen ? (
-          <p className="animate-rise mb-4 px-0.5 text-body text-muted">{t("brief.end")}</p>
-        ) : null}
-
-        {asking ? <p className="mb-4 px-0.5 text-body text-muted">{t("ask.processing")}</p> : null}
-
         {voice.voiceUnavailable ? (
-          <p className="mb-4 px-0.5 text-meta text-muted">{t("fallback.noVoiceNote")}</p>
+          <p className="mb-2.5 px-1 text-fine text-muted">{t("fallback.noVoiceNote")}</p>
         ) : null}
-
-        {/* FR-022: what the agent will and will not do, on the screen with the microphone. */}
-        <AgentLimits className="mt-2 mb-2" />
       </div>
 
-      <ChatBar language={dialect} locale={locale} busy={asking} onSend={(text) => void submit(text)} />
+      <ChatBar
+        language={dialect}
+        locale={locale}
+        busy={asking}
+        onSend={(text) => void submit(text)}
+        onListening={onListeningChange}
+        onInterim={setInterim}
+        onNothingHeard={() => setNothingHeard(true)}
+      />
 
       {sourceFor ? (
         <SourceSheet

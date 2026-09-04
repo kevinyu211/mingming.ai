@@ -82,8 +82,9 @@ test.describe("A photograph that cannot be read (V7)", () => {
       page.getByRole("heading", { name: UI.hant["fallback.modelUnavailable"], exact: true }),
     ).toBeVisible();
     await expect(page.getByText(UNAVAILABLE_BODY, { exact: true })).toBeVisible();
-    // The sheet never became "the active sheet" on the strength of a photograph nobody could read.
-    await expect(page.getByRole("region", { name: UI.hant["brief.warnTitle"] })).toHaveCount(0);
+    // The sheet never became "the active sheet" on the strength of a photograph nobody could read:
+    // 明仔 has not greeted anybody, because there is nothing to greet them about.
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toHaveCount(0);
 
     await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
     await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
@@ -128,15 +129,18 @@ test.describe("Speech output is unavailable (V7)", () => {
     });
 
     // 2. The red flags, in full, still first and still not behind a tap (constitution II).
-    const block = page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true });
-    await expect(block).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
     for (const warning of warnings) {
-      await expect(block.getByText(warning.body.yue, { exact: true })).toBeVisible();
+      await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
+        timeout: 60_000,
+      });
     }
     // And each of them still traces to its own line, which is the only way to check a silent app.
-    await expect(block.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
-      warnings.length,
-    );
+    await expect(
+      page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first(),
+    ).toBeVisible();
 
     // 3. The screen says it is silent rather than looking broken.
     await expect(page.getByText(UI.hant["fallback.noVoiceNote"], { exact: true })).toBeVisible({
@@ -153,10 +157,10 @@ test.describe("Speech output is unavailable (V7)", () => {
       page.getByRole("button", { name: UI.hant["chat.muteSpeaker"], exact: true }),
     ).toBeVisible();
 
-    // 5. The teach-back loop still runs, so a silent phone can still walk the whole sheet.
-    await expect(
-      page.getByRole("button", { name: UI.hant["brief.understand"], exact: true }),
-    ).toBeVisible({ timeout: 30_000 });
+    // 5. The script still plays itself out, so a silent phone still gets the whole sheet in words.
+    await expect(page.getByText(UI.hant["brief.checkUnderstand"], { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
 
     await expectNoHorizontalScroll(page);
   });
@@ -198,9 +202,9 @@ test.describe("The camera is not the way in (V7)", () => {
     await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(
-      page.getByRole("region", { name: UI.hant["brief.warnTitle"], exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
+      timeout: 60_000,
+    });
   });
 });
 

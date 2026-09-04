@@ -14,19 +14,19 @@ export default function AgentLimits({ className = "" }: { className?: string }) 
   const t = useT();
   return (
     <section aria-label={t("agentLimits.title")} className={className}>
-      <h2 className="mb-2 ml-1 text-fine font-semibold text-muted">{t("agentLimits.title")}</h2>
+      <h2 className="mb-1.5 ml-1 text-fine font-semibold text-muted">{t("agentLimits.title")}</h2>
 
       <div className="surface overflow-hidden">
-        <div className="flex items-start gap-3 px-[18px] py-[15px]">
+        <div className="flex items-start gap-2.5 px-3.5 py-2.5">
           <CheckGlyph />
-          <p className="text-body leading-relaxed text-ink">{t("agentLimits.can")}</p>
+          <p className="text-fine leading-[1.5] text-ink">{t("agentLimits.can")}</p>
         </div>
 
-        <div aria-hidden="true" className="ml-[18px] h-px bg-hairline" />
+        <div aria-hidden="true" className="ml-3.5 h-px bg-hairline" />
 
-        <div className="flex items-start gap-3 px-[18px] py-[15px]">
+        <div className="flex items-start gap-2.5 px-3.5 py-2.5">
           <CrossGlyph />
-          <p className="text-body leading-relaxed text-muted">{t("agentLimits.cannot")}</p>
+          <p className="text-fine leading-[1.5] text-muted">{t("agentLimits.cannot")}</p>
         </div>
       </div>
     </section>
@@ -39,7 +39,7 @@ function CheckGlyph() {
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="mt-1 h-5 w-5 shrink-0 text-accent"
+      className="mt-0.5 h-4 w-4 shrink-0 text-accent"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.4"
@@ -57,7 +57,7 @@ function CrossGlyph() {
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="mt-1 h-5 w-5 shrink-0 text-muted"
+      className="mt-0.5 h-4 w-4 shrink-0 text-muted"
       fill="none"
       stroke="currentColor"
       strokeWidth="2.4"
