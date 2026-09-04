@@ -150,6 +150,19 @@ function listenWithBrowser(
 
   return new Promise<{ text: string }>((resolve, reject) => {
     let finalText = "";
+    /**
+     * The last interim transcript, kept because releasing the bar usually beats the final result.
+     *
+     * `stop()` ends the session, and on iOS Safari a short utterance frequently ends WITHOUT the
+     * engine ever promoting its interim guess to `isFinal` — so `finalText` is empty and the
+     * reader watched their own words appear in the bubble and then vanish unsent. That is the
+     * "I said it, I let go, and nothing happened" everyone hits.
+     *
+     * An interim transcript is the engine's best guess rather than its confirmed one, so it is
+     * only used when there is no final at all. Sending the reader's words as heard beats sending
+     * nothing and making them say it twice.
+     */
+    let interimText = "";
     let settled = false;
     let failure: SpeechUnavailableError | null = null;
 
@@ -175,6 +188,7 @@ function listenWithBrowser(
         if (result.isFinal) finalText += transcript;
         else interim += transcript;
       }
+      if (interim) interimText = interim;
       if (interim && opts.onInterim) opts.onInterim(finalText + interim);
     };
 
@@ -192,7 +206,8 @@ function listenWithBrowser(
     };
 
     recognition.onend = () => {
-      const text = finalText.trim();
+      // Fall back to the last interim when the session ended before anything was made final.
+      const text = (finalText.trim() || interimText.trim()).trim();
       if (failure && text.length === 0) settle(() => reject(failure));
       else settle(() => resolve({ text }));
     };

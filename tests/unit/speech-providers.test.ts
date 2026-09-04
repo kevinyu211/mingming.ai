@@ -604,3 +604,83 @@ describe("no adapter logs the text, the audio or the key", () => {
     expect(written).toContain("provider=elevenlabs");
   });
 });
+
+/**
+ * The reader said it, let go, and nothing was sent.
+ *
+ * `stop()` ends the session, and on iOS Safari a short utterance frequently ends WITHOUT the
+ * engine ever promoting its interim guess to `isFinal`. The code kept only final results, so
+ * `finalText` was empty and the transcript the reader had just watched appear in the bubble was
+ * dropped on the floor. They then had to say it again, which for the person this app is built for
+ * is the moment they give up and hand the phone to someone else.
+ */
+describe("a released hold sends what was heard, final or not", () => {
+  interface FakeResult {
+    isFinal: boolean;
+    0: { transcript: string };
+  }
+
+  /** Drives the browser recogniser through one hold: some interim text, then `stop()`. */
+  function runHold(results: FakeResult[], promoteToFinal: boolean) {
+    let onresult: ((e: { resultIndex: number; results: FakeResult[] }) => void) | null = null;
+    let onend: (() => void) | null = null;
+
+    class FakeRecognition {
+      lang = "";
+      continuous = false;
+      interimResults = false;
+      maxAlternatives = 1;
+      set onresult(fn: typeof onresult) {
+        onresult = fn;
+      }
+      set onerror(_fn: unknown) {}
+      set onend(fn: typeof onend) {
+        onend = fn;
+      }
+      start() {
+        // The engine emits its guess as interim…
+        onresult?.({ resultIndex: 0, results });
+        // …and only sometimes promotes it before the session ends.
+        if (promoteToFinal) {
+          onresult?.({
+            resultIndex: 0,
+            results: results.map((r) => ({ ...r, isFinal: true })),
+          });
+        }
+      }
+      stop() {
+        onend?.();
+      }
+      abort() {
+        onend?.();
+      }
+    }
+    return FakeRecognition;
+  }
+
+  const said = [{ isFinal: false, 0: { transcript: "覆診要帶咩" } }];
+
+  it("sends the interim text when the session ends before anything is final", async () => {
+    vi.resetModules();
+    vi.stubGlobal("window", { webkitSpeechRecognition: runHold(said, false) });
+    const { listen } = await import("@/lib/speech/stt");
+    const stop = new AbortController();
+    const result = listen("yue", { stop: stop.signal });
+    await Promise.resolve();
+    stop.abort();
+    await expect(result).resolves.toEqual({ text: "覆診要帶咩" });
+    vi.unstubAllGlobals();
+  });
+
+  it("prefers the final transcript when the engine does produce one", async () => {
+    vi.resetModules();
+    vi.stubGlobal("window", { webkitSpeechRecognition: runHold(said, true) });
+    const { listen } = await import("@/lib/speech/stt");
+    const stop = new AbortController();
+    const result = listen("yue", { stop: stop.signal });
+    await Promise.resolve();
+    stop.abort();
+    await expect(result).resolves.toEqual({ text: "覆診要帶咩" });
+    vi.unstubAllGlobals();
+  });
+});
