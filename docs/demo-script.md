@@ -18,6 +18,11 @@ silence.
 - Phone on the **deployed HTTPS URL**, never the LAN address — the microphone needs a secure origin.
 - **Tap 明白，開始 before you are on.** That tap is what unlocks audio on iOS; without it 明明 is
   silent. It also gets the consent gate out of your five minutes.
+- **Hold the bar once and grant the microphone before you are on.** The first hold of a session is
+  behind the iOS permission sheet, and you cannot keep holding the bar while tapping Allow — so
+  that hold is lost by construction, every time, on any phone. Grant it once beforehand and every
+  hold on stage opens immediately. (The app now says 「麥克風未開到。撳住耐啲再講一次」 rather than
+  「我冇聽到」, but you do not want to spend a beat explaining that.)
 - 記錄 empty, no active sheet.
 - **Ring/silent switch OFF.** Check it. This is the failure that looks exactly like a broken app.
 - Volume up, speaker toggle in the chat header ON.

@@ -310,7 +310,10 @@ test.describe("one control: hold it to talk, tap it to type", () => {
     });
     await page.goto("/chat?sample=hk_en");
 
-    await expect(page.getByText(NO_MIC, { exact: true })).toBeVisible();
+    // `visible: true` because the desktop composer carries its own copy of this sentence and is
+    // in the DOM at every width, hidden by `lg:block`. The claim here is about what the reader on
+    // a phone SEES, so the hidden twin is filtered out rather than asserted about.
+    await expect(page.getByText(NO_MIC, { exact: true }).filter({ visible: true })).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true }),
     ).toBeVisible();
