@@ -165,7 +165,7 @@ function ChatScreen() {
   const [nothingHeard, setNothingHeard] = useState(false);
 
   const voice = useVoice(dialect, speakerOn);
-  const { say, resay, cancel } = voice;
+  const { say, resay, warm, cancel } = voice;
 
   const threadRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -335,7 +335,10 @@ function ChatScreen() {
           }
           runRef.current?.(next);
         });
-      });
+        // Fetch the next few lines' audio while this one is still being said. A clip takes about
+        // two seconds, and asking for it when the bubble is already on screen is why the words
+        // used to finish typing and then sit in silence.
+      }, beats.slice(index + 1, index + 4).map(beatSpeech));
     },
     [at, beats, openCheckinIfEarned, say, setBriefing],
   );
@@ -764,8 +767,10 @@ function ChatScreen() {
     if (status !== "ready" || sheetId === null || beats.length === 0) return;
     if (kicked.current === sheetId) return;
     kicked.current = sheetId;
+    // The opening bubble has nothing in front of it to have warmed it, so warm it here.
+    warm(beats.slice(0, 3).map(beatSpeech));
     play(true);
-  }, [beats.length, play, sheetId, status]);
+  }, [beats, play, sheetId, status, warm]);
 
   /**
    * Changing the spoken language starts the sheet again, in the language just chosen.

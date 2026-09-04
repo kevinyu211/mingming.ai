@@ -43,6 +43,7 @@ import BottomSheet from "@/components/BottomSheet";
 import ChunkyButton from "@/components/ChunkyButton";
 import { useLocale } from "@/components/LocaleProvider";
 import { downscale, type DownscaledImage } from "@/lib/image/downscale";
+import { unlockAudio } from "@/lib/speech/tts";
 import type { UiLocale } from "@/lib/i18n/ui";
 
 /** The one transient home for image bytes; see the comment in the reading screen. */
@@ -241,6 +242,9 @@ export default function Capture() {
    */
   const startReading = useCallback(() => {
     if (pages.length === 0) return;
+    // 講俾我聽 is the gesture immediately before a reading, so unlock here too. Costs nothing when
+    // the consent tap already did it, and covers a second sheet read in the same session.
+    unlockAudio();
     try {
       window.sessionStorage.setItem(
         PENDING_IMAGES_KEY,

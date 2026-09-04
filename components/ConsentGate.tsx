@@ -19,6 +19,7 @@
 import { useCallback, useSyncExternalStore, type ReactNode, type SVGProps } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import type { UiLocale } from "@/lib/i18n/ui";
+import { unlockAudio } from "@/lib/speech/tts";
 import { loadState, setConsented, subscribe } from "@/lib/storage/local";
 
 const SESSION_KEY = "fitornot.consent.session";
@@ -71,6 +72,17 @@ export default function ConsentGate({ children }: { children: ReactNode }) {
   const consent = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
 
   const accept = useCallback(() => {
+    /**
+     * FIRST, and synchronously, before anything that could yield.
+     *
+     * iOS only lets an audio element make a sound if a real user gesture touched THAT element, and
+     * 明仔 speaks with nothing to press — so without this the very first `play()` is refused and
+     * every later one is refused identically. This tap is the one gesture that always precedes a
+     * reading, so it is where the session's single audio element gets unlocked. Moving this below
+     * an `await`, or into a promise continuation, silently breaks it: the gesture only counts on
+     * its own tick.
+     */
+    unlockAudio();
     // Session mark first, so the store notification already sees the final state.
     writeSessionMark();
     setConsented();
