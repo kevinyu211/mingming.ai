@@ -133,6 +133,12 @@ describe("placeholders survive translation", () => {
       "{date}",
       "{label}",
       "{title}",
+      // The opening summary: the plain word for the document, and the pre-joined counts
+      // ("3樣要留意嘅情況、3隻藥、1次覆診") that `buildBeats` assembles before filling.
+      "{sheet}",
+      "{parts}",
+      // Medicine turns are numbered: "第2隻藥（總共3隻）".
+      "{total}",
     ]);
     for (const locale of UI_LOCALES) {
       for (const key of UI_KEYS) {

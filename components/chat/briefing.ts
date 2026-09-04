@@ -49,6 +49,17 @@ export const AFTER_WARN_MS = 1500;
 /** The wait between the thread painting and the first dots. About two seconds, as asked. */
 export const OPENING_MS = 900;
 
+/** Between the lines inside one bubble. A newline, so a bubble reads as a short list. */
+const JOIN = "\n";
+
+/**
+ * Between what a bubble says and the question it ends with.
+ *
+ * A blank line, because the question is a different act from the content: it is where 明仔 hands
+ * the floor over, and running it on from the last medicine makes it look like part of the dose.
+ */
+const ASK_GAP = "\n\n";
+
 /**
  * Splits spoken text into the clauses it is revealed in.
  *
@@ -146,7 +157,16 @@ export interface Beat {
   text: string;
   origin: "rule" | "model";
   tone: "warn" | null;
-  source: SourceReference | null;
+  /**
+   * Every printed line this bubble was built from, in order.
+   *
+   * Plural because a bubble is a SECTION now, not a card. Four warning signs used to arrive as
+   * four separate amber boxes and three medicines as three white ones, which is what Kevin saw on
+   * his phone and called "the AI shooting out a lot of text" — a wall of small boxes rather than
+   * somebody talking. They are one message each now, and one message has to be able to cite all
+   * the lines underneath it or constitution IV quietly becomes "the first line of each section".
+   */
+  sources: SourceReference[];
   link: "track" | null;
   stopped: boolean;
   unverified: boolean;
@@ -215,7 +235,7 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
     text: display(text),
     origin: "rule",
     tone: null,
-    source: null,
+    sources: [],
     link: null,
     stopped: false,
     unverified: false,
@@ -223,75 +243,112 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
     section,
   });
 
-  beats.push(rule("hello", fill(t("brief.hello"), { title: ctx.sheetWord }), "opening"));
-  beats.push(rule("intro", t("brief.intro"), "opening"));
+  /**
+   * The opening: what is on the page, in numbers, and an offer of where to start.
+   *
+   * A reader who has just been handed a medical document does not know what is in it, and 明仔
+   * launching straight into red flags gives them no idea how long this is going to take or what is
+   * coming. One sentence of shape first — four things to watch for, five medicines, one visit —
+   * and then the floor, because someone who came to the app worried about one specific thing
+   * should be able to say so instead of sitting through the rest to reach it.
+   */
+  const medicines = pieces.filter((card) => card.type === "medicine");
+  const counts: string[] = [];
+  if (warnings.length > 0 && !empty) {
+    counts.push(fill(t("count.warnings"), { n: warnings.length }));
+  }
+  if (medicines.length > 0) counts.push(fill(t("count.medicines"), { n: medicines.length }));
+  const visits = pieces.filter((card) => card.type === "followUp").length;
+  if (visits > 0) counts.push(fill(t("count.followUp"), { n: visits }));
 
-  // The red flags. `empty` means the page printed none and the `noWarnings` card is standing in
-  // its slot — that is not an alarm, so it gets neither the amber tone nor the "go now" lead-in.
-  if (warnings.length > 0 && !empty) beats.push(rule("warn-lead", t("brief.warnLead"), "warn"));
+  beats.push(
+    rule(
+      "summary",
+      counts.length > 0
+        ? fill(t("brief.summary"), { sheet: ctx.sheetWord, parts: counts.join(t("count.join")) })
+        : fill(t("brief.summaryBare"), { sheet: ctx.sheetWord }),
+      "opening",
+      // Only worth asking where to start when there is more than one place to start.
+      counts.length > 1,
+    ),
+  );
 
-  warnings.forEach((card, i) => {
+  /**
+   * The red flags, as ONE bubble with the question inside it.
+   *
+   * Grouped rather than one-per-turn on purpose, and this is the one place the grouping is not
+   * just about tidiness: these are the lines that say "stop and go back to hospital". Splitting
+   * them across four turns would make the most urgent thing on the page the slowest to get
+   * through, and a reader who answers 明白 twice and then puts the phone down would have been
+   * shown half of them.
+   */
+  if (warnings.length > 0) {
+    const body = warnings.map((card) => display(pieceSpeech(card, dialect))).join(JOIN);
+    const lead = empty ? "" : `${display(t("brief.warnLead"))}${JOIN}`;
     beats.push({
-      key: `warn-${i}`,
+      key: "warn",
       lead: null,
-      text: display(pieceSpeech(card, dialect)),
-      origin: card.aiGenerated ? "model" : "rule",
+      text: `${lead}${body}${ASK_GAP}${display(t("ask.warn"))}`,
+      origin: warnings.some((card) => card.aiGenerated) ? "model" : "rule",
       tone: empty ? null : "warn",
-      source: card.source ?? null,
+      sources: warnings
+        .map((card) => card.source)
+        .filter((source): source is SourceReference => source !== null),
       link: null,
       stopped: false,
-      unverified: card.unverified === true,
-      awaits: false,
+      unverified: warnings.some((card) => card.unverified === true),
+      // Nothing to hold the floor for if the page had nothing else on it.
+      awaits: pieces.length > 0,
       section: "warn",
     });
-  });
-
-  // Teach-back after the part that matters most, and it WAITS. Only when there is more to come:
-  // asking 「明唔明？」 immediately before 「講完喇」 is a question with nowhere to go.
-  if (warnings.length > 0 && pieces.length > 0) {
-    beats.push(rule("check", t("brief.checkUnderstand"), "warn", true));
   }
 
   /**
-   * The rest of the page, one SECTION per kind of card — medicines, follow-up, diet, activity,
-   * anything unreadable — and a question at the end of each one.
+   * The rest of the page. Medicines get a turn EACH; everything else is one turn per kind.
    *
-   * Sectioning by card type rather than by card is what gives the reader somewhere to breathe
-   * without turning three medicines into three separate interrogations: the run of medicines is
-   * said together under one connective, and then 明仔 stops and asks once.
+   * A medicine is a discrete thing to remember — a name, a strength, a printed instruction — and
+   * five of them in one bubble is the wall of text this rebuild exists to remove. Follow-up, diet
+   * and activity are one idea each, so they stay whole.
    */
   const trackAt = trackLinkIndex(pieces);
   let previousType: CardType | null = null;
-  pieces.forEach((card, i) => {
-    const isNewRun = card.type !== previousType;
-    const leadKey = isNewRun ? LEAD_KEY[card.type] : undefined;
+  let medicineNumber = 0;
 
-    // Close the previous run before opening this one.
-    if (isNewRun && previousType !== null) {
-      beats.push(rule(`ask-${previousType}`, t("brief.askContinue"), `piece-${previousType}`, true));
-    }
+  pieces.forEach((card, i) => {
+    const isMedicine = card.type === "medicine";
+    const isNewRun = card.type !== previousType;
     previousType = card.type;
+
+    let lead: string | null = null;
+    if (isMedicine) {
+      medicineNumber += 1;
+      lead = display(
+        fill(t("lead.medicineNth"), { n: medicineNumber, total: medicines.length }),
+      );
+    } else if (isNewRun) {
+      const key = LEAD_KEY[card.type];
+      lead = key ? display(t(key)) : null;
+    }
+
+    const last = i === pieces.length - 1;
+    const askKey = isMedicine && !last ? "ask.medicine" : "ask.section";
+    // The last piece asks nothing: the closing line follows it and does the asking.
+    const ask = last ? "" : `${ASK_GAP}${display(t(askKey))}`;
 
     beats.push({
       key: `piece-${i}`,
-      lead: leadKey ? display(t(leadKey)) : null,
-      text: display(pieceSpeech(card, dialect)),
+      lead,
+      text: `${display(pieceSpeech(card, dialect))}${ask}`,
       origin: card.aiGenerated ? "model" : "rule",
       tone: null,
-      source: card.source ?? null,
+      sources: card.source ? [card.source] : [],
       link: i === trackAt ? "track" : null,
       stopped: card.stopped === true,
       unverified: card.unverified === true,
-      awaits: false,
-      section: `piece-${card.type}`,
+      awaits: !last,
+      section: isMedicine ? `medicine-${medicineNumber}` : `piece-${card.type}`,
     });
   });
-
-  // The final run gets its question too, so the reader is asked after every section and never
-  // walked straight from the last medicine into the closing line.
-  if (previousType !== null) {
-    beats.push(rule(`ask-${previousType}`, t("brief.askContinue"), `piece-${previousType}`, true));
-  }
 
   beats.push(rule("end", t("brief.end"), "end"));
   return beats;

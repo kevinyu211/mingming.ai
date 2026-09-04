@@ -291,7 +291,7 @@ function ChatScreen() {
           lead: beat.lead,
           origin: beat.origin,
           tone: beat.tone,
-          source: beat.source,
+          sources: beat.sources,
           link: beat.link,
           outcome: null,
           stopped: beat.stopped,
@@ -633,7 +633,11 @@ function ChatScreen() {
           role: "agent",
           text: answerText,
           origin: failed ? "rule" : "model",
-          source: result.source ?? citedCard?.source ?? null,
+          // One cited line for an answer, but the field is plural because a briefing bubble
+          // quotes a whole section. `filter` keeps it empty rather than [null] when nothing cited.
+          sources: [result.source ?? citedCard?.source].filter(
+            (source): source is SourceReference => !!source,
+          ),
           outcome: failed ? null : (result.outcome as ThreadMessage["outcome"]),
           unverified: citedCard?.unverified === true,
         });
@@ -855,8 +859,9 @@ function ChatScreen() {
   /** The heading announced with the source sheet, so the reader knows which line they opened. */
   const sourceTitleFor = useCallback(
     (message: ThreadMessage): string => {
-      if (!message.source) return "";
-      const card = cardForSource(message.source);
+      const first = message.sources?.[0];
+      if (!first) return "";
+      const card = cardForSource(first);
       return card ? cardTitle(card.type, script) : t("cards.header");
     },
     [cardForSource, script, t],
@@ -934,7 +939,10 @@ function ChatScreen() {
             reading={speakingId === message.id && voice.speaking}
             sourceTitle={sourceTitleFor(message)}
             dialect={dialect}
-            onOpenSource={(m) => m.source && openSource(m.source, cardForSource(m.source))}
+            onOpenSource={(m) => {
+              const first = m.sources?.[0];
+              if (first) openSource(first, cardForSource(first));
+            }}
             onOpenTrack={() => router.push("/track")}
             onSpeak={speakAgain}
           />

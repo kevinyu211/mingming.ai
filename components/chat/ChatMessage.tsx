@@ -165,7 +165,7 @@ export default function ChatMessage({
               {reading ? t("chat.reading") : t("chat.speakAgain")}
             </button>
 
-            {message.source ? (
+            {(message.sources?.length ?? 0) > 0 ? (
               <button
                 type="button"
                 onClick={() => onOpenSource(message)}

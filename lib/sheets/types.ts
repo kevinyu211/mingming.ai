@@ -68,7 +68,10 @@ export interface ThreadMessage {
    */
   origin: "rule" | "model" | "user";
   /** Opens the source sheet, so every spoken fact traces to a line (constitution IV). */
-  source?: SourceReference | null;
+  /**
+   * Every printed line this message was built from. Plural because a bubble is a SECTION now.
+   */
+  sources?: SourceReference[];
   /** Renders the 睇「跟進」 button under the message. */
   link?: "track" | null;
   /** Styles a refusal, a not-on-sheet answer or a crisis referral as itself, not as an answer. */

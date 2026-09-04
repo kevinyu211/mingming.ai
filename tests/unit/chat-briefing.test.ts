@@ -27,7 +27,7 @@ import {
   type Beat,
 } from "@/components/chat/briefing";
 import type { Card, Medicine, StoredReading, WarningSign } from "@/lib/domain/schemas";
-import type { UiKey } from "@/lib/i18n/ui";
+import { UI, type UiKey } from "@/lib/i18n/ui";
 import { buildCards } from "@/lib/rules/card-order";
 import { CAUTION_SUFFIX } from "@/lib/rules/template-fallback";
 
@@ -217,12 +217,18 @@ describe("what one piece says out loud", () => {
  * rendered outside the thread, so their position was a fact about JSX; here it is a fact about an
  * array, which is the only thing the driver can walk. Everything below is about that array.
  *
- * `t` and `display` are the identity-ish stand-ins a test wants: `t` returns the key so a beat's
- * provenance is readable in an assertion, and `display` is the no-conversion case.
+ * `t` is the REAL Cantonese dictionary, not a stub returning the key.
+ *
+ * It used to return the key, which read nicely in a failure message but made every assertion about
+ * what a bubble actually SAYS impossible: `fill()` interpolates `{n}` and `{total}` into the
+ * template, and a template that is just its own key has nothing to interpolate. Using the shipped
+ * strings means these tests check the sentence the reader gets, counts and all.
+ *
+ * `display` is the no-conversion case — the script conversion has its own tests.
  */
 const CTX = {
   dialect: "yue" as const,
-  t: (key: UiKey) => key,
+  t: (key: UiKey) => UI.hant[key],
   display: (text: string) => text,
   sheetWord: "出院紙",
 };
@@ -237,47 +243,83 @@ describe("the script 明仔 plays", () => {
   const beats = buildBeats(cards, CTX);
   const at = (key: string) => beats.findIndex((beat) => beat.key === key);
 
-  it("opens with a greeting that names the document and nobody at all", () => {
-    expect(beats[0].key).toBe("hello");
+  /**
+   * The opening says what is ON the page before it says anything from it, and then hands over.
+   *
+   * A reader handed a medical document has no idea how long this will take or what is in it, and
+   * someone who came worried about one specific thing should be able to say so rather than sit
+   * through everything else to reach it. It addresses nobody: the profile holds a relationship
+   * word, never a name.
+   */
+  it("opens with a summary of what is on the page, and offers a choice", () => {
+    expect(beats[0].key).toBe("summary");
     expect(beats[0].origin).toBe("rule");
-    expect(beats[1].key).toBe("intro");
+    expect(beats[0].awaits).toBe(true);
+    expect(beats[0].text).toContain("2");
+    expect(beats[0].text).not.toContain("陳太");
   });
 
-  it("puts every red flag ahead of every other card (constitution II)", () => {
-    const lastWarning = Math.max(at("warn-0"), at("warn-1"));
-    const firstPiece = at("piece-0");
-    expect(lastWarning).toBeGreaterThan(-1);
-    expect(firstPiece).toBeGreaterThan(lastWarning);
-    // And the lead-in that promises them comes before the first of them, not after.
-    expect(at("warn-lead")).toBeLessThan(at("warn-0"));
+  it("puts the red flags ahead of every other card (constitution II)", () => {
+    expect(at("warn")).toBeGreaterThan(-1);
+    expect(at("piece-0")).toBeGreaterThan(at("warn"));
+    // The lead-in that promises them is inside the same bubble, above the signs themselves.
+    const block = beats[at("warn")].text;
+    expect(block.indexOf(CTX.t("brief.warnLead"))).toBe(0);
   });
 
-  it("paints the red flags themselves amber, and nothing else — not even their lead-in", () => {
-    const amber = beats.filter((beat) => beat.tone === "warn").map((beat) => beat.key);
-    expect(amber).toEqual(["warn-0", "warn-1"]);
+  /**
+   * The red flags are ONE amber bubble, not one per sign, and that grouping is not tidiness.
+   * These are the lines that say "stop and go back to hospital"; splitting them across four turns
+   * would make the most urgent thing on the page the slowest to get through, and a reader who
+   * answers twice and puts the phone down would have seen half of them.
+   */
+  it("paints exactly one amber bubble, holding every red flag", () => {
+    const amber = beats.filter((beat) => beat.tone === "warn");
+    expect(amber.map((beat) => beat.key)).toEqual(["warn"]);
+    expect(amber[0].text).toContain("胸口痛");
+    expect(amber[0].text).toContain("氣促");
+    expect(amber[0].sources).toHaveLength(2);
   });
 
-  it("carries each card's own printed line with it (constitution IV)", () => {
+  /**
+   * A bubble is a SECTION now, so a message can quote several lines — the warning block is one
+   * bubble standing on four of them. What must hold is that no printed line is dropped on the way
+   * into the script (constitution IV), so the count is over sources, not over bubbles.
+   */
+  it("carries every card's printed line with it (constitution IV)", () => {
     const quoting = cards.filter((card) => card.source !== null).length;
-    expect(beats.filter((beat) => beat.source !== null)).toHaveLength(quoting);
+    const carried = beats.reduce((total, beat) => total + beat.sources.length, 0);
+    expect(carried).toBe(quoting);
   });
 
-  it("asks teach-back once, and only when there is more to come", () => {
-    expect(beats.filter((beat) => beat.key === "check")).toHaveLength(1);
-    expect(at("check")).toBeGreaterThan(at("warn-1"));
-    expect(at("check")).toBeLessThan(at("piece-0"));
+  /**
+   * The question lives INSIDE the bubble it is about, not in a box of its own. That is what stops
+   * the screen filling with small alternating boxes — content, question, content, question — which
+   * is what it looked like on a real phone and what got it called "shooting out a lot of text".
+   */
+  it("asks inside the red-flag bubble, and only when there is more to come", () => {
+    expect(beats[at("warn")].text).toContain(CTX.t("ask.warn"));
+    expect(beats[at("warn")].awaits).toBe(true);
 
-    // A sheet with red flags and nothing else has nowhere to go after the question, so it is not
-    // asked: 「明唔明？」 immediately before 「講完喇」 is a question with no purpose.
+    // A sheet with red flags and nothing else has nowhere to go after the question, so it does
+    // not hold the floor: 「明唔明？」 immediately before 「講完喇」 asks for nothing.
     const onlyWarnings = buildBeats(buildCards(reading({ warningSigns: [warning("胸口痛")] })), CTX);
-    expect(onlyWarnings.some((beat) => beat.key === "check")).toBe(false);
+    expect(onlyWarnings.find((beat) => beat.key === "warn")?.awaits).toBe(false);
   });
 
-  it("signposts a RUN of one kind of card once, not every card in it", () => {
-    const leads = beats.filter((beat) => beat.lead === "lead.medicine");
-    expect(leads).toHaveLength(1);
-    // Two medicines, one connective: the second one just carries on.
-    expect(beats.filter((beat) => beat.key.startsWith("piece-")).length).toBeGreaterThan(1);
+  /**
+   * A medicine gets a turn of its own, numbered. It is a discrete thing to remember — a name, a
+   * strength, a printed instruction — and five in one bubble is the wall of text this shape exists
+   * to remove. Everything else is one idea, so it stays whole under a single connective.
+   */
+  it("numbers each medicine and gives it its own turn", () => {
+    const meds = beats.filter((beat) => beat.section.startsWith("medicine-"));
+    expect(meds).toHaveLength(2);
+    expect(meds[0].lead).toContain("1");
+    expect(meds[1].lead).toContain("2");
+    // Each stops and asks, except where the closing line follows immediately.
+    expect(meds[0].awaits).toBe(true);
+    expect(meds[0].text).toContain(CTX.t("ask.medicine"));
   });
 
   it("says the page printed no red flags rather than dressing that up as one", () => {
@@ -285,8 +327,10 @@ describe("the script 明仔 plays", () => {
     // The slot is still filled (`noWarnings` takes it) but it is not amber, and the「go now」
     // lead-in is not said over a page that never printed one.
     expect(quiet.some((beat) => beat.tone === "warn")).toBe(false);
-    expect(quiet.some((beat) => beat.key === "warn-lead")).toBe(false);
-    expect(quiet.some((beat) => beat.key === "warn-0")).toBe(true);
+    const block = quiet.find((beat) => beat.key === "warn");
+    expect(block).toBeDefined();
+    // The 「go now」 lead-in is not said over a page that never printed a red flag.
+    expect(block?.text.startsWith(CTX.t("brief.warnLead"))).toBe(false);
   });
 
   it("ends by handing the conversation over, with no button anywhere in it", () => {
@@ -302,7 +346,7 @@ describe("what a beat says out loud, and how long it is given", () => {
     text: "張紙寫住每日兩次。",
     origin: "model",
     tone: null,
-    source: null,
+    sources: [],
     link: null,
     stopped: false,
     unverified: false,
@@ -410,20 +454,36 @@ describe("the script stops and asks at the end of every section", () => {
   );
   const asks = beats.filter((b) => b.awaits);
 
-  it("waits after the red flags, before anything else is said", () => {
+  /**
+   * The FIRST wait is the summary, which offers a choice of where to start; the second is the red
+   * flags. What must hold either way is that nothing from the body of the page is spoken before
+   * the reader has answered at least once.
+   */
+  it("hands the floor over before any of the page's content is read out", () => {
     const firstAsk = beats.findIndex((b) => b.awaits);
-    expect(firstAsk).toBeGreaterThan(0);
-    expect(beats[firstAsk].section).toBe("warn");
-    // Nothing from a later section may be spoken before the reader has answered.
-    expect(beats.slice(0, firstAsk).every((b) => !b.section.startsWith("piece-"))).toBe(true);
+    expect(firstAsk).toBe(0);
+    expect(beats[0].section).toBe("opening");
+
+    const secondAsk = beats.findIndex((b, i) => i > firstAsk && b.awaits);
+    expect(beats[secondAsk].section).toBe("warn");
+    expect(
+      beats.slice(0, secondAsk).every((b) => !b.section.startsWith("medicine-")),
+    ).toBe(true);
   });
 
-  it("asks once per section, not once per card", () => {
-    // Three medicines are one run and get one question between them, not three.
-    const medicineBeats = beats.filter((b) => b.section === "piece-medicine" && !b.awaits);
-    const medicineAsks = beats.filter((b) => b.section === "piece-medicine" && b.awaits);
-    expect(medicineBeats.length).toBeGreaterThan(1);
-    expect(medicineAsks).toHaveLength(1);
+  /**
+   * Every bubble carries its own question — content and ask in ONE box — so the count of bubbles
+   * that wait equals the count of bubbles that have somewhere to go afterwards. The closing line
+   * is the only agent bubble that never waits.
+   */
+  it("puts the question inside the bubble rather than in a box of its own", () => {
+    const asking = beats.filter((b) => b.awaits);
+    expect(asking.length).toBeGreaterThan(1);
+    // No beat exists whose entire job is to ask: every waiting beat also says something.
+    for (const beat of asking) {
+      expect(beat.text.length).toBeGreaterThan(UI.hant["ask.section"].length);
+    }
+    expect(beats[beats.length - 1].awaits).toBe(false);
   });
 
   it("puts the question last in its own section, so a resume lands on the next one", () => {

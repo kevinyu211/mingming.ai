@@ -28,7 +28,7 @@ function message(overrides: Partial<ThreadMessage> = {}): ThreadMessage {
     text: "Metformin 500mg，一粒，一日兩次，同飯一齊食。",
     at: "2026-09-03T02:00:00.000Z",
     origin: "model",
-    source: SOURCE,
+    sources: [SOURCE],
     ...overrides,
   };
 }
@@ -96,19 +96,19 @@ describe("a card that disagrees with its own line points harder at the line", ()
 describe("an outcome styles the message as itself, inside the thread", () => {
   it("gives a refusal its own heading rather than its own screen", () => {
     const html = render(
-      message({ origin: "rule", source: null, outcome: "refused_medicine_change" }),
+      message({ origin: "rule", sources: [], outcome: "refused_medicine_change" }),
     );
     expect(html).toContain(UI.hant["ask.refused"]);
   });
 
   it("gives a not-on-sheet answer the honest heading", () => {
-    const html = render(message({ origin: "rule", source: null, outcome: "not_on_sheet" }));
+    const html = render(message({ origin: "rule", sources: [], outcome: "not_on_sheet" }));
     expect(html).toContain(UI.hant["ask.notOnSheet"]);
   });
 
   it("keeps the crisis referral's resource list", () => {
     const html = render(
-      message({ origin: "rule", source: null, outcome: "crisis_referral", text: "…" }),
+      message({ origin: "rule", sources: [], outcome: "crisis_referral", text: "…" }),
     );
     expect(html).toContain(UI.hant["ask.referral"]);
     expect(html).toContain(UI.hant["ask.referralCall"]);
@@ -120,7 +120,7 @@ describe("an outcome styles the message as itself, inside the thread", () => {
 describe("the reader's own words are their own bubble", () => {
   it("renders a user message with no source, no chip and no track link", () => {
     const html = render(
-      message({ role: "user", origin: "user", text: "覆診要帶咩？", source: null }),
+      message({ role: "user", origin: "user", text: "覆診要帶咩？", sources: [] }),
     );
     expect(html).toContain("覆診要帶咩？");
     expect(html).not.toContain(UI.hant["aiChip"]);

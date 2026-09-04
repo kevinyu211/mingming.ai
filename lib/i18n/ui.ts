@@ -252,6 +252,19 @@ const hant = {
   // the plain word 出院紙 when the page named no hospital. Never a person's name: the profile
   // stores a relationship label and nothing here addresses anybody by name.
   "brief.hello": "你好呀，我係明仔。你張{title}我已經睇咗喇。",
+  // The opening. What is on the page in numbers, then the floor — someone who came worried about
+  // one thing should be able to say so instead of sitting through the rest to reach it.
+  "brief.summary": "你好呀，我係明仔。你張{sheet}我睇完喇，入面有{parts}。想我由邊樣講起？定係我一樣一樣咁講？",
+  "brief.summaryBare": "你好呀，我係明仔。你張{sheet}我睇完喇。我一樣一樣咁講俾你聽。",
+  "count.warnings": "{n}樣要留意嘅情況",
+  "count.medicines": "{n}隻藥",
+  "count.followUp": "{n}次覆診",
+  "count.join": "、",
+  // The question each bubble ends with, inside the same bubble as the thing it is asking about.
+  "ask.warn": "呢幾樣係最緊要嘅。明唔明？",
+  "ask.medicine": "呢隻清唔清楚？清楚我就講下一隻。",
+  "ask.section": "明唔明？想我講埋跟住嗰樣就話我知。",
+  "lead.medicineNth": "第{n}隻藥（總共{total}隻）：",
   "brief.intro": "我一樣一樣咁講俾你聽，唔急。最緊要嘅擺喺最前。",
   "brief.warnLead": "先講最緊要嗰樣。張紙寫住，如果有下面呢啲情況，唔好等，即刻返醫院。",
   // The teach-back beat. It is a question, not a form: there is no 明白 button to press, because
@@ -543,6 +556,16 @@ const hans: Record<UiKey, string> = {
 
   // --- V2 The briefing -----------------------------------------------------
   "brief.hello": "你好，我是明仔。你的{title}我已经看过了。",
+  "brief.summary": "你好，我是明仔。你的{sheet}我看完了，里面有{parts}。想我从哪一样讲起？还是我一样一样地讲？",
+  "brief.summaryBare": "你好，我是明仔。你的{sheet}我看完了。我一样一样地讲给你听。",
+  "count.warnings": "{n}样要留意的情况",
+  "count.medicines": "{n}种药",
+  "count.followUp": "{n}次复诊",
+  "count.join": "、",
+  "ask.warn": "这几样是最要紧的。明白吗？",
+  "ask.medicine": "这一种清楚吗？清楚我就讲下一种。",
+  "ask.section": "明白吗？想我讲下一样就告诉我。",
+  "lead.medicineNth": "第{n}种药（一共{total}种）：",
   "brief.intro": "我一样一样讲给你听，不急。最要紧的放在最前面。",
   "brief.warnLead": "先讲最要紧的。纸上写着，如果有下面这些情况，别等，马上回医院。",
   "brief.checkUnderstand": "讲到这里，明白吗？哪一句不明白，按住下面那个键告诉我，我再讲一次。",
@@ -813,6 +836,16 @@ const en: Record<UiKey, string> = {
 
   // --- V2 The briefing -----------------------------------------------------
   "brief.hello": "Hello — I'm Ming. I've been through your {title}.",
+  "brief.summary": "Hello — I'm Ming. I've read your {sheet}. It has {parts}. Where would you like to start, or shall I go through it one thing at a time?",
+  "brief.summaryBare": "Hello — I'm Ming. I've read your {sheet}. I'll go through it one thing at a time.",
+  "count.warnings": "{n} things to watch for",
+  "count.medicines": "{n} medicines",
+  "count.followUp": "{n} follow-up visit",
+  "count.join": ", ",
+  "ask.warn": "Those are the important ones. Is that clear?",
+  "ask.medicine": "Is that one clear? If it is, I'll go on to the next.",
+  "ask.section": "Is that clear? Tell me when you want the next part.",
+  "lead.medicineNth": "Medicine {n} of {total}:",
   "brief.intro": "I'll take it one piece at a time, no rush. The part that matters most comes first.",
   "brief.warnLead": "Here's the most important part. The sheet says that if any of these happen, don't wait — go straight back to the hospital.",
   "brief.checkUnderstand": "That's the important bit. Is it clear so far? If any of it isn't, hold the bar below and tell me — I'll go over it again.",
