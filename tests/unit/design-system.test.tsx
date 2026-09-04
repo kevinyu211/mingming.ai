@@ -10,11 +10,19 @@
  */
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import ChunkyButton from "@/components/ChunkyButton";
-import Mascot, { type MascotSize, type MascotState } from "@/components/Mascot";
+import Mascot, {
+  MASCOT,
+  MascotDrawing,
+  type MascotSize,
+  type MascotState,
+} from "@/components/Mascot";
 
 const SIZES: MascotSize[] = [30, 44, 64, 92];
-const STATES: MascotState[] = ["idle", "speaking", "listening"];
+const STATES: MascotState[] = ["idle", "speaking", "listening", "greeting"];
+const ANIMALS = ["cat", "panda", "puppy", "rabbit"];
 
 describe("明仔 is decoration, and says so", () => {
   it("is aria-hidden at every size and state", () => {
@@ -26,19 +34,15 @@ describe("明仔 is decoration, and says so", () => {
     }
   });
 
-  it("never labels the drawing", () => {
-    // He always appears next to his name as real text (`mascot.name`). A label on the drawing as
-    // well would make a screen reader say 明仔 twice, and an alt text would make it say it wrong.
+  it("never labels the picture", () => {
+    // He always appears next to his name as real text (`mascot.name`). A label on the picture as
+    // well would make a screen reader say 明仔 twice, and an alt text would make it say it wrong —
+    // so the alt is empty, which is what marks an image as decoration rather than content.
     for (const size of SIZES) {
       const html = renderToStaticMarkup(<Mascot size={size} />);
-      expect(html).not.toMatch(/aria-label|role="img"|title=|alt=/);
-    }
-  });
-
-  it("is drawn, not fetched — no image asset can 404 at the demo", () => {
-    for (const size of SIZES) {
-      const html = renderToStaticMarkup(<Mascot size={size} />);
-      expect(html).not.toMatch(/<img|<image|url\(|\.png|\.svg/);
+      expect(html).not.toMatch(/aria-label|role="img"|title=/);
+      expect(html).toContain('alt=""');
+      expect(html.match(/alt="[^"]/)).toBeNull();
     }
   });
 
@@ -47,14 +51,59 @@ describe("明仔 is decoration, and says so", () => {
       const html = renderToStaticMarkup(<Mascot size={size} />);
       expect(html, `size ${size}`).toContain(`width:${size}px`);
       expect(html).not.toContain("width:0px");
+      // Explicit width and height on the image itself, so a slow mascot never reflows the thread.
+      expect(html, `size ${size}`).toContain(`width="${size}"`);
+      expect(html, `size ${size}`).toContain(`height="${size}"`);
+    }
+  });
+});
+
+describe("明仔's art is shipped, and every state points at a file that exists", () => {
+  it("asks for the chosen animal's file for the state it is in, and asks for it directly", () => {
+    for (const state of STATES) {
+      const html = renderToStaticMarkup(<Mascot size={44} state={state} />);
+      expect(html, state).toContain(`src="/mascot/${MASCOT}/${state}.webp"`);
+      // Straight at the file: /_next/image would re-encode an already-sized WebP, cap the srcset
+      // at 2× on a 3× phone, and hand a non-WebP client a black JPEG square.
+      expect(html, state).not.toContain("_next/image");
     }
   });
 
+  it("ships all four animals, so switching MASCOT is a one-word change", () => {
+    for (const animal of ANIMALS) {
+      for (const state of STATES) {
+        const file = fileURLToPath(
+          new URL(`../../public/mascot/${animal}/${state}.webp`, import.meta.url),
+        );
+        expect(existsSync(file), `${animal}/${state}`).toBe(true);
+      }
+    }
+  });
+
+  it("preloads the two above-the-fold placements and never the repeating avatar", () => {
+    // 64 is the home screen's empty state, 92 the reading screen — one of each per page. 30 is the
+    // thread avatar: twenty identical preload tags for one small file would be twenty mistakes.
+    expect(renderToStaticMarkup(<Mascot size={64} />)).toContain("preload");
+    expect(renderToStaticMarkup(<Mascot size={92} />)).toContain("preload");
+    expect(renderToStaticMarkup(<Mascot size={30} />)).not.toContain("preload");
+    expect(renderToStaticMarkup(<Mascot size={44} />)).not.toContain("preload");
+  });
+
+  it("only animates when it has something to say", () => {
+    const idle = renderToStaticMarkup(<Mascot size={92} state="idle" />);
+    expect(idle).not.toContain("animate-edge");
+    expect(renderToStaticMarkup(<Mascot size={92} state="listening" />)).toContain("animate-edge");
+  });
+});
+
+describe("明仔 still has a drawing to fall back on", () => {
+  // The art can 404 or the network can give up, and a broken-image icon on the demo phone is worse
+  // than anything a few divs cost. `Mascot` swaps to this on the image's own error event.
   it("drops the mouth at 30 and the eye glints below 92, as the canvas does", () => {
     // Small sizes lose detail instead of shrinking it into mud.
-    const at30 = renderToStaticMarkup(<Mascot size={30} state="speaking" />);
-    const at92 = renderToStaticMarkup(<Mascot size={92} state="speaking" />);
-    const at44 = renderToStaticMarkup(<Mascot size={44} />);
+    const at30 = renderToStaticMarkup(<MascotDrawing size={30} state="speaking" />);
+    const at92 = renderToStaticMarkup(<MascotDrawing size={92} state="speaking" />);
+    const at44 = renderToStaticMarkup(<MascotDrawing size={44} state="idle" />);
 
     expect(at30).not.toContain("animate-wv"); // no mouth at 30, so nothing to pulse
     expect(at92).toContain("animate-wv");
@@ -63,11 +112,11 @@ describe("明仔 is decoration, and says so", () => {
     expect(at44).not.toContain("top:41px");
   });
 
-  it("only animates when it has something to say", () => {
-    const idle = renderToStaticMarkup(<Mascot size={92} state="idle" />);
-    expect(idle).not.toContain("animate-wv");
-    expect(idle).not.toContain("animate-edge");
-    expect(renderToStaticMarkup(<Mascot size={92} state="listening" />)).toContain("animate-edge");
+  it("needs no image and no network", () => {
+    for (const size of SIZES) {
+      const html = renderToStaticMarkup(<MascotDrawing size={size} state="idle" />);
+      expect(html, `size ${size}`).not.toMatch(/<img|<image|url\(|\.webp|\.png|\.svg/);
+    }
   });
 });
 
