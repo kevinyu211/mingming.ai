@@ -218,7 +218,9 @@ test.describe("Questions go into the same thread", () => {
 
   test("with no microphone the bar is a keyboard and says so", async ({ page }) => {
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(NO_MIC, { exact: true })).toBeVisible();
+    // The desktop composer carries its own copy of this sentence and is in the DOM at every
+    // width behind `lg:block`. The claim is about what a reader on a phone SEES.
+    await expect(page.getByText(NO_MIC, { exact: true }).filter({ visible: true })).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true }),
     ).toBeVisible();
