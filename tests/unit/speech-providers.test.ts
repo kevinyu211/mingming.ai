@@ -867,6 +867,8 @@ describe("cloud speech: one engine per hold, and never silence", () => {
     upload?: (init: RequestInit, attempt: number) => Promise<Response>;
     /** Pretend this is an iPhone with the Safari 16.4 audio session API. */
     audioSession?: { type: string };
+    /** How long `getUserMedia` takes. A cold page, or a permission prompt, is not instant. */
+    micOpensAfterMs?: number;
   }
 
   interface World {
@@ -877,6 +879,8 @@ describe("cloud speech: one engine per hold, and never silence", () => {
     recorders: Recorders;
     /** How many times a recogniser was constructed. Must be 0 on the recorded path. */
     recognitions: () => number;
+    /** One entry per `onOpen`: capture is genuinely running, and the bar may say so. */
+    opens: number[];
   }
 
   /**
@@ -892,6 +896,7 @@ describe("cloud speech: one engine per hold, and never silence", () => {
     const interims: string[] = [];
     const tracks: FakeTrack[] = [];
     const made: FakeRecorderLike[] = [];
+    const opens: number[] = [];
     let recognitions = 0;
 
     class FakeRecognition {
@@ -961,6 +966,11 @@ describe("cloud speech: one engine per hold, and never silence", () => {
         getUserMedia:
           options.openMic ??
           (async () => {
+            // A cold page and a permission prompt both make this slow, and the hold can be over
+            // before it answers — which is the first hold of every session on a phone.
+            if (options.micOpensAfterMs) {
+              await new Promise((resolve) => setTimeout(resolve, options.micOpensAfterMs));
+            }
             const track: FakeTrack = { stopped: 0 };
             tracks.push(track);
             return { getTracks: () => [{ stop: () => (track.stopped += 1) }] };
@@ -991,6 +1001,7 @@ describe("cloud speech: one engine per hold, and never silence", () => {
       tracks,
       recorders: { made },
       recognitions: () => recognitions,
+      opens,
     };
   }
 
@@ -1016,6 +1027,7 @@ describe("cloud speech: one engine per hold, and never silence", () => {
       cancel: cancel.signal,
       cloudTimeoutMs: options.cloudTimeoutMs,
       onInterim: (text) => w.interims.push(text),
+      onOpen: () => w.opens.push(Date.now()),
     });
     // `ChatBar` awaits `listen` inside a try/catch, so its handler is attached synchronously.
     // Here the wait below comes first, so a rejection would land unhandled and Vitest would report
@@ -1222,6 +1234,54 @@ describe("cloud speech: one engine per hold, and never silence", () => {
       code: "speech_unavailable",
       reason: "no_api",
     });
+  });
+
+  /* ------------------------------------------------- the microphone is not open yet */
+
+  it("only says it is listening once capture is genuinely running", async () => {
+    // The bar goes jade at 220 ms and used to say 「聽住你講…」 there — before `getUserMedia` had
+    // answered. `onOpen` is the moment that sentence becomes true, and it is after the recorder
+    // starts, not after the press.
+    const w = await world();
+    await (await hold(w)).result;
+
+    expect(w.opens).toHaveLength(1);
+    expect(w.recorders.made).toHaveLength(1);
+  });
+
+  it("says the microphone was not open when the hold ends before it opens", async () => {
+    // Measured in real Chrome on a cold page: `getUserMedia` had not resolved by the end of a
+    // 900 ms hold, and nothing was recorded. On a phone that first call is behind a permission
+    // prompt, so this is the FIRST hold of a session — the one that has to not lie.
+    const w = await world({ micOpensAfterMs: 5_000 });
+    const { result } = await hold(w);
+
+    await expect(result).rejects.toMatchObject({
+      code: "speech_unavailable",
+      reason: "provider",
+    });
+    // Never "I didn't catch that": nothing was listening, so there was nothing to catch.
+    expect(w.opens).toEqual([]);
+  }, 10_000);
+
+  it("closes a microphone that opens after nobody is holding the bar", async () => {
+    // The late stream still arrives. An open track with no hold behind it is exactly the leak
+    // that makes the NEXT press do nothing.
+    const w = await world({ micOpensAfterMs: 600 });
+    const { result } = await hold(w);
+    await expect(result).rejects.toMatchObject({ reason: "provider" });
+
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    expect(w.tracks).toHaveLength(1);
+    expect(w.tracks[0].stopped).toBeGreaterThan(0);
+  }, 10_000);
+
+  it("is still instant on the browser engine, which is listening the moment it starts", async () => {
+    const w = await world({ noRecorder: true });
+    await (await hold(w)).result;
+
+    // Synchronous there, so the bar never shows an opening state on a device with no recorder.
+    expect(w.opens).toHaveLength(1);
   });
 
   /* --------------------------------------------------------------- the iOS session */

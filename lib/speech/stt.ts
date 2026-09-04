@@ -30,6 +30,12 @@
  *      `navigator.audioSession.type = "playback"` so the ring/silent switch cannot mute 明明.
  *      That is the right type for speaking and the wrong one for listening, so capture now claims
  *      `play-and-record` for the length of the hold and hands it straight back.
+ *   5. **The bar said 「聽住你講…」 before anything was listening.** Measured in real Chrome on a
+ *      cold page: `getUserMedia` had not resolved by the end of a 900 ms hold. The bar had gone
+ *      jade at 220 ms regardless, so the reader said their whole sentence into a microphone that
+ *      was not open yet, let go, and got 「我冇聽到」. On a phone that first call is behind a
+ *      PERMISSION PROMPT, so this is the first hold of every session. `onOpen` now fires when
+ *      capture is genuinely running, and the bar does not claim to be listening until it does.
  *
  * ── What is guaranteed now ───────────────────────────────────────────────────────────────────
  *
@@ -89,6 +95,14 @@ export interface ListenOptions {
    * nothing to report until it comes back, which is what the bar's 「送緊…」 state is for.
    */
   onInterim?: (text: string) => void;
+  /**
+   * Capture is genuinely running — the recogniser started, or the recorder did.
+   *
+   * Fires at most once, and never after the hold ends. This is what lets the bar wait before it
+   * claims to be listening: `getUserMedia` can outlast a whole hold on a cold page, and on a
+   * phone the first one sits behind a permission prompt.
+   */
+  onOpen?: () => void;
   /** Release-to-send. Abort this to stop capture and transcribe what was recorded. */
   stop?: AbortSignal;
   /** Hard cancel. Abort this to discard the recording; `listen` then resolves with "". */
@@ -144,6 +158,16 @@ const RECORDER_MIME_TYPES = [
   "audio/ogg;codecs=opus",
   "audio/mp4",
 ];
+
+/**
+ * How long after the hold ends the microphone still gets to finish opening.
+ *
+ * Short on purpose. A microphone that opens after the reader has stopped talking has recorded
+ * nothing worth sending, so the only thing this buys is the case where it opened in the same
+ * breath as the release — and past it the honest answer is "it was not open", not "I did not hear
+ * you", which are different sentences and lead to different behaviour from the reader.
+ */
+const MIC_OPEN_GRACE_MS = 300;
 
 /**
  * A hold shorter than this cannot have contained a question, so an empty clip from one is a slip
@@ -352,6 +376,9 @@ async function listenWithBrowser(
   if (!recognition) {
     throw new SpeechUnavailableError("no_api", "This browser has no SpeechRecognition API.");
   }
+  // `start()` has already returned, so this engine is listening now and the bar may say so. It is
+  // synchronous here, which is why the browser path looks exactly as instant as it always did.
+  opts.onOpen?.();
 
   let cancelled = false;
   let releaseHold: () => void = () => {};
@@ -505,8 +532,13 @@ function stopTracks(stream: MediaStream): void {
   }
 }
 
-/** Open the microphone and start recording. Throws `SpeechUnavailableError`. */
-async function startRecording(): Promise<Recording> {
+/**
+ * Open the microphone and start recording. Throws `SpeechUnavailableError`.
+ *
+ * `onOpen` fires once `recorder.start()` has returned, which is the first moment anything in this
+ * app is genuinely capturing audio. Everything before it is the phone deciding.
+ */
+async function startRecording(onOpen?: () => void): Promise<Recording> {
   if (!canRecord()) {
     throw new SpeechUnavailableError("no_api", "This browser cannot record audio.");
   }
@@ -580,6 +612,7 @@ async function startRecording(): Promise<Recording> {
     restoreSession();
     throw new SpeechUnavailableError("no_api", "Recording could not be started.");
   }
+  onOpen?.();
 
   return {
     clip,
@@ -726,16 +759,55 @@ async function listenWithUpload(
     { once: true },
   );
 
-  try {
-    recording = await startRecording();
-    // The hold can end behind the permission prompt — on a first run that prompt IS the first
-    // hold. Nothing may keep the microphone open past it.
-    if (holdOver) recording.stop();
-  } catch (error) {
+  /*
+   * Opening the microphone is RACED against the hold, never simply awaited.
+   *
+   * Measured in real Chrome: on a cold page `getUserMedia` had not resolved by the end of a
+   * 900 ms hold, and on a phone the first one is behind a permission prompt that can sit there
+   * for as long as the reader takes to read it. A bare await here means `listen()` cannot resolve
+   * until the phone feels like it — which is the latched-guard failure all over again — and it
+   * means the reader spends the whole hold talking to a microphone that is not open.
+   */
+  let opened = false;
+  const markOpen = () => {
+    if (holdOver) return;
+    opened = true;
+    opts.onOpen?.();
+  };
+
+  const opening = startRecording(markOpen);
+  // Settled below through `Promise.race`; this only stops Node calling the rejection unhandled in
+  // the window before the race observes it.
+  opening.catch(() => {});
+
+  const started = await Promise.race([
+    opening.then(
+      (ready) => ({ kind: "ready" as const, ready }),
+      (error: unknown) => ({ kind: "failed" as const, error }),
+    ),
+    heldUntilReleased
+      .then(() => sleep(MIC_OPEN_GRACE_MS))
+      .then(() => ({ kind: "too-slow" as const })),
+  ]);
+
+  if (started.kind === "too-slow") {
+    clearTimeout(timer);
+    // The hold is over and the microphone still is not open. Whatever it hands back arrives with
+    // nobody holding anything, so it is closed the moment it appears — an open track nobody is
+    // using is the leak that makes the NEXT hold fail.
+    void opening.then(
+      (ready) => ready.release(),
+      () => {},
+    );
+    if (cancelled) return { text: "" };
+    throw new SpeechUnavailableError("provider", "The microphone did not open in time.");
+  }
+
+  if (started.kind === "failed") {
     clearTimeout(timer);
     const failure =
-      error instanceof SpeechUnavailableError
-        ? error
+      started.error instanceof SpeechUnavailableError
+        ? started.error
         : new SpeechUnavailableError("provider", "The microphone could not be opened.");
 
     // A refusal is the reader's answer and is permanent for this session; anything else is this
@@ -749,6 +821,11 @@ async function listenWithUpload(
     }
     throw failure;
   }
+
+  recording = started.ready;
+  // The hold can end behind the permission prompt — on a first run that prompt IS the first hold.
+  // Nothing may keep the microphone open past it.
+  if (holdOver) recording.stop();
 
   await heldUntilReleased;
   clearTimeout(timer);
@@ -770,10 +847,10 @@ async function listenWithUpload(
   if (cancelled) return { text: "" };
 
   if (clip.size === 0) {
-    // Nothing at all came out of the recorder. From a real hold that means the recorder is not
-    // working on this device, so the session stops using it; from a flick of the thumb it means
-    // exactly what it looks like.
-    if (heldMs >= MEANINGFUL_HOLD_MS) downgradeToBrowser();
+    // Nothing at all came out of the recorder. From a real hold on a microphone that WAS open
+    // that means the recorder is not working on this device, so the session stops using it; from
+    // a flick of the thumb it means exactly what it looks like.
+    if (opened && heldMs >= MEANINGFUL_HOLD_MS) downgradeToBrowser();
     return { text: "" };
   }
 

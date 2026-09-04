@@ -76,6 +76,18 @@
  *
  * And a hold that captured the reader's voice and could not turn it into words now SAYS SO, in
  * the same slot the no-microphone sentence uses. Silence with nothing sent was the bug.
+ *
+ * ## Four phases, because the microphone is not open when the press ends
+ *
+ * The first phase is `opening`, and leaving it out is why the FIRST hold of a session so often
+ * came back empty. The bar went jade at 220 ms and said 「聽住你講…」 — but on a cold page
+ * `getUserMedia` had not resolved by the end of a 900 ms hold (measured in real Chrome), and on a
+ * phone that first call is behind a permission prompt. So the reader said their whole sentence
+ * into a microphone that was not open, let go, and was told 「我冇聽到」.
+ *
+ * The bar tells the truth now: 開緊 until `onOpen` says capture is genuinely running, and only
+ * then 聽住. On the browser engine `onOpen` is synchronous, so that path is as instant as it ever
+ * was and nothing about it changes.
  */
 import {
   useCallback,
@@ -122,11 +134,24 @@ const NOT_SENT: Record<UiLocale, string> = {
   en: "I heard you, but it couldn't go through. Hold and say it again, or type it.",
 };
 
-/** The microphone would not open this time — busy, or taken by something else on the phone. */
+/**
+ * The microphone was not open — busy, taken by something else, or simply not ready in time.
+ *
+ * "Hold it a bit longer" is the advice that actually works, and it is advice 「我冇聽到」 does not
+ * give: that sentence sends somebody back to say the same thing louder into the same closed
+ * microphone, which is the loop this whole file exists to break.
+ */
 const NO_MIC_NOW: Record<UiLocale, string> = {
-  hant: "而家開唔到麥克風。試多次，或者打字問。",
-  hans: "现在开不了麦克风。再试一次，或者打字问。",
-  en: "The microphone wouldn't open just now. Try again, or type it.",
+  hant: "麥克風未開到。撳住耐啲再講一次，或者打字問。",
+  hans: "麦克风还没开。按住久一点再说一次，或者打字问。",
+  en: "The microphone wasn't open. Hold it a little longer and say it again, or type it.",
+};
+
+/** The bar between the press and the microphone actually being open. */
+const OPENING: Record<UiLocale, { label: string; sub: string }> = {
+  hant: { label: "開緊麥克風…", sub: "· 等一等先講" },
+  hans: { label: "正在打开麦克风…", sub: "· 等一下再说" },
+  en: { label: "Opening the microphone…", sub: "· wait a moment" },
 };
 
 /**
@@ -145,10 +170,11 @@ function noteFor(reason: SpeechUnavailableReason): Record<UiLocale, string> | nu
 /**
  * Where a hold is between the press and the transcript.
  *
- * `sending` is the one that did not exist. See the header: without it the bar claimed to be
- * listening through the whole upload and silently swallowed the next press.
+ * `opening` and `sending` are the two that did not exist, and both of them are moments the bar
+ * used to spend claiming to be listening when it was not — once before the microphone was open,
+ * once after it had closed. See the header.
  */
-type Phase = "idle" | "listening" | "sending";
+type Phase = "idle" | "opening" | "listening" | "sending";
 
 /** Past this, the press is a hold and the microphone opens. Under it, it is a tap. */
 const HOLD_MS = 220;
@@ -209,7 +235,9 @@ export default function ChatBar({
   const [failure, setFailure] = useState<Record<UiLocale, string> | null>(null);
   const [draft, setDraft] = useState("");
 
-  const holding = phase === "listening";
+  /** Pressed: jade, waveform, `aria-pressed`. Says nothing about whether anything is listening. */
+  const holding = phase === "opening" || phase === "listening";
+  const opening = phase === "opening";
   const sending = phase === "sending";
   const noMic = !sttAvailable || denied;
   const mode: "voice" | "text" = noMic ? "text" : (chosen ?? "voice");
@@ -255,13 +283,17 @@ export default function ChatBar({
     stopSignal.current = stop;
     cancelSignal.current = cancel;
     setFailure(null);
-    setPhase("listening");
+    // Pressed, not yet listening. `onListening(true)` still fires now rather than on `onOpen`,
+    // because taking the floor is about the reader's intent: 明明 stops talking the moment the
+    // bar is held, not once the phone has finished deciding about the microphone.
+    setPhase("opening");
     onInterim?.("");
     onListening?.(true);
 
     try {
       const { text } = await listen(language, {
         onInterim: (partial) => onInterim?.(partial),
+        onOpen: () => setPhase((current) => (current === "opening" ? "listening" : current)),
         stop: stop.signal,
         cancel: cancel.signal,
       });
@@ -394,16 +426,24 @@ export default function ChatBar({
             `sending` is that second or two, said out loud, with the control genuinely disabled.
           */}
           <span className={`text-[17px] font-bold ${holding ? "text-white" : "text-ink"}`}>
-            {holding ? t("bar.listening") : busy || sending ? t("bar.sending") : t("bar.hold")}
+            {opening
+              ? OPENING[locale].label
+              : holding
+                ? t("bar.listening")
+                : busy || sending
+                  ? t("bar.sending")
+                  : t("bar.hold")}
           </span>
           <span
             className={`text-[13px] whitespace-nowrap ${holding ? "text-white/80" : "text-muted"}`}
           >
-            {holding
-              ? t("bar.listeningSub")
-              : busy || sending
-                ? t("bar.sendingSub")
-                : t("bar.holdSub")}
+            {opening
+              ? OPENING[locale].sub
+              : holding
+                ? t("bar.listeningSub")
+                : busy || sending
+                  ? t("bar.sendingSub")
+                  : t("bar.holdSub")}
           </span>
         </button>
       ) : (
