@@ -133,7 +133,24 @@ async function silenceVoice(page: Page): Promise<void> {
   );
 }
 
-/** Press the bar, hold it long enough to have said something, let go. */
+/**
+ * How long the microphone gets to open before the test calls it a failure.
+ *
+ * Generous on purpose, and the generosity is the finding: opening a real capture device is not
+ * instant, and REPEATED opens are slower still — this suite has caught a third consecutive
+ * `getUserMedia` taking longer than ten seconds on a loaded machine. That is exactly what the
+ * bar's 開緊麥克風… state exists to be honest about, so the test waits for it the way a reader
+ * would rather than asserting a speed the platform does not offer.
+ */
+const MIC_OPEN_TIMEOUT_MS = 30_000;
+
+/**
+ * Press the bar, wait until it is genuinely listening, say something, let go.
+ *
+ * Waiting for 聽住 rather than pressing and counting is the whole point: the bar only says it
+ * after `onOpen`, so a hold driven this way cannot talk into a microphone that is not open — the
+ * failure that made the first hold of a session come back empty.
+ */
 async function holdTheBar(page: Page): Promise<void> {
   const bar = page.getByRole("button", { name: UI.hant["bar.hold"] });
   await expect(bar).toBeEnabled();
@@ -143,7 +160,9 @@ async function holdTheBar(page: Page): Promise<void> {
 
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
-  await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible();
+  await expect(page.getByText(UI.hant["bar.listeningSub"], { exact: true })).toBeVisible({
+    timeout: MIC_OPEN_TIMEOUT_MS,
+  });
   await page.waitForTimeout(HOLD_MS);
   await page.mouse.up();
 }
