@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...except the template, which carries no values and is the only list of what this app needs.
+# README's first step is `cp .env.example .env.local`, and that step cannot work from a clone
+# unless the file is actually in the clone.
+!.env.example
 
 # vercel
 .vercel
