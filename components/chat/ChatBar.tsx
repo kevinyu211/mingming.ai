@@ -291,13 +291,19 @@ export default function ChatBar({
           } ${busy ? "opacity-60" : ""}`}
         >
           {holding ? <HoldingWave /> : <MicMark />}
+          {/*
+            Three states, not two. Between letting go and the question appearing there is a second
+            or two while the recording is transcribed — without a state of its own the bar dropped
+            straight back to 「按住講嘢」 and looked idle while it was in fact working, which reads
+            as "it didn't hear me" and invites a second hold on top of the first.
+          */}
           <span className={`text-[17px] font-bold ${holding ? "text-white" : "text-ink"}`}>
-            {holding ? t("bar.listening") : t("bar.hold")}
+            {holding ? t("bar.listening") : busy ? t("bar.sending") : t("bar.hold")}
           </span>
           <span
             className={`text-[13px] whitespace-nowrap ${holding ? "text-white/80" : "text-muted"}`}
           >
-            {holding ? t("bar.listeningSub") : t("bar.holdSub")}
+            {holding ? t("bar.listeningSub") : busy ? t("bar.sendingSub") : t("bar.holdSub")}
           </span>
         </button>
       ) : (

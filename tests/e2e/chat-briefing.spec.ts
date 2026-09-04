@@ -41,8 +41,13 @@ const BRIEFING_TIMEOUT = 180_000;
 /** Long enough for the script to reach any one beat on a slow machine. */
 const BEAT = 90_000;
 
-/** The greeting, with the plain word for the document in its slot (never the sheet's filed title). */
-const HELLO = UI.hant["brief.hello"].replace("{title}", UI.hant["cards.header"]);
+/**
+ * The opening. Not the old two-beat hello + intro any more: the greeting, the counts of what is on
+ * the page, and the offer of where to start are ONE bubble, so the assertion is on the stable
+ * halves of that sentence rather than on the whole interpolated string.
+ */
+const HELLO_OPENS = UI.hant["brief.summary"].split("{sheet}")[0];
+const OFFERS_A_CHOICE = UI.hant["brief.summary"].split("{parts}")[1];
 
 /**
  * Puts one real JPEG into the hand-off slot, as if the camera had just downscaled a page.
@@ -88,11 +93,11 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     test.setTimeout(BRIEFING_TIMEOUT);
     await page.goto("/chat?sample=hk_en");
 
-    // 1. 明仔 says hello and says what is about to happen. Both are fixed templates.
-    await expect(page.getByText(HELLO, { exact: true })).toBeVisible({ timeout: BEAT });
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    // 1. 明仔 greets, says what is ON the page, and offers a choice of where to start — one
+    //    bubble, all of it fixed template.
+    const opening = page.getByText(HELLO_OPENS, { exact: false });
+    await expect(opening).toBeVisible({ timeout: BEAT });
+    await expect(page.getByText(OFFERS_A_CHOICE, { exact: false })).toBeVisible({ timeout: BEAT });
 
     // 2. The red flags come next — before any medicine, diet or follow-up line, and never behind
     //    a tap (constitution II). The lead-in is the app's own, the bodies are the page's.
@@ -122,7 +127,7 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
 
   test("nothing on the screen is a play button", async ({ page }) => {
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     // The v1 controls are gone: 明仔 speaks on his own and the only voice control is the toggle.
     for (const gone of ["cards.playAll", "cards.play", "cards.stop"] as const) {
@@ -226,7 +231,7 @@ test.describe("Questions go into the same thread", () => {
     const log = await mockAsk(page, "answered");
     await page.goto("/chat?sample=hk_en");
     // Wait for 明仔 to finish his opening line, so the thread order is the one a reader sees.
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
     await field.fill("白色嗰粒係朝早定夜晚食？");
@@ -247,7 +252,7 @@ test.describe("Questions go into the same thread", () => {
   }) => {
     const log = await mockAsk(page, "answered");
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
     await field.fill("可唔可以食多啲？");
@@ -262,7 +267,7 @@ test.describe("Questions go into the same thread", () => {
   test("a crisis question answers from the fixed list and sends nothing", async ({ page }) => {
     const log = await mockAsk(page, "answered");
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     const field = page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true });
     await field.fill("我想死");
@@ -284,7 +289,7 @@ test.describe("The old routes still land somewhere sensible", () => {
     await seedConsent(page);
 
     await page.goto("/read?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible();
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible();
 
     await page.goto("/ask");
     // No sheet parameter this time, but one is already active, so the conversation is still here.
@@ -309,7 +314,7 @@ test.describe("The reading service is down or refuses, on /chat", () => {
     // One tap out (SC-007): the sample is bundled, so it works with the route still failing.
     await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
     await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible({
       timeout: 30_000,
     });
   });
@@ -499,7 +504,7 @@ test.describe("The bar is one control: hold to talk, tap to type", () => {
     await seedConsent(page);
     await stubRecognition(page, "覆診要帶咩？");
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible({
       timeout: BEAT,
     });
 
@@ -530,7 +535,7 @@ test.describe("The bar is one control: hold to talk, tap to type", () => {
     await seedConsent(page);
     await stubRecognition(page, "覆診要帶咩？");
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible({
       timeout: BEAT,
     });
 
@@ -585,7 +590,7 @@ test.describe("The speaker toggle is the only voice control", () => {
     await expect(
       page.getByRole("button", { name: UI.hant["chat.unmuteSpeaker"], exact: true }),
     ).toBeVisible();
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
+    await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible({
       timeout: BEAT,
     });
     // With the sound off the script keeps playing: the red flags still reach the thread.
