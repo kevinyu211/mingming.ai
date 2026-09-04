@@ -222,12 +222,15 @@ const hant = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "讀住你張紙…",
-  // Measured, not hoped for: a clean one-page read ran 27–46 s against the live model
-  // (tests/eval/results.md) and the hard fixtures 45–105 s. The screen used to promise ten
-  // seconds, which is a false promise on the one screen where the user has nothing to do but
-  // wait — and on a stack of six pages it was out by a factor of ten.
-  "reading.meta": "{n} 頁 · 大概半分鐘",
-  "reading.metaLong": "{n} 頁 · 可能要一兩分鐘",
+  // Measured on the deployed app, not locally and not hoped for: three reads of the same
+  // one-page sheet through Vercel took 24 s, 54 s and 57 s. Locally it is 27–46 s
+  // (tests/eval/results.md) and the hard fixtures run 45–105 s. Cards arrive all at once at the
+  // end rather than streaming in, so this screen is what the reader looks at for the whole wait.
+  //
+  // It said 大概十秒 for a long time, which was out by a factor of five on a good run. Better to
+  // over-state and finish early than to leave someone wondering whether it has hung.
+  "reading.meta": "{n} 頁 · 大概一分鐘",
+  "reading.metaLong": "{n} 頁 · 可能要幾分鐘",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "返去記錄",
@@ -488,8 +491,8 @@ const hans: Record<UiKey, string> = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "读着你的纸…",
-  "reading.meta": "{n} 页 · 大概半分钟",
-  "reading.metaLong": "{n} 页 · 可能要一两分钟",
+  "reading.meta": "{n} 页 · 大概一分钟",
+  "reading.metaLong": "{n} 页 · 可能要几分钟",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "回到记录",
@@ -742,8 +745,8 @@ const en: Record<UiKey, string> = {
 
   // --- V2 Reading ----------------------------------------------------------
   "reading.title": "Reading your sheet…",
-  "reading.meta": "{n} pages · about half a minute",
-  "reading.metaLong": "{n} pages · this may take a minute or two",
+  "reading.meta": "{n} pages · about a minute",
+  "reading.metaLong": "{n} pages · this may take a few minutes",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "Back to sheets",

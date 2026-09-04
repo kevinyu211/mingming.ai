@@ -2,10 +2,14 @@
 
 Written for the three-tab app (記錄 · 傾偈 · 跟進). Every label below is the one actually on screen.
 
-**The one number to know cold:** a read takes **about 30 seconds** on a clean single page, longer on
-a stack. That is measured, not hoped for (`tests/eval/results.md`: 27–46 s across the three
-fixtures). Plan the talk around that gap — it is the only dead air in the demo, and section 1:00
-exists to fill it. Do not photograph a sheet and then stand in silence.
+**The one number to know cold:** on the deployed app a read takes **anywhere from 25 seconds to a
+minute**, and the cards all arrive at the end rather than trickling in. Three consecutive reads of
+the same page through Vercel measured **24 s, 54 s and 57 s**. Locally it is faster (27–46 s), so do
+not rehearse against localhost and expect the venue to match.
+
+Plan for a minute and be pleased when it is twenty-five seconds. Section 1:00 exists to fill that
+gap and can be cut short the moment 明仔 starts talking — never photograph a sheet and then stand
+in silence.
 
 ---
 
@@ -55,9 +59,10 @@ Tap **講俾我聽**.
 
 ---
 
-## 1:00 — Talk over the read (30 s, and this is the dead-air slot)
+## 1:00 — Talk over the read (up to 60 s — the dead-air slot)
 
-The screen says 讀住你張紙… and about half a minute. Use it:
+The screen says 讀住你張紙… and about a minute. Use it — and if the read finishes early, stop
+mid-sentence and let 明仔 talk. He is the demo; this is the filler.
 
 > "Two things here are the model, and only two: reading a page of clinical abbreviations, and
 > writing the sentence a daughter would say to her mother in Cantonese.
