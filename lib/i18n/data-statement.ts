@@ -30,7 +30,7 @@ export interface DataStatementProviders {
  * wrong, and a reader told only about OpenAI would be told half the truth.
  */
 export const DATA_STATEMENT_PROVIDERS: DataStatementProviders = {
-  model: "Anthropic Claude (US)",
+  model: "Google Gemini via Vercel AI Gateway (US)",
   voice: "MiniMax (api.minimax.io)",
   transcription: "OpenAI (api.openai.com)",
 };

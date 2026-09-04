@@ -1,9 +1,11 @@
 /**
- * Unit tests for the model provider adapter. The Anthropic SDK is mocked, so nothing here reaches
- * the network and no API key is needed: `messages.create` / `messages.stream` return canned
- * responses and the tests assert on the request that was built and on how each response is handled.
+ * Unit tests for the model provider adapter. The AI SDK entry points (`generateText` /
+ * `streamText`) are injected through `GatewayProvider`'s test seams, so nothing here reaches the
+ * Gateway and no token is needed: the fakes return canned results and the tests assert on the
+ * request that was built and on how each result is handled.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { APICallError, RetryError, type generateText, type streamText } from "ai";
 
 import {
   ASK_SYSTEM,
@@ -18,38 +20,20 @@ import {
   type Card,
   type SheetReading,
 } from "@/lib/model/schemas";
-
-const { createMock, streamMock } = vi.hoisted(() => ({
-  createMock: vi.fn(),
-  streamMock: vi.fn(),
-}));
-
-vi.mock("@anthropic-ai/sdk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@anthropic-ai/sdk")>();
-  class MockAnthropic {
-    beta = { messages: { create: createMock, stream: streamMock } };
-  }
-  // Keep the real error classes so `instanceof` narrowing in client.ts is exercised for real.
-  return { ...actual, default: MockAnthropic };
-});
-
-const {
-  ASK_OUTPUT_FORMAT,
-  AnthropicProvider,
+import {
+  ASK_TIMEOUT_MS,
+  DEFAULT_MODEL,
+  GatewayProvider,
   MAX_TOKENS,
   ModelOutputError,
   ModelRefusalError,
   ModelRequestError,
   ModelUnavailableError,
-  PHRASE_OUTPUT_FORMAT,
-  READ_EFFORT,
-  READ_OUTPUT_FORMAT,
-  REFUSAL_FALLBACK_BETA,
+  READ_TIMEOUT_MS,
   getModelProvider,
-} = await import("@/lib/model/client");
-const { APIConnectionError, BadRequestError, InternalServerError, RateLimitError } = await import(
-  "@anthropic-ai/sdk"
-);
+  toModelError,
+  toUserContent,
+} from "@/lib/model/client";
 
 /* -------------------------------------------------------------------------- */
 /* Canned data                                                                */
@@ -107,34 +91,29 @@ const CARDS: Card[] = [
 ];
 
 const USAGE = {
-  input_tokens: 412,
-  output_tokens: 1180,
-  cache_read_input_tokens: 2048,
-  cache_creation_input_tokens: 96,
+  inputTokens: 412,
+  outputTokens: 1180,
+  totalTokens: 1592,
+  inputTokenDetails: { noCacheTokens: 412, cacheReadTokens: 2048, cacheWriteTokens: 96 },
+  outputTokenDetails: { textTokens: 1180, reasoningTokens: 0 },
 };
 
-interface CannedMessage {
-  id: string;
-  type: string;
-  role: string;
-  model: string;
-  content: Array<{ type: string; text?: string }>;
-  stop_reason: string;
-  stop_sequence: null;
-  stop_details?: { category: string; explanation: string };
+type FinishReason = Awaited<ReturnType<typeof generateText>>["finishReason"];
+
+/** The subset of a `generateText` result that `client.ts` reads. */
+interface CannedResult {
+  text: string;
+  finishReason: FinishReason;
   usage: typeof USAGE;
+  response: { modelId: string };
 }
 
-function canned(overrides: Partial<CannedMessage> = {}): CannedMessage {
+function canned(overrides: Partial<CannedResult> = {}): CannedResult {
   return {
-    id: "msg_test",
-    type: "message",
-    role: "assistant",
-    model: "claude-opus-5",
-    content: [{ type: "text", text: JSON.stringify(READING) }],
-    stop_reason: "end_turn",
-    stop_sequence: null,
+    text: JSON.stringify(READING),
+    finishReason: "stop",
     usage: { ...USAGE },
+    response: { modelId: "google/gemini-3.8-flash" },
     ...overrides,
   };
 }
@@ -143,51 +122,100 @@ function canned(overrides: Partial<CannedMessage> = {}): CannedMessage {
 /* Request inspection helpers                                                 */
 /* -------------------------------------------------------------------------- */
 
-interface ContentBlock {
+interface Part {
   type: string;
   text?: string;
-  source?: { type: string; media_type: string; data: string };
+  image?: string;
+  mediaType?: string;
+}
+
+interface RecordedMessage {
+  role: string;
+  content: string | Part[];
+  providerOptions?: { anthropic?: { cacheControl?: { type: string } } };
 }
 
 interface RecordedRequest {
   model: string;
-  max_tokens: number;
-  betas: string[];
-  fallbacks: unknown;
-  system: Array<{ type: string; text: string; cache_control?: { type: string } }>;
-  messages: Array<{ role: string; content: ContentBlock[] }>;
-  output_config: {
-    effort: string;
-    format: { type: string; schema: Record<string, unknown> };
-  };
+  messages: RecordedMessage[];
+  output: { responseFormat: unknown };
+  maxOutputTokens: number;
+  maxRetries: number;
+  timeout: { totalMs: number };
+  providerOptions: { gateway: { tags: string[] } };
+  onError?: (event: { error: unknown }) => void;
 }
 
-function lastRequest(mock: typeof createMock): RecordedRequest {
+const generateMock = vi.fn();
+const streamMock = vi.fn();
+
+/** A provider wired to the fakes, so no test can reach the real SDK. */
+function provider(options: { modelRead?: string; modelAsk?: string } = {}) {
+  return new GatewayProvider({
+    ...options,
+    generate: generateMock as unknown as typeof generateText,
+    stream: streamMock as unknown as typeof streamText,
+  });
+}
+
+function lastRequest(mock: typeof generateMock): RecordedRequest {
   const { calls } = mock.mock;
   expect(calls.length).toBeGreaterThan(0);
   return calls[calls.length - 1][0] as RecordedRequest;
 }
 
-function fakeStream(message: CannedMessage, deltas: string[] = []) {
-  const handlers = new Map<string, Array<(value: string) => void>>();
+function systemMessage(request: RecordedRequest): RecordedMessage {
+  const [system] = request.messages;
+  expect(system.role).toBe("system");
+  return system;
+}
+
+function userParts(request: RecordedRequest): Part[] {
+  const user = request.messages[1];
+  expect(user.role).toBe("user");
+  expect(Array.isArray(user.content)).toBe(true);
+  return user.content as Part[];
+}
+
+/** The JSON schema the SDK will send, out of the `Output.object()` in the request. */
+async function wireSchema(request: RecordedRequest) {
+  const format = (await request.output.responseFormat) as {
+    type: string;
+    schema: { required: string[]; additionalProperties: boolean; properties: Record<string, unknown> };
+  };
+  expect(format.type).toBe("json");
+  return format.schema;
+}
+
+/** What `streamText` returns, reduced to the fields `client.ts` reads. */
+function fakeStream(result: CannedResult, deltas: string[] = []) {
   return {
-    on(event: string, cb: (value: string) => void) {
-      const list = handlers.get(event) ?? [];
-      list.push(cb);
-      handlers.set(event, list);
-      return this;
-    },
-    async finalMessage() {
-      for (const cb of handlers.get("text") ?? []) {
-        for (const delta of deltas) cb(delta);
-      }
-      return message;
-    },
+    textStream: (async function* () {
+      for (const delta of deltas) yield delta;
+    })(),
+    finishReason: Promise.resolve(result.finishReason),
+    usage: Promise.resolve(result.usage),
+    response: Promise.resolve(result.response),
   };
 }
 
+async function failure(promise: Promise<unknown>): Promise<unknown> {
+  return promise.then(() => null).catch((e: unknown) => e);
+}
+
+function apiError(statusCode: number | undefined) {
+  return new APICallError({
+    message: "upstream said: Amlodipine 5mg 1 tab daily",
+    url: "https://ai-gateway.vercel.sh/v1/ai/language-model",
+    requestBodyValues: { images: ["AAAAJPEGBYTES"] },
+    statusCode,
+    responseBody: "Amlodipine 5mg 1 tab daily",
+    isRetryable: statusCode === undefined || statusCode === 429 || statusCode >= 500,
+  });
+}
+
 beforeEach(() => {
-  createMock.mockReset();
+  generateMock.mockReset();
   streamMock.mockReset();
   delete process.env.MODEL_READ;
   delete process.env.MODEL_ASK;
@@ -200,64 +228,62 @@ afterEach(() => {
 
 /* -------------------------------------------------------------------------- */
 
-describe("AnthropicProvider.readSheet request", () => {
-  it("uses MODEL_READ from the environment, defaulting to claude-opus-5", async () => {
-    createMock.mockResolvedValue(canned());
+describe("GatewayProvider.readSheet request", () => {
+  it("uses MODEL_READ from the environment, defaulting to google/gemini-3.8-flash", async () => {
+    generateMock.mockResolvedValue(canned());
 
-    await new AnthropicProvider().readSheet(IMAGES);
-    expect(lastRequest(createMock).model).toBe("claude-opus-5");
+    await provider().readSheet(IMAGES);
+    expect(lastRequest(generateMock).model).toBe(DEFAULT_MODEL);
+    expect(DEFAULT_MODEL).toBe("google/gemini-3.8-flash");
 
-    process.env.MODEL_READ = "claude-sonnet-5";
-    await new AnthropicProvider().readSheet(IMAGES);
-    expect(lastRequest(createMock).model).toBe("claude-sonnet-5");
+    process.env.MODEL_READ = "anthropic/claude-sonnet-5";
+    await provider().readSheet(IMAGES);
+    expect(lastRequest(generateMock).model).toBe("anthropic/claude-sonnet-5");
+
+    // Blank means unset, not a model called "".
+    process.env.MODEL_READ = "   ";
+    await provider().readSheet(IMAGES);
+    expect(lastRequest(generateMock).model).toBe(DEFAULT_MODEL);
   });
 
-  it("sends one frozen system block carrying the cache breakpoint", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
+  it("sends one frozen system message first, carrying the Anthropic cache breakpoint", async () => {
+    generateMock.mockResolvedValue(canned());
+    await provider().readSheet(IMAGES);
 
-    const { system } = lastRequest(createMock);
-    expect(system).toHaveLength(1);
-    expect(system[0].type).toBe("text");
-    expect(system[0].text).toBe(READ_SYSTEM);
-    expect(system[0].cache_control).toEqual({ type: "ephemeral" });
+    const request = lastRequest(generateMock);
+    expect(request.messages).toHaveLength(2);
+    const system = systemMessage(request);
+    expect(system.content).toBe(READ_SYSTEM);
+    expect(system.providerOptions?.anthropic?.cacheControl).toEqual({ type: "ephemeral" });
   });
 
   it("keeps the system prefix byte-identical across calls", async () => {
-    createMock.mockResolvedValue(canned());
-    const provider = new AnthropicProvider();
-    await provider.readSheet(IMAGES);
-    const first = lastRequest(createMock).system[0].text;
-    await provider.readSheet([IMAGES[0]]);
-    expect(lastRequest(createMock).system[0].text).toBe(first);
+    generateMock.mockResolvedValue(canned());
+    const p = provider();
+    await p.readSheet(IMAGES);
+    const first = systemMessage(lastRequest(generateMock)).content;
+    await p.readSheet([IMAGES[0]]);
+    expect(systemMessage(lastRequest(generateMock)).content).toBe(first);
   });
 
-  // `medium`, chosen by measurement rather than instinct: it read the three fixtures exactly as
-  // `high` did and cut roughly a third off the wait (tests/eval/results.md, 2026-09-03).
-  it("sets the read effort and passes the sheet schema in output_config.format", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
+  it("asks for structured output from the sheet schema and caps the reply", async () => {
+    generateMock.mockResolvedValue(canned());
+    await provider().readSheet(IMAGES);
 
-    const { output_config } = lastRequest(createMock);
-    expect(output_config.effort).toBe(READ_EFFORT);
-    expect(output_config.format.type).toBe("json_schema");
-    expect(output_config.format.schema).toEqual(READ_OUTPUT_FORMAT.schema);
-  });
+    const request = lastRequest(generateMock);
+    expect(request.maxOutputTokens).toBe(MAX_TOKENS);
+    expect(MAX_TOKENS).toBe(16000);
+    expect(request.maxRetries).toBe(2);
+    expect(request.timeout).toEqual({ totalMs: READ_TIMEOUT_MS });
+    expect(request.providerOptions).toEqual({ gateway: { tags: ["route:read"] } });
 
-  it("sends a schema describing the same shape as the published contract", () => {
-    // The wire schema comes from the SDK's own zod helper (it normalises the document for the
-    // structured-outputs endpoint). It must still describe what contracts/sheet-reading.schema.json
-    // and lib/domain's sheetReadingJsonSchema() describe.
+    // The wire schema must still describe what contracts/sheet-reading.schema.json and
+    // lib/domain's sheetReadingJsonSchema() describe.
     const published = sheetReadingJsonSchema() as {
       required: string[];
-      additionalProperties: boolean;
       properties: Record<string, unknown>;
     };
-    const wire = READ_OUTPUT_FORMAT.schema as {
-      required: string[];
-      additionalProperties: boolean;
-      properties: Record<string, unknown>;
-    };
+    const wire = await wireSchema(request);
     expect(wire.required).toEqual(published.required);
     expect(Object.keys(wire.properties).sort()).toEqual(Object.keys(published.properties).sort());
     expect(wire.additionalProperties).toBe(false);
@@ -265,38 +291,42 @@ describe("AnthropicProvider.readSheet request", () => {
     expect(JSON.stringify(wire)).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
   });
 
-  it("opts into the server-side refusal fallback with the matching beta header", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
+  it("puts every image part before the text instruction", async () => {
+    generateMock.mockResolvedValue(canned());
+    await provider().readSheet(IMAGES);
 
-    const request = lastRequest(createMock);
-    expect(request.betas).toEqual([REFUSAL_FALLBACK_BETA]);
-    expect(REFUSAL_FALLBACK_BETA).toBe("server-side-fallback-2026-07-01");
-    expect(request.fallbacks).toBe("default");
-    expect(request.max_tokens).toBe(MAX_TOKENS);
-    expect(MAX_TOKENS).toBe(16000);
+    const parts = userParts(lastRequest(generateMock));
+    expect(parts.map((part) => part.type)).toEqual(["image", "image", "text"]);
+    expect(parts[0]).toEqual({ type: "image", image: "AAAAJPEGBYTES", mediaType: "image/jpeg" });
+    expect(parts[1].mediaType).toBe("image/png");
+    expect(parts[2].text).toContain("page 1");
+  });
+});
+
+describe("toUserContent", () => {
+  it("converts text and base64 image blocks into SDK parts", () => {
+    expect(
+      toUserContent([
+        { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAAPNGBYTES" } },
+        { type: "text", text: "Read page 1." },
+      ]),
+    ).toEqual([
+      { type: "image", image: "AAAAPNGBYTES", mediaType: "image/png" },
+      { type: "text", text: "Read page 1." },
+    ]);
   });
 
-  it("leaves thinking at the adaptive default", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
-    expect(lastRequest(createMock)).not.toHaveProperty("thinking");
-  });
-
-  it("puts every image block before the text instruction", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
-
-    const [{ role, content }] = lastRequest(createMock).messages;
-    expect(role).toBe("user");
-    expect(content.map((block) => block.type)).toEqual(["image", "image", "text"]);
-    expect(content[0].source).toEqual({
-      type: "base64",
-      media_type: "image/jpeg",
-      data: "AAAAJPEGBYTES",
-    });
-    expect(content[1].source?.media_type).toBe("image/png");
-    expect(content[2].text).toContain("page 1");
+  it("rejects a block shape this app never builds, without echoing it", () => {
+    let thrown: unknown = null;
+    try {
+      toUserContent([
+        { type: "image", source: { type: "url", url: "https://example.invalid/AAAAJPEGBYTES" } },
+      ]);
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).toBeInstanceOf(ModelRequestError);
+    expect((thrown as Error).message).not.toContain("AAAAJPEGBYTES");
   });
 });
 
@@ -315,60 +345,49 @@ describe("no profile-like data ever leaves the server", () => {
     "facts",
   ];
 
-  // `messages` is the only part of the request built from caller data: `system` is asserted
-  // byte-equal to the frozen constant elsewhere, and `output_config.format` is the derived schema.
+  // The user message is the only part of the request built from caller data: the system message
+  // is asserted byte-equal to the frozen constant elsewhere (and the frozen prompt itself talks
+  // about "labels" and "plans"), and `output` is the derived schema.
   it("omits them from the read request", async () => {
-    createMock.mockResolvedValue(canned());
-    await new AnthropicProvider().readSheet(IMAGES);
-    const body = JSON.stringify(lastRequest(createMock).messages);
+    generateMock.mockResolvedValue(canned());
+    await provider().readSheet(IMAGES);
+    const body = JSON.stringify(userParts(lastRequest(generateMock)));
     for (const field of FORBIDDEN) expect(body).not.toContain(field);
   });
 
   it("omits them from the ask request, including the cards' own facts", async () => {
-    createMock.mockResolvedValue(
+    generateMock.mockResolvedValue(
       canned({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({
-              kind: "sheet" as const,
-              citedCardIds: ["medicine-1"],
-              answer: SPEAKABLE,
-            }),
-          },
-        ],
+        text: JSON.stringify({
+          kind: "sheet" as const,
+          citedCardIds: ["medicine-1"],
+          answer: SPEAKABLE,
+        }),
       }),
     );
-    await new AnthropicProvider().answer({
+    await provider().answer({
       cards: CARDS,
       question: "白色嗰粒係朝早定夜晚食？",
       inputLanguage: "yue",
       dialect: "yue",
     });
 
-    const body = JSON.stringify(lastRequest(createMock).messages);
+    const body = JSON.stringify(userParts(lastRequest(generateMock)));
     for (const field of FORBIDDEN) expect(body).not.toContain(field);
     // The card body and its source still travel; only the extra fields are dropped.
     expect(body).toContain("medicine-1");
   });
 });
 
-describe("AnthropicProvider.answer and .phrase", () => {
-  it("use MODEL_ASK at medium effort with their own schemas", async () => {
-    process.env.MODEL_ASK = "claude-opus-5";
-    createMock.mockResolvedValue(
-      canned({
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ kind: "none" as const, citedCardIds: [], answer: null }),
-          },
-        ],
-      }),
+describe("GatewayProvider.answer and .phrase", () => {
+  it("use MODEL_ASK with their own schemas, tags and timeout", async () => {
+    process.env.MODEL_ASK = "openai/gpt-5.6-terra";
+    generateMock.mockResolvedValue(
+      canned({ text: JSON.stringify({ kind: "none" as const, citedCardIds: [], answer: null }) }),
     );
 
-    const provider = new AnthropicProvider();
-    const answered = await provider.answer({
+    const p = provider();
+    const answered = await p.answer({
       cards: CARDS,
       question: "幾時覆診？",
       inputLanguage: "yue",
@@ -376,76 +395,92 @@ describe("AnthropicProvider.answer and .phrase", () => {
     });
     expect(answered.result.kind).toBe("none");
 
-    let request = lastRequest(createMock);
-    expect(request.model).toBe("claude-opus-5");
-    expect(request.output_config.effort).toBe("medium");
-    expect(request.output_config.format.schema).toEqual(ASK_OUTPUT_FORMAT.schema);
-    expect(Object.keys((askResultJsonSchema() as { properties: object }).properties).sort()).toEqual(
-      ["answer", "citedCardIds", "kind"],
+    let request = lastRequest(generateMock);
+    expect(request.model).toBe("openai/gpt-5.6-terra");
+    expect(request.timeout).toEqual({ totalMs: ASK_TIMEOUT_MS });
+    expect(request.providerOptions.gateway.tags).toEqual(["route:ask"]);
+    expect(Object.keys((await wireSchema(request)).properties).sort()).toEqual(
+      Object.keys((askResultJsonSchema() as { properties: object }).properties).sort(),
     );
-    expect(request.system[0].text).toBe(ASK_SYSTEM);
-    expect(request.system[0].cache_control).toEqual({ type: "ephemeral" });
+    expect(systemMessage(request).content).toBe(ASK_SYSTEM);
+    expect(systemMessage(request).providerOptions?.anthropic?.cacheControl).toEqual({
+      type: "ephemeral",
+    });
 
-    createMock.mockResolvedValue(
-      canned({ content: [{ type: "text", text: JSON.stringify({ spoken: SPEAKABLE }) }] }),
-    );
-    const phrased = await provider.phrase({
+    generateMock.mockResolvedValue(canned({ text: JSON.stringify({ spoken: SPEAKABLE }) }));
+    const phrased = await p.phrase({
       cardType: "medicine",
       facts: { name: "Amlodipine", strength: "5mg", frequency: null },
       source: SOURCE,
-      avoid: ["治療"],
+      avoid: ["治病"],
       dialect: "both",
     });
     expect(phrased.result.spoken).toEqual(SPEAKABLE);
 
-    request = lastRequest(createMock);
-    expect(request.output_config.effort).toBe("medium");
-    expect(request.output_config.format.schema).toEqual(PHRASE_OUTPUT_FORMAT.schema);
-    expect(
+    request = lastRequest(generateMock);
+    expect(request.model).toBe("openai/gpt-5.6-terra");
+    expect(request.timeout).toEqual({ totalMs: ASK_TIMEOUT_MS });
+    expect(request.providerOptions.gateway.tags).toEqual(["route:phrase"]);
+    expect(Object.keys((await wireSchema(request)).properties)).toEqual(
       Object.keys((phraseResultJsonSchema() as { properties: object }).properties),
-    ).toEqual(["spoken"]);
-    expect(request.system[0].text).toBe(PHRASE_SYSTEM);
+    );
+    expect(systemMessage(request).content).toBe(PHRASE_SYSTEM);
+  });
+
+  it("constructor options win over the environment", async () => {
+    process.env.MODEL_READ = "anthropic/claude-sonnet-5";
+    process.env.MODEL_ASK = "anthropic/claude-sonnet-5";
+    const p = provider({ modelRead: "google/gemini-3.8-pro", modelAsk: "openai/gpt-5.6-terra" });
+    expect(p.modelRead).toBe("google/gemini-3.8-pro");
+    expect(p.modelAsk).toBe("openai/gpt-5.6-terra");
   });
 });
 
 describe("response handling", () => {
   it("returns the parsed reading for a valid response", async () => {
-    createMock.mockResolvedValue(canned());
-    const { reading } = await new AnthropicProvider().readSheet(IMAGES);
+    generateMock.mockResolvedValue(canned());
+    const { reading } = await provider().readSheet(IMAGES);
     expect(reading).toEqual(READING);
   });
 
-  it("populates the UsageSummary from usage", async () => {
-    createMock.mockResolvedValue(canned());
-    const { usage } = await new AnthropicProvider().readSheet(IMAGES);
+  it("populates the UsageSummary from usage and the serving model id", async () => {
+    generateMock.mockResolvedValue(canned({ response: { modelId: "gemini-3.8-flash-002" } }));
+    const { usage } = await provider().readSheet(IMAGES);
     expect(usage.inputTokens).toBe(412);
     expect(usage.outputTokens).toBe(1180);
     expect(usage.cacheReadInputTokens).toBe(2048);
     expect(usage.cacheCreationInputTokens).toBe(96);
-    expect(usage.model).toBe("claude-opus-5");
+    expect(usage.model).toBe("gemini-3.8-flash-002");
     expect(usage.ms).toBeGreaterThanOrEqual(0);
   });
 
-  it("throws ModelRefusalError on stop_reason refusal, before reading content", async () => {
-    createMock.mockResolvedValue(
-      canned({
-        stop_reason: "refusal",
-        stop_details: { category: "cyber", explanation: "declined" },
-        content: [],
-      }),
-    );
+  it("falls back to the requested model and zero counts when the gateway reports none", async () => {
+    generateMock.mockResolvedValue({
+      text: JSON.stringify(READING),
+      finishReason: "stop",
+      usage: undefined,
+      response: undefined,
+    });
+    const { usage } = await provider().readSheet(IMAGES);
+    expect(usage.model).toBe(DEFAULT_MODEL);
+    expect(usage.inputTokens).toBe(0);
+    expect(usage.cacheReadInputTokens).toBe(0);
+  });
 
-    const error = await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e);
+  it("throws ModelRefusalError on a content-filter finish, before reading the text", async () => {
+    generateMock.mockResolvedValue(canned({ finishReason: "content-filter", text: "" }));
+
+    const error = await failure(provider().readSheet(IMAGES));
     expect(error).toBeInstanceOf(ModelRefusalError);
-    expect((error as InstanceType<typeof ModelRefusalError>).category).toBe("cyber");
+    expect((error as InstanceType<typeof ModelRefusalError>).code).toBe("refusal");
+    expect((error as InstanceType<typeof ModelRefusalError>).category).toBeNull();
   });
 
   it("throws ModelOutputError when the body is not JSON", async () => {
-    createMock.mockResolvedValue(canned({ content: [{ type: "text", text: "sorry, not JSON" }] }));
-    await expect(new AnthropicProvider().readSheet(IMAGES)).rejects.toBeInstanceOf(ModelOutputError);
+    generateMock.mockResolvedValue(canned({ text: "sorry, not JSON" }));
+    const error = await failure(provider().readSheet(IMAGES));
+    expect(error).toBeInstanceOf(ModelOutputError);
+    expect((error as InstanceType<typeof ModelOutputError>).code).toBe("invalid_output:invalid_json");
   });
 
   it("throws ModelOutputError with the Zod issues when the JSON fails the schema", async () => {
@@ -453,14 +488,11 @@ describe("response handling", () => {
       ...READING,
       medicines: [{ ...READING.medicines[0], name: 42, unexpected: "field" }],
     };
-    createMock.mockResolvedValue(
-      canned({ content: [{ type: "text", text: JSON.stringify(broken) }] }),
-    );
+    generateMock.mockResolvedValue(canned({ text: JSON.stringify(broken) }));
 
-    const error = (await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e)) as InstanceType<typeof ModelOutputError>;
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelOutputError
+    >;
 
     expect(error).toBeInstanceOf(ModelOutputError);
     expect(error.code).toBe("invalid_output:schema");
@@ -473,94 +505,162 @@ describe("response handling", () => {
   });
 
   it("throws ModelOutputError when the response was truncated", async () => {
-    createMock.mockResolvedValue(canned({ stop_reason: "max_tokens" }));
-    const error = (await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e)) as InstanceType<typeof ModelOutputError>;
+    generateMock.mockResolvedValue(canned({ finishReason: "length" }));
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelOutputError
+    >;
     expect(error).toBeInstanceOf(ModelOutputError);
     expect(error.code).toBe("invalid_output:truncated");
   });
 
+  it("throws ModelUnavailableError when the provider reports an error finish", async () => {
+    generateMock.mockResolvedValue(canned({ finishReason: "error" }));
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelUnavailableError
+    >;
+    expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error.status).toBeNull();
+  });
+
   it("never leaks request or response text through an error message", async () => {
-    createMock.mockResolvedValue(
-      canned({ content: [{ type: "text", text: "Amlodipine 5mg 1 tab daily" }] }),
-    );
-    const error = (await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e)) as Error;
+    generateMock.mockResolvedValue(canned({ text: "Amlodipine 5mg 1 tab daily" }));
+    const error = (await failure(provider().readSheet(IMAGES))) as Error;
     expect(error.message).not.toContain("Amlodipine");
     expect(error.message).not.toContain("AAAAJPEGBYTES");
   });
 });
 
 describe("transport errors", () => {
-  const headers = new Headers();
-
   it.each([
-    ["connection", new APIConnectionError({ message: "socket hang up" }), null],
-    ["429", new RateLimitError(429, undefined, "slow down", headers), 429],
-    ["5xx", new InternalServerError(529, undefined, "overloaded", headers), 529],
+    ["connection", apiError(undefined), null],
+    ["429", apiError(429), 429],
+    ["5xx", apiError(529), 529],
+    ["non-SDK", new Error("socket hang up: AAAAJPEGBYTES"), null],
   ])("maps a %s failure to ModelUnavailableError", async (_label, thrown, status) => {
-    createMock.mockRejectedValue(thrown);
-    const error = (await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e)) as InstanceType<typeof ModelUnavailableError>;
+    generateMock.mockRejectedValue(thrown);
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelUnavailableError
+    >;
     expect(error).toBeInstanceOf(ModelUnavailableError);
     expect(error.status).toBe(status);
+    expect(error.message).not.toContain("Amlodipine");
+    expect(error.message).not.toContain("AAAAJPEGBYTES");
   });
 
   it("maps a 4xx to ModelRequestError", async () => {
-    createMock.mockRejectedValue(new BadRequestError(400, undefined, "bad request", headers));
-    const error = (await new AnthropicProvider()
-      .readSheet(IMAGES)
-      .then(() => null)
-      .catch((e: unknown) => e)) as InstanceType<typeof ModelRequestError>;
+    generateMock.mockRejectedValue(apiError(400));
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelRequestError
+    >;
     expect(error).toBeInstanceOf(ModelRequestError);
     expect(error.status).toBe(400);
+    expect(error.message).not.toContain("Amlodipine");
+  });
+
+  it("unwraps the last attempt from the SDK's RetryError", async () => {
+    generateMock.mockRejectedValue(
+      new RetryError({
+        message: "Failed after 3 attempts",
+        reason: "maxRetriesExceeded",
+        errors: [apiError(500), apiError(503), apiError(429)],
+      }),
+    );
+    const error = (await failure(provider().readSheet(IMAGES))) as InstanceType<
+      typeof ModelUnavailableError
+    >;
+    expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error.status).toBe(429);
+  });
+
+  it("toModelError passes its own errors through untouched", () => {
+    const refusal = new ModelRefusalError("cyber");
+    expect(toModelError(refusal)).toBe(refusal);
+    expect(toModelError("not even an Error")).toBeInstanceOf(ModelUnavailableError);
   });
 });
 
 describe("readSheetStream", () => {
-  it("uses the SDK stream helper, forwards text deltas and validates the final message", async () => {
-    streamMock.mockReturnValue(fakeStream(canned(), ["{\"sheetType\":", "\"hk_en\"..."]));
+  it("uses streamText, forwards text deltas in order and validates the final text", async () => {
+    // The final text is what the deltas add up to, so make them do so here.
+    const full = JSON.stringify(READING);
+    const chunks = [full.slice(0, 20), full.slice(20, 100), full.slice(100)];
+    streamMock.mockReturnValue(fakeStream(canned(), chunks));
 
     const seen: string[] = [];
-    const { reading, usage } = await new AnthropicProvider().readSheetStream(IMAGES, (delta) =>
+    const { reading, usage } = await provider().readSheetStream(IMAGES, (delta) =>
       seen.push(delta),
     );
 
     expect(streamMock).toHaveBeenCalledTimes(1);
-    expect(createMock).not.toHaveBeenCalled();
-    expect(seen).toEqual(["{\"sheetType\":", "\"hk_en\"..."]);
+    expect(generateMock).not.toHaveBeenCalled();
+    expect(seen).toEqual(chunks);
     expect(reading).toEqual(READING);
     expect(usage.cacheReadInputTokens).toBe(2048);
+    expect(usage.model).toBe("google/gemini-3.8-flash");
 
+    // Same request as the unstreamed path, plus the error hook.
     const request = lastRequest(streamMock);
-    expect(request.output_config.effort).toBe(READ_EFFORT);
-    expect(request.system[0].cache_control).toEqual({ type: "ephemeral" });
-    expect(request.messages[0].content.map((block) => block.type)).toEqual([
-      "image",
-      "image",
-      "text",
-    ]);
+    expect(request.model).toBe(DEFAULT_MODEL);
+    expect(request.timeout).toEqual({ totalMs: READ_TIMEOUT_MS });
+    expect(request.providerOptions.gateway.tags).toEqual(["route:read"]);
+    expect(systemMessage(request).providerOptions?.anthropic?.cacheControl).toEqual({
+      type: "ephemeral",
+    });
+    expect(userParts(request).map((part) => part.type)).toEqual(["image", "image", "text"]);
+    expect(typeof request.onError).toBe("function");
   });
 
-  it("surfaces a refusal from the streamed final message", async () => {
-    streamMock.mockReturnValue(
-      fakeStream(canned({ stop_reason: "refusal", content: [], stop_details: undefined })),
-    );
-    await expect(new AnthropicProvider().readSheetStream(IMAGES)).rejects.toBeInstanceOf(
-      ModelRefusalError,
-    );
+  it("validates the concatenated text, not the deltas", async () => {
+    streamMock.mockReturnValue(fakeStream(canned(), ["not ", "json"]));
+    const error = await failure(provider().readSheetStream(IMAGES));
+    expect(error).toBeInstanceOf(ModelOutputError);
+    expect((error as InstanceType<typeof ModelOutputError>).code).toBe("invalid_output:invalid_json");
+  });
+
+  it("surfaces a refusal from the streamed finish reason", async () => {
+    streamMock.mockReturnValue(fakeStream(canned({ finishReason: "content-filter", text: "" })));
+    await expect(provider().readSheetStream(IMAGES)).rejects.toBeInstanceOf(ModelRefusalError);
+  });
+
+  it("surfaces a transport error reported through onError after the stream ends", async () => {
+    streamMock.mockImplementation((params: RecordedRequest) => {
+      const stream = fakeStream(canned({ finishReason: "error", text: "" }), ["{"]);
+      params.onError?.({ error: apiError(503) });
+      return stream;
+    });
+    const seen: string[] = [];
+    const error = (await failure(
+      provider().readSheetStream(IMAGES, (delta) => seen.push(delta)),
+    )) as InstanceType<typeof ModelUnavailableError>;
+    expect(seen).toEqual(["{"]);
+    expect(error).toBeInstanceOf(ModelUnavailableError);
+    expect(error.status).toBe(503);
+  });
+
+  it("maps a throw from the stream itself", async () => {
+    streamMock.mockImplementation(() => {
+      throw apiError(401);
+    });
+    const error = (await failure(provider().readSheetStream(IMAGES))) as InstanceType<
+      typeof ModelRequestError
+    >;
+    expect(error).toBeInstanceOf(ModelRequestError);
+    expect(error.status).toBe(401);
   });
 });
 
 describe("getModelProvider", () => {
   it("returns the same instance while the model ids are unchanged", () => {
     expect(getModelProvider()).toBe(getModelProvider());
+  });
+
+  it("rebuilds the provider when the model ids change", () => {
+    const before = getModelProvider();
+    process.env.MODEL_ASK = "anthropic/claude-sonnet-5";
+    const after = getModelProvider();
+    expect(after).not.toBe(before);
+    expect((after as GatewayProvider).modelAsk).toBe("anthropic/claude-sonnet-5");
+    expect(getModelProvider()).toBe(after);
   });
 });
 

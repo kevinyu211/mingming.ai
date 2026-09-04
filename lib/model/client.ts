@@ -1,46 +1,41 @@
 /**
- * SERVER ONLY. This module holds the Anthropic API key and must never be imported into a client
- * component or bundled for the browser. The `server-only` package is not a dependency here, so the
- * guard below is the enforcement.
+ * SERVER ONLY. This module talks to the model and must never be imported into a client component
+ * or bundled for the browser. The `server-only` package is not a dependency here, so the guard
+ * below is the enforcement.
  *
  * The provider adapter (research.md R1) is the single place the model is called from. Three jobs
  * only, per constitution principle III: read the sheet, answer from cards, re-phrase one card.
  * Nothing here decides whether a card is shown.
  *
- * SDK usage follows the bundled claude-api skill:
- * - `client.beta.messages.create` — the beta path is required because `fallbacks` lives there
- *   (model-migration.md § Migrating to Claude Opus 5 → New API features).
- * - `output_config.format` built by `betaZodOutputFormat()` from the same Zod schema that validates
- *   the reply (typescript README § Structured Outputs; research.md R3). The helper normalises the
- *   schema for the structured-outputs endpoint (`lib/transform-json-schema`), which a hand-derived
- *   draft-2020-12 document does not, so it is the safer wire format. The README documents passing
- *   the format object to `.create()` and parsing the reply yourself, which is what happens below —
- *   `.parse()` would swallow a schema failure into an untyped SDK error whose message can embed
- *   response text, and this module must throw codes only. `sheetReadingJsonSchema()` and friends
- *   stay the published contract; the test asserts the two describe the same shape.
- * - `output_config.effort` set per route; `thinking` omitted so adaptive thinking stays on, which is
- *   the Claude Opus 5 default (README § Extended Thinking).
- * - One system text block carrying `cache_control: {type: "ephemeral"}`; images and question come
- *   after it in the user turn (shared/prompt-caching.md § Placement patterns).
- * - `stop_reason` is checked before `content` is read (model-migration.md, Opus 5 checklist).
+ * Every call goes through the Vercel AI Gateway (AI SDK 6, `ai`). A model is a plain
+ * `"provider/model"` string — `google/gemini-3.8-flash`, `anthropic/claude-sonnet-5`,
+ * `openai/gpt-5.6-terra` — read from `MODEL_READ` / `MODEL_ASK`, so switching models or vendors is
+ * an environment change and nothing else. Authentication is the deployment's OIDC token on
+ * Vercel (`VERCEL_OIDC_TOKEN` locally, from `vercel env pull`) or `AI_GATEWAY_API_KEY`; no
+ * provider key is held here.
+ *
+ * - Structured output: `Output.object()` from the same Zod schema that validates the reply, so
+ *   the provider is asked for JSON of that shape and the final text is still parsed and checked
+ *   here. A schema failure becomes `ModelOutputError` with issue paths only.
+ * - The system prompt is the first message, carrying Anthropic's cache breakpoint as a provider
+ *   option; other providers ignore it. Images and the question follow in the user turn.
+ * - `finishReason` is checked before the text is read.
  *
  * Logging discipline (constitution principle V, contracts/api-read.md § Server guarantees): no
  * error thrown from this module carries request or response bodies, image bytes, sheet text or
  * question text. Errors carry a code, an HTTP status, and Zod issue paths only.
  */
-import Anthropic, {
-  APIConnectionError,
-  APIError,
-  InternalServerError,
-  RateLimitError,
-} from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import type {
-  BetaContentBlockParam,
-  BetaJSONOutputFormat,
-  BetaMessage,
-  MessageCreateParamsNonStreaming,
-} from "@anthropic-ai/sdk/resources/beta/messages/messages";
+import {
+  APICallError,
+  NoObjectGeneratedError,
+  Output,
+  RetryError,
+  generateText,
+  streamText,
+  type ModelMessage,
+  type UserContent,
+} from "ai";
+import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { z } from "zod";
 
 import {
@@ -72,53 +67,21 @@ if (typeof window !== "undefined") {
 
 export type { ImageInput, PhraseDialect, PhraseInput };
 
-/** Default when `MODEL_READ` / `MODEL_ASK` are unset. */
-export const DEFAULT_MODEL = "claude-opus-5";
-
-/** Gates the scalar `fallbacks: "default"` form (model-migration.md § New API features). */
-export const REFUSAL_FALLBACK_BETA = "server-side-fallback-2026-07-01";
+/** Default when `MODEL_READ` / `MODEL_ASK` are unset. A Gateway slug: `provider/model`. */
+export const DEFAULT_MODEL = "google/gemini-3.8-flash";
 
 /**
- * Models observed to reject the refusal-fallback parameter with a 400. Learned at runtime by
- * `AnthropicProvider.attempt` rather than hardcoded, so a model that gains support later needs no
- * code change. Process-lifetime only: a restart re-probes once per model.
- */
-const NO_FALLBACK_MODELS = new Set<string>();
-
-/**
- * Generous, per the skill's guidance: on Claude Opus 5 `max_tokens` caps adaptive thinking plus the
- * response text together, and a truncated reading is unusable JSON.
+ * Generous: on models with thinking the cap covers reasoning plus the reply, and a truncated
+ * reading is unusable JSON.
  */
 export const MAX_TOKENS = 16000;
 
-type Effort = NonNullable<NonNullable<MessageCreateParamsNonStreaming["output_config"]>["effort"]>;
-
 /**
- * Effort per route. Overridable so the reading eval can sweep it without a code change.
- *
- * `medium` for the read, measured rather than assumed (tests/eval/results.md, 2026-09-03, Opus 5
- * over the three fixtures, two runs each):
- *
- *   high    29.6–34.4 s, misses SC-001's 30 s
- *   medium  20.2–25.7 s, and identical on everything scored — medicines verbatim, no invented or
- *           missing items, warning coverage 100%, unreadable regions caught, zero banned terms
- *
- * The one thing `high` did unaided was split a printed line that carries both a food and an
- * activity instruction; `medium` needed that spelled out in READ_SYSTEM, which it now is. So the
- * trade is a more explicit prompt for roughly a third off the wait — the right way round, since
- * the wait is what the family feels.
+ * Wall-clock budget per call, kept under each route's `maxDuration` (read 300 s, ask/phrase 60 s)
+ * so a stalled provider surfaces as `model_unavailable` instead of a stream that just stops.
  */
-export const READ_EFFORT: Effort = (process.env.READ_EFFORT as Effort) || "medium";
-export const ASK_EFFORT: Effort = "medium";
-export const PHRASE_EFFORT: Effort = "medium";
-
-/**
- * Built once at module load so the schema bytes are identical on every request (a schema that was
- * re-derived per call would still be deterministic, but this keeps the cost off the hot path).
- */
-export const READ_OUTPUT_FORMAT = betaZodOutputFormat(SheetReadingSchema);
-export const ASK_OUTPUT_FORMAT = betaZodOutputFormat(AskResultSchema);
-export const PHRASE_OUTPUT_FORMAT = betaZodOutputFormat(PhraseResultSchema);
+export const READ_TIMEOUT_MS = 240_000;
+export const ASK_TIMEOUT_MS = 50_000;
 
 /** Recorded for the eval log; never contains any request or response text. */
 export interface UsageSummary {
@@ -155,7 +118,7 @@ export interface ModelProvider {
   /**
    * Same call, streamed, so the read route can start speaking before the whole reading lands.
    * `onPartialText` receives raw text deltas of the JSON body; full validation happens on the
-   * final message only.
+   * final text only.
    */
   readSheetStream(
     images: ImageInput[],
@@ -178,9 +141,9 @@ export class ModelError extends Error {
   }
 }
 
-/** `stop_reason: "refusal"` — the whole fallback chain declined. Maps to 502 for the client. */
+/** The provider declined the request (`finishReason: "content-filter"`). Maps to 502. */
 export class ModelRefusalError extends ModelError {
-  /** `stop_details.category` when the API supplied one; never the explanation text. */
+  /** A category when the provider supplied one; never the explanation text. */
   readonly category: string | null;
   constructor(category: string | null = null) {
     super("refusal", "the model declined this request");
@@ -221,16 +184,23 @@ export class ModelOutputError extends ModelError {
   }
 }
 
-function toModelError(error: unknown): ModelError {
+/**
+ * Collapses any SDK or transport error to a code. `RetryError` wraps the last attempt; an
+ * `APICallError` carries the upstream status; anything else is treated as unreachable. Messages
+ * from the SDK are dropped here because they can embed response text.
+ */
+export function toModelError(error: unknown): ModelError {
   if (error instanceof ModelError) return error;
-  if (error instanceof APIConnectionError) return new ModelUnavailableError(null);
-  if (error instanceof RateLimitError) return new ModelUnavailableError(error.status ?? 429);
-  if (error instanceof InternalServerError) return new ModelUnavailableError(error.status ?? 500);
-  if (error instanceof APIError) {
-    const status = error.status ?? null;
-    return status !== null && status >= 500
-      ? new ModelUnavailableError(status)
-      : new ModelRequestError(status);
+  if (RetryError.isInstance(error)) return toModelError(error.lastError);
+  if (NoObjectGeneratedError.isInstance(error)) {
+    if (error.finishReason === "length") return new ModelOutputError("truncated");
+    return new ModelOutputError("invalid_json");
+  }
+  if (APICallError.isInstance(error)) {
+    const status = error.statusCode ?? null;
+    if (status === null) return new ModelUnavailableError(null);
+    if (status === 429 || status >= 500) return new ModelUnavailableError(status);
+    return new ModelRequestError(status);
   }
   return new ModelUnavailableError(null);
 }
@@ -239,31 +209,54 @@ function toModelError(error: unknown): ModelError {
 /* Provider                                                                   */
 /* -------------------------------------------------------------------------- */
 
+type Route = "read" | "ask" | "phrase";
+
 interface CallSpec<T> {
+  route: Route;
   model: string;
   system: string;
   content: BetaContentBlockParam[];
-  effort: Effort;
-  format: BetaJSONOutputFormat;
   schema: z.ZodType<T>;
+  timeoutMs: number;
 }
 
-export interface AnthropicProviderOptions {
-  client?: Anthropic;
+/**
+ * The prompt builders in `lib/model/prompts.ts` emit Anthropic-shaped blocks; the SDK wants its own
+ * parts. Only text and base64 images exist in this app, so anything else is a programming error.
+ */
+export function toUserContent(blocks: readonly BetaContentBlockParam[]): UserContent {
+  return blocks.map((block) => {
+    if (block.type === "text") return { type: "text" as const, text: block.text };
+    if (block.type === "image" && block.source.type === "base64") {
+      return {
+        type: "image" as const,
+        image: block.source.data,
+        mediaType: block.source.media_type,
+      };
+    }
+    throw new ModelRequestError(null);
+  });
+}
+
+export interface GatewayProviderOptions {
   modelRead?: string;
   modelAsk?: string;
+  /** Test seam: the SDK entry points. */
+  generate?: typeof generateText;
+  stream?: typeof streamText;
 }
 
-export class AnthropicProvider implements ModelProvider {
-  private readonly client: Anthropic;
+export class GatewayProvider implements ModelProvider {
   readonly modelRead: string;
   readonly modelAsk: string;
+  private readonly generate: typeof generateText;
+  private readonly stream: typeof streamText;
 
-  constructor(options: AnthropicProviderOptions = {}) {
-    // No apiKey argument: the SDK resolves ANTHROPIC_API_KEY from the environment.
-    this.client = options.client ?? new Anthropic();
+  constructor(options: GatewayProviderOptions = {}) {
     this.modelRead = options.modelRead ?? envModel("MODEL_READ");
     this.modelAsk = options.modelAsk ?? envModel("MODEL_ASK");
+    this.generate = options.generate ?? generateText;
+    this.stream = options.stream ?? streamText;
   }
 
   async readSheet(images: ImageInput[]) {
@@ -278,6 +271,7 @@ export class AnthropicProvider implements ModelProvider {
 
   async answer(input: AnswerInput) {
     const { value, usage } = await this.send({
+      route: "ask",
       model: this.modelAsk,
       system: ASK_SYSTEM,
       content: buildAskUserContent(
@@ -288,92 +282,75 @@ export class AnthropicProvider implements ModelProvider {
         input.memory,
         input.context,
       ),
-      effort: ASK_EFFORT,
-      format: ASK_OUTPUT_FORMAT,
       schema: AskResultSchema,
+      timeoutMs: ASK_TIMEOUT_MS,
     });
     return { result: value, usage };
   }
 
   async phrase(input: PhraseInput) {
     const { value, usage } = await this.send({
+      route: "phrase",
       model: this.modelAsk,
       system: PHRASE_SYSTEM,
       content: buildPhraseUserContent(input),
-      effort: PHRASE_EFFORT,
-      format: PHRASE_OUTPUT_FORMAT,
       schema: PhraseResultSchema,
+      timeoutMs: ASK_TIMEOUT_MS,
     });
     return { result: value, usage };
   }
 
   private readSpec(images: ImageInput[]): CallSpec<SheetReading> {
     return {
+      route: "read",
       model: this.modelRead,
       system: READ_SYSTEM,
       content: buildReadUserContent(images),
-      effort: READ_EFFORT,
-      format: READ_OUTPUT_FORMAT,
       schema: SheetReadingSchema,
+      timeoutMs: READ_TIMEOUT_MS,
     };
   }
 
-  private params<T>(spec: CallSpec<T>, withFallbacks: boolean) {
+  /** The request, identical for the streamed and unstreamed paths. */
+  params<T>(spec: CallSpec<T>) {
+    const messages: ModelMessage[] = [
+      {
+        role: "system",
+        content: spec.system,
+        // Single frozen block, cached on Anthropic. Volatile bytes (images, question) follow.
+        providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+      },
+      { role: "user", content: toUserContent(spec.content) },
+    ];
     return {
       model: spec.model,
-      max_tokens: MAX_TOKENS,
-      // Server-side refusal fallback: on a policy decline the API re-runs the request on
-      // Anthropic's recommended substitute inside the same call, rather than returning a refusal.
-      // Not every model accepts it, so it is dropped and remembered on a 400 — see `attempt`.
-      ...(withFallbacks
-        ? { betas: [REFUSAL_FALLBACK_BETA], fallbacks: "default" as const }
-        : {}),
-      // Single frozen block, cached. Volatile bytes (images, question) follow in `messages`.
-      system: [
-        {
-          type: "text" as const,
-          text: spec.system,
-          cache_control: { type: "ephemeral" as const },
-        },
-      ],
-      messages: [{ role: "user" as const, content: spec.content }],
-      output_config: { effort: spec.effort, format: spec.format },
+      messages,
+      output: Output.object({ schema: spec.schema }),
+      maxOutputTokens: MAX_TOKENS,
+      maxRetries: 2,
+      timeout: { totalMs: spec.timeoutMs },
+      providerOptions: { gateway: { tags: [`route:${spec.route}`] } },
     };
-  }
-
-  /**
-   * Runs one call, dropping the refusal-fallback parameter if this model will not take it.
-   *
-   * `fallbacks` is documented for the Opus and Fable tiers; a model that does not support it
-   * rejects the whole request with a 400, which would otherwise make every other model
-   * unusable — and the point of `MODEL_READ` is that the model IS swappable (research.md R1).
-   * Rather than hardcode a list of model ids that will rot, the first 400 for a given model
-   * demotes it to the plain shape and the answer is remembered for the life of the process.
-   */
-  private async attempt<T>(
-    spec: CallSpec<T>,
-    run: (params: ReturnType<AnthropicProvider["params"]>) => Promise<BetaMessage>,
-  ): Promise<BetaMessage> {
-    const supported = !NO_FALLBACK_MODELS.has(spec.model);
-    try {
-      return await run(this.params(spec, supported));
-    } catch (error) {
-      const status = error instanceof APIError ? error.status : undefined;
-      if (!supported || status !== 400) throw toModelError(error);
-      NO_FALLBACK_MODELS.add(spec.model);
-      return await run(this.params(spec, false));
-    }
   }
 
   private async send<T>(spec: CallSpec<T>): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
-    let message: BetaMessage;
+    let result: Awaited<ReturnType<typeof generateText>>;
     try {
-      message = await this.attempt(spec, (params) => this.client.beta.messages.create(params));
+      result = await this.generate(this.params(spec));
     } catch (error) {
       throw toModelError(error);
     }
-    return finish(message, spec, startedAt);
+    return finish(
+      {
+        text: result.text,
+        finishReason: result.finishReason,
+        usage: result.usage,
+        modelId: result.response?.modelId,
+      },
+      spec,
+      startedAt,
+    );
   }
 
   private async sendStreaming<T>(
@@ -381,41 +358,62 @@ export class AnthropicProvider implements ModelProvider {
     onPartialText?: (delta: string) => void,
   ): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
-    let message: BetaMessage;
+    let failure: unknown = null;
+    let text = "";
+    let finishReason: Awaited<ReturnType<typeof generateText>>["finishReason"];
+    let usage: Awaited<ReturnType<typeof generateText>>["usage"];
+    let modelId: string | undefined;
     try {
-      message = await this.attempt(spec, async (params) => {
-        const stream = this.client.beta.messages.stream(params);
-        if (onPartialText) stream.on("text", (delta: string) => onPartialText(delta));
-        return await stream.finalMessage();
+      const result = this.stream({
+        ...this.params(spec),
+        // streamText reports transport errors here and ends the stream, rather than throwing.
+        onError: ({ error }) => {
+          failure = error;
+        },
       });
+      for await (const delta of result.textStream) {
+        text += delta;
+        onPartialText?.(delta);
+      }
+      finishReason = await result.finishReason;
+      usage = await result.usage;
+      modelId = (await result.response)?.modelId;
     } catch (error) {
-      throw toModelError(error);
+      // The recorded transport error carries the upstream status; a rejection that follows it
+      // would not.
+      throw toModelError(failure ?? error);
     }
-    return finish(message, spec, startedAt);
+    if (failure !== null) throw toModelError(failure);
+    return finish({ text, finishReason, usage, modelId }, spec, startedAt);
   }
 }
 
-/** Check `stop_reason`, then read `content` — never the other way round. */
+interface Completed {
+  text: string;
+  finishReason: Awaited<ReturnType<typeof generateText>>["finishReason"];
+  usage: Awaited<ReturnType<typeof generateText>>["usage"];
+  modelId: string | undefined;
+}
+
+/** Check the finish reason, then read the text — never the other way round. */
 function finish<T>(
-  message: BetaMessage,
+  completed: Completed,
   spec: CallSpec<T>,
   startedAt: number,
 ): { value: T; usage: UsageSummary } {
-  if (message.stop_reason === "refusal") {
-    throw new ModelRefusalError(message.stop_details?.category ?? null);
+  if (completed.finishReason === "content-filter") {
+    throw new ModelRefusalError(null);
   }
-  if (message.stop_reason === "max_tokens") {
+  if (completed.finishReason === "length") {
     throw new ModelOutputError("truncated");
   }
-
-  const text = (message.content ?? [])
-    .filter((block): block is Extract<typeof block, { type: "text" }> => block.type === "text")
-    .map((block) => block.text)
-    .join("");
+  if (completed.finishReason === "error") {
+    throw new ModelUnavailableError(null);
+  }
 
   let raw: unknown;
   try {
-    raw = JSON.parse(text);
+    raw = JSON.parse(completed.text);
   } catch {
     throw new ModelOutputError("invalid_json");
   }
@@ -433,20 +431,19 @@ function finish<T>(
 
   return {
     value: parsed.data,
-    usage: summariseUsage(message, spec.model, startedAt),
+    usage: summariseUsage(completed, spec.model, startedAt),
   };
 }
 
-function summariseUsage(message: BetaMessage, requestedModel: string, startedAt: number): UsageSummary {
-  const usage = message.usage;
+function summariseUsage(completed: Completed, requestedModel: string, startedAt: number): UsageSummary {
+  const usage = completed.usage;
   return {
-    inputTokens: usage?.input_tokens ?? 0,
-    outputTokens: usage?.output_tokens ?? 0,
-    cacheReadInputTokens: usage?.cache_read_input_tokens ?? 0,
-    cacheCreationInputTokens: usage?.cache_creation_input_tokens ?? 0,
-    // `message.model` is what actually served the turn, which differs from the requested id
-    // whenever the server-side fallback ran.
-    model: message.model ?? requestedModel,
+    inputTokens: usage?.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? 0,
+    cacheReadInputTokens: usage?.inputTokenDetails?.cacheReadTokens ?? 0,
+    cacheCreationInputTokens: usage?.inputTokenDetails?.cacheWriteTokens ?? 0,
+    // The id that actually served the turn, when the Gateway reports it.
+    model: completed.modelId || requestedModel,
     ms: Date.now() - startedAt,
   };
 }
@@ -460,16 +457,16 @@ function envModel(name: "MODEL_READ" | "MODEL_ASK"): string {
 /* Singleton                                                                  */
 /* -------------------------------------------------------------------------- */
 
-let cached: { key: string; provider: AnthropicProvider } | null = null;
+let cached: { key: string; provider: GatewayProvider } | null = null;
 
 /**
- * The process-wide provider. Cached on the resolved model ids so a route never rebuilds the client
- * per request (and so the prompt cache stays on one model per route).
+ * The process-wide provider. Cached on the resolved model ids so a route never rebuilds it per
+ * request.
  */
 export function getModelProvider(): ModelProvider {
-  const key = `${envModel("MODEL_READ")} ${envModel("MODEL_ASK")}`;
+  const key = `${envModel("MODEL_READ")}|${envModel("MODEL_ASK")}`;
   if (!cached || cached.key !== key) {
-    cached = { key, provider: new AnthropicProvider() };
+    cached = { key, provider: new GatewayProvider() };
   }
   return cached.provider;
 }

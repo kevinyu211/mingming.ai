@@ -1032,12 +1032,12 @@ async function main(): Promise<void> {
   console.log("");
 
   // Imported here, after `.env.local` is in `process.env`, because the module reads
-  // READ_EFFORT at load time and the SDK resolves ANTHROPIC_API_KEY when it is constructed.
+  // MODEL_READ at load time and the Gateway token is resolved when it is constructed.
   const readers = new Map<string, Reader>();
   if (paths.some((p) => p.startsWith("direct:"))) {
-    const { AnthropicProvider } = await import("@/lib/model/client");
+    const { GatewayProvider } = await import("@/lib/model/client");
     for (const model of models) {
-      readers.set(model, new AnthropicProvider({ modelRead: model }) as Reader);
+      readers.set(model, new GatewayProvider({ modelRead: model }) as Reader);
     }
   }
 

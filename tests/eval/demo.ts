@@ -476,8 +476,8 @@ async function main(): Promise<void> {
 
   // ---- live ----------------------------------------------------------------
   loadEnvLocal();
-  const { AnthropicProvider } = await import("@/lib/model/client");
-  const reader = new AnthropicProvider({ modelRead: model }) as Reader;
+  const { GatewayProvider } = await import("@/lib/model/client");
+  const reader = new GatewayProvider({ modelRead: model }) as Reader;
 
   let liveFailures = 0;
   for (const sheet of sheets) {

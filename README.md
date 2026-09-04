@@ -13,7 +13,7 @@ the page. Built for the Vital (Soft Healthcare) track of the AIx Origin Summit.
 
 ```bash
 npm install
-cp .env.example .env.local   # add ANTHROPIC_API_KEY; voice keys optional
+cp .env.example .env.local   # then `vercel env pull .env.local` for the Gateway token; voice keys optional
 npm run dev
 ```
 
@@ -33,7 +33,8 @@ bundled sample sheets (`/chat?sample=hk_en`), which exercise the whole UI.
 
 ## Environment
 
-See `.env.example`. `MODEL_READ` / `MODEL_ASK` default to `claude-opus-5`. `TTS_PROVIDER` defaults
+See `.env.example`. Model calls go through the Vercel AI Gateway; `MODEL_READ` / `MODEL_ASK` are
+Gateway slugs (`provider/model`) and default to `google/gemini-3.8-flash`. `TTS_PROVIDER` defaults
 to `browser` (the phone's own voice); the demo build runs `minimax`. `.env.example` ships
 `STT_PROVIDER=openai` with `NEXT_PUBLIC_STT_MODE=cloud`, so a spoken question is recorded and
 transcribed by OpenAI; set both to `browser` to keep audio on the phone. What each provider receives

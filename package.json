@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
+    "ai": "^6.0.276",
     "next": "16.3.4",
     "opencc-js": "^1.4.2",
     "react": "19.2.8",
