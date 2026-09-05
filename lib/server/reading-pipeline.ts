@@ -24,7 +24,9 @@ import {
   type Speakable,
   type StoredReading,
 } from "@/lib/domain/schemas";
-import { ModelOutputError, type ModelProvider } from "@/lib/model/client";
+import { ModelCancelledError, ModelOutputError, type ModelCallOptions, type ModelProvider } from "@/lib/model/client";
+import { READ_REPAIR_CONCURRENCY, READ_REPAIR_TIMEOUT_MS } from "@/lib/domain/read-policy";
+import { abortFailure, callBudget, withinSignal } from "@/lib/server/call-budget";
 import type { PhraseDialect } from "@/lib/model/prompts";
 import { checkCard, checkSpeakableAgainstQuotes } from "@/lib/rules/banned-terms";
 import { buildCards } from "@/lib/rules/card-order";
@@ -49,6 +51,8 @@ export interface ReadingPipelineOptions {
   now?: () => Date;
   /** Which dialect the repair prompt leads with. Both, unless a caller knows better. */
   dialect?: PhraseDialect;
+  signal?: AbortSignal;
+  deadline?: number;
 }
 
 /** Stand-in for a card that quotes nothing off the page (`noWarnings`, `referral`). */
@@ -152,19 +156,45 @@ export async function runReadingPipeline(
 
   const filter: FilterCounts = { regenerated: 0, templated: 0 };
   const dialect = options.dialect ?? "both";
-  const cards: Card[] = [];
-
-  // Sequential on purpose: a hit is rare, and firing every repair at once would turn one bad
-  // reading into a burst of model calls.
-  for (const built of buildCards(stored)) {
-    // Traceability first, so the mark survives whatever the banned-term repair does to the body.
-    const card = verifiedAgainstQuote(built) ? built : { ...built, unverified: true };
+  if (options.signal?.aborted) throw abortFailure(options.signal);
+  const cards: Card[] = buildCards(stored).map((built) =>
+    verifiedAgainstQuote(built) ? built : { ...built, unverified: true },
+  );
+  const pending = cards.flatMap((card, index) => {
     const check = checkCard(card);
-    if (check.ok) {
-      cards.push(card);
-      continue;
+    return check.ok ? [] : [{ card, index, avoid: check.matches }];
+  });
+
+  if (pending.length > 0) {
+    const deadline = Math.min(options.deadline ?? Infinity, Date.now() + READ_REPAIR_TIMEOUT_MS);
+    const budget = callBudget(deadline - Date.now(), options.signal);
+    let cursor = 0;
+    const worker = async () => {
+      while (!budget.signal.aborted && Date.now() < deadline) {
+        const item = pending[cursor++];
+        if (!item) return;
+        cards[item.index] = await repair(item.card, item.avoid, provider, dialect, filter, {
+          signal: budget.signal,
+          timeoutMs: Math.max(1, deadline - Date.now()),
+        });
+      }
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(READ_REPAIR_CONCURRENCY, pending.length) }, worker));
+      if (options.signal?.aborted) throw abortFailure(options.signal);
+      // A queued card whose repair never started must receive the same checked fallback.
+      for (const { card, index } of pending) {
+        if (cards[index] !== card) continue;
+        filter.templated += 1;
+        cards[index] = {
+          ...card,
+          body: safeTemplate(card.type, card.facts ?? {}, card.source?.quote),
+          aiGenerated: false,
+        };
+      }
+    } finally {
+      budget.dispose();
     }
-    cards.push(await repair(card, check.matches, provider, dialect, filter));
   }
 
   return { kind: "reading", cards, reading: withFilteredSpoken(stored, cards), filter };
@@ -181,20 +211,23 @@ async function repair(
   provider: Pick<ModelProvider, "phrase">,
   dialect: PhraseDialect,
   filter: FilterCounts,
+  options?: ModelCallOptions,
 ): Promise<Card> {
   const facts: TemplateFacts = card.facts ?? {};
 
   let regenerated: Speakable | null = null;
   try {
-    const { result } = await provider.phrase({
+    const call = () => provider.phrase({
       cardType: card.type,
       facts,
       source: card.source ?? NO_SOURCE,
       avoid,
       dialect,
-    });
-    regenerated = result.spoken;
-  } catch {
+    }, options);
+    const result = options?.signal ? await withinSignal(options.signal, call) : await call();
+    regenerated = result.result.spoken;
+  } catch (error) {
+    if (error instanceof ModelCancelledError) throw error;
     regenerated = null;
   }
 

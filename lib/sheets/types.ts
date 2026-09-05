@@ -10,7 +10,7 @@
  * Types only — no values, no clock, no storage. `lib/sheets/store.ts` is the only writer.
  */
 import type { AnswerOutcome } from "@/lib/client/ask-stream";
-import type { CardType, SourceReference, StoredReading } from "@/lib/domain/schemas";
+import type { Card, CardType, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import type { DraftPlan } from "@/lib/rules/plan-from-reading";
 
 /**
@@ -136,6 +136,8 @@ export interface Sheet {
   /** Derived by rule from the reading, never by a model turn — see `lib/sheets/title.ts`. */
   title: string;
   reading: StoredReading;
+  /** The filtered cards returned by the read pipeline, when this sheet was read by a newer build. */
+  validatedCards?: Card[];
   plan: DraftPlan;
   thread: ThreadMessage[];
   /** Keyed by `DoseTarget.key`. A medicine with no entry has been taken zero times today. */

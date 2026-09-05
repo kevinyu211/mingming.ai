@@ -21,7 +21,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ask } from "@/lib/client/ask-stream";
 import { readSheet } from "@/lib/client/read-stream";
-import type { StoredReading } from "@/lib/domain/schemas";
+import { buildCards } from "@/lib/rules/card-order";
+import { StoredReadingSchema, type StoredReading } from "@/lib/domain/schemas";
 import { resetSpeechSession, speak } from "@/lib/speech/tts";
 import {
   ImageDataRejectedError,
@@ -95,6 +96,7 @@ function mockFetch(): typeof fetch {
       return new Response(
         ndjson([
           { event: "status", phase: "reading" },
+          ...buildCards(WIRE_READING).map((card) => ({ event: "card", card })),
           { event: "done", reading: WIRE_READING, filter: { regenerated: 0, templated: 0 } },
         ]),
         { status: 200, headers: { "Content-Type": "application/x-ndjson" } },
@@ -144,8 +146,9 @@ const SOURCE = {
   quote: "1. Amlodipine 5mg 1 tab daily",
 };
 
-/** The reading as `/api/read` returns it — no `readAt`, and above all no pixels. */
-const WIRE_READING = {
+/** The server-stamped reading, with no pixels. */
+const WIRE_READING = StoredReadingSchema.parse({
+  readAt: "2026-09-05T00:00:00.000Z",
   sheetType: "hk_en",
   warningSigns: [],
   medicines: [
@@ -155,7 +158,8 @@ const WIRE_READING = {
       amount: "1 tab",
       frequency: "daily",
       duration: null,
-      spoken: { yue: "Amlodipine 5mg，一粒，每日一次。", cmn: "Amlodipine 5mg，一片，每天一次。" },
+      status: "current",
+      spoken: { yue: "Amlodipine 5mg，一粒，每日一次。", cmn: "Amlodipine 5mg，一片，每天一次。", en: "Amlodipine 5mg, one tablet daily." },
       source: SOURCE,
     },
   ],
@@ -164,7 +168,7 @@ const WIRE_READING = {
   activityLine: null,
   hospitalContact: null,
   unreadable: [],
-};
+});
 
 const PLAN: FollowUpPlan = {
   items: [

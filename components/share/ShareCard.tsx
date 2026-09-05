@@ -16,9 +16,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import { formatMonthDay, formatYmd } from "@/components/home/format";
-import { filterCards } from "@/lib/client/sample";
 import { scriptForDialect, toScript } from "@/lib/i18n/script";
-import { buildCards } from "@/lib/rules/card-order";
+import { getSheetCards } from "@/lib/sheets";
 import { buildShareCard } from "@/lib/share/card";
 import { renderShareCardPng } from "@/lib/share/png";
 import { buildShareText } from "@/lib/share/text";
@@ -43,7 +42,7 @@ export default function ShareCard({ sheet, compact = false }: { sheet: Sheet; co
   useEffect(() => {
     let cancelled = false;
     let objectUrl: string | null = null;
-    const cards = filterCards(buildCards(sheet.reading));
+    const cards = getSheetCards(sheet);
     const data = buildShareCard({
       reading: sheet.reading,
       plan: sheet.plan,
@@ -124,7 +123,7 @@ export default function ShareCard({ sheet, compact = false }: { sheet: Sheet; co
 
   const shareText = useCallback(async () => {
     const text = buildShareText(
-      filterCards(buildCards(sheet.reading)),
+      getSheetCards(sheet),
       dialect,
       {
         title: t("share.title"),
@@ -147,7 +146,7 @@ export default function ShareCard({ sheet, compact = false }: { sheet: Sheet; co
     } catch {
       // Closed, or refused. Nothing to do.
     }
-  }, [dialect, display, say, sheet.reading, t]);
+  }, [dialect, display, say, sheet, t]);
 
   return (
     <div className={compact ? "" : "surface p-4"}>

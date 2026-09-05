@@ -22,10 +22,119 @@ npm run eval -- --sheets all --runs 34 --model claude-opus-5     # SC-002, SC-00
 NODE_OPTIONS=--use-openssl-ca tsx tests/eval/questions.ts        # SC-006 (quickstart V5)
 ```
 
-**No live run has happened yet.** Both runners have been exercised end to end against a local
-stub server only; those blocks were removed. The first block below will be the first real run.
+Live and failed environment probes are recorded below. Single-run percentile columns are descriptive
+only and do not estimate production latency. Medicine/filter pass lines do not imply all warning,
+source, language or whole-reading accuracy gates passed. See `docs/processing-speed-verification.md`
+for the September 5 candidate interpretation and release limits.
 
 <!-- tests/eval runners append run blocks below this line. -->
+
+## Reading run 2026-09-05T12:06:03.564Z
+
+- Model label: `anthropic/claude-sonnet-5` (set by the server's `MODEL_READ`; the runner only records it)
+- Server: http://127.0.0.1:3053
+- Sheets: cn_zh_photo x 1 run(s)
+- Filter: 0 regenerated, 0 templated
+
+| sheet | runs | ok | exact meds | invented | missing | warnings | diet | unread. | banned | p50 card | p95 card | p50 done | p95 done |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cn_zh_photo | 1 | 1 | 100% | 0 | 0 | 0% | 1/1 | 1/1 | 0 | 38.9s | 38.9s | 38.9s | 38.9s |
+
+Timings:
+
+- cn_zh_photo run 1: accepted 0.0s, first card 38.9s, done 38.9s
+- cn_zh_photo warning review (synthetic): [{"quote":"7.如出现胸痛、气促、下肢水肿，立即急诊就诊","symptom":"If you have chest pain, feel short of breath, or your legs swell up","action":"go straight to the emergency room right away"}]
+
+Findings:
+
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: 1 warning sign(s), expected 3
+
+**SC-002 PASS** — invented 0, missing 0, exact-medicine rate cn_zh_photo 100%.
+**SC-003 PASS** — 0 banned-term hit(s) after filtering.
+
+
+## Reading run 2026-09-05T12:04:53.728Z
+
+- Model label: `anthropic/claude-sonnet-5` (set by the server's `MODEL_READ`; the runner only records it)
+- Server: https://mingming.app
+- Sheets: cn_zh_photo x 1 run(s)
+- Filter: 0 regenerated, 0 templated
+
+| sheet | runs | ok | exact meds | invented | missing | warnings | diet | unread. | banned | p50 card | p95 card | p50 done | p95 done |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| cn_zh_photo | 1 | 1 | 100% | 0 | 0 | 100% | 0/1 | 1/1 | 0 | 39.5s | 39.5s | 39.5s | 39.5s |
+
+Timings:
+
+- cn_zh_photo run 1: accepted 29.9s, first card 39.5s, done 39.5s
+- cn_zh_photo warning review (synthetic): [{"quote":"7. 如出现胸痛、气促、下肢水肿，立即急诊就诊","symptom":"If there's chest pain, shortness of breath, or swelling in the legs","action":"Go straight to the emergency room right away, don't wait."}]
+
+Findings:
+
+- cn_zh_photo run 1: 1 warning sign(s), expected 3
+- cn_zh_photo run 1: diet line raw differs, recognisedType expected low_salt, got low_salt
+
+**SC-002 PASS** — invented 0, missing 0, exact-medicine rate cn_zh_photo 100%.
+**SC-003 PASS** — 0 banned-term hit(s) after filtering.
+
+
+## Reading run 2026-09-05T12:02:44.390Z
+
+- Model label: `anthropic/claude-sonnet-5` (set by the server's `MODEL_READ`; the runner only records it)
+- Server: http://127.0.0.1:3053
+- Sheets: hk_en, cn_zh_photo x 1 run(s)
+- Filter: 0 regenerated, 0 templated
+
+| sheet | runs | ok | exact meds | invented | missing | warnings | diet | unread. | banned | p50 card | p95 card | p50 done | p95 done |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hk_en | 1 | 1 | 100% | 0 | 0 | 100% | 1/1 | 1/1 | 0 | 27.0s | 27.0s | 27.0s | 27.0s |
+| cn_zh_photo | 1 | 1 | 100% | 0 | 0 | 0% | 1/1 | 1/1 | 0 | 38.6s | 38.6s | 38.6s | 38.6s |
+
+Timings:
+
+- hk_en run 1: accepted 0.1s, first card 27.0s, done 27.0s
+- cn_zh_photo run 1: accepted 0.0s, first card 38.6s, done 38.6s
+
+Findings:
+
+- hk_en run 1: 1 warning sign(s), expected 3
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: warning-sign quote not returned — "7. 如出现胸痛、气促、下肢水肿，立即急诊就诊"
+- cn_zh_photo run 1: 1 warning sign(s), expected 3
+
+**SC-002 PASS** — invented 0, missing 0, exact-medicine rate hk_en 100%, cn_zh_photo 100%.
+**SC-003 PASS** — 0 banned-term hit(s) after filtering.
+
+
+## Reading run 2026-09-05T11:58:08.805Z
+
+- Model label: `anthropic/claude-sonnet-5-medium-candidate` (set by the server's `MODEL_READ`; the runner only records it)
+- Server: http://127.0.0.1:3053
+- Sheets: hk_en, cn_zh_photo x 1 run(s)
+- Filter: 0 regenerated, 0 templated
+
+| sheet | runs | ok | exact meds | invented | missing | warnings | diet | unread. | banned | p50 card | p95 card | p50 done | p95 done |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| hk_en | 1 | 0 | 0% | 0 | 0 | 0% | 0/0 | 0/0 | 0 | - | - | - | - |
+| cn_zh_photo | 1 | 0 | 0% | 0 | 0 | 0% | 0/0 | 0/0 | 0 | - | - | - | - |
+
+Timings:
+
+- hk_en run 1: accepted 0.1s, first card -, done -
+- cn_zh_photo run 1: accepted 0.0s, first card -, done -
+
+Findings:
+
+- hk_en run 1: FAILED — stream error: model_unavailable
+- cn_zh_photo run 1: FAILED — stream error: model_unavailable
+
+**SC-002 FAIL** — invented 0, missing 0, exact-medicine rate hk_en 0%, cn_zh_photo 0%.
+**SC-003 PASS** — 0 banned-term hit(s) after filtering.
+
 
 ## Ask run 2026-09-04T14:34:18.617Z
 

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { readSheet, splitLines, type ImageInput } from "@/lib/client/read-stream";
-import type { Card } from "@/lib/domain/schemas";
+import { READ_PROCESSING_TIMEOUT_MS, READ_RESPONSE_GRACE_MS, READ_SUBMISSION_TIMEOUT_MS } from "@/lib/domain/read-policy";
+import { buildCards } from "@/lib/rules/card-order";
+import type { StoredReading, Card } from "@/lib/domain/schemas";
 
 const images: ImageInput[] = [{ mediaType: "image/jpeg", base64: "AAAA" }];
 
@@ -12,16 +14,31 @@ const card = (id: string, type: Card["type"] = "warning"): Card => ({
   aiGenerated: true,
 });
 
-const reading = {
+const reading: StoredReading = {
   sheetType: "hk_en",
   warningSigns: [],
-  medicines: [{ name: "Amlodipine" }],
+  medicines: [
+    {
+      name: "Amlodipine",
+      strength: null,
+      amount: null,
+      frequency: null,
+      duration: null,
+      status: "current",
+      spoken: { yue: "Amlodipine", cmn: "Amlodipine", en: "Amlodipine" },
+      source: { section: "Medicines", lineIndex: 0, quote: "Amlodipine" },
+    },
+  ],
   followUp: [],
   dietLine: null,
   activityLine: null,
   hospitalContact: null,
   unreadable: [],
+  readAt: "2026-09-05T00:00:00.000Z",
 };
+
+const validCards = buildCards(reading);
+const cardLines = validCards.map((card) => `${JSON.stringify({ event: "card", card })}\n`).join("");
 
 /** A response whose body arrives in exactly these chunks, so line splits can be placed by hand. */
 function streamed(chunks: string[], status = 200): Response {
@@ -52,6 +69,7 @@ function mockFetch(response: Response | (() => Promise<Response>)): void {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("splitLines", () => {
@@ -72,8 +90,7 @@ describe("readSheet", () => {
     const line = (value: unknown) => `${JSON.stringify(value)}\n`;
     const whole =
       line({ event: "status", phase: "reading" }) +
-      line({ event: "card", card: card("warning-0") }) +
-      line({ event: "card", card: card("medicine-0", "medicine") }) +
+      cardLines +
       line({ event: "done", reading, filter: { regenerated: 1, templated: 0 } });
 
     // Cut the stream at three awkward places: mid-key, mid-value and right on a newline.
@@ -88,20 +105,20 @@ describe("readSheet", () => {
     });
 
     expect(phases).toEqual(["reading"]);
-    expect(arrived).toEqual(["warning-0", "medicine-0"]);
+    expect(arrived).toEqual(validCards.map((card) => card.id));
     expect(outcome.kind).toBe("reading");
     if (outcome.kind !== "reading") throw new Error("expected a reading");
-    expect(outcome.cards.map((c) => c.id)).toEqual(["warning-0", "medicine-0"]);
+    expect(outcome.cards.map((c) => c.id)).toEqual(validCards.map((card) => card.id));
     expect(outcome.filter).toEqual({ regenerated: 1, templated: 0 });
     expect(outcome.reading.sheetType).toBe("hk_en");
-    // The timestamp is set here, on the client, and never sent to a model.
+    // The timestamp from the server is preserved and never sent to a model.
     expect(Number.isNaN(Date.parse(outcome.reading.readAt))).toBe(false);
   });
 
   it("accepts a final line with no trailing newline", async () => {
     mockFetch(
       streamed([
-        `${JSON.stringify({ event: "card", card: card("warning-0") })}\n`,
+        cardLines,
         JSON.stringify({ event: "done", reading }),
       ]),
     );
@@ -141,7 +158,7 @@ describe("readSheet", () => {
   });
 
   it("ignores a line that is not JSON", async () => {
-    mockFetch(streamed(["not json\n", `${JSON.stringify({ event: "done", reading })}\n`]));
+    mockFetch(streamed(["not json\n", cardLines, `${JSON.stringify({ event: "done", reading })}\n`]));
     expect((await readSheet(images)).kind).toBe("reading");
   });
 
@@ -169,4 +186,99 @@ describe("readSheet", () => {
     mockFetch(() => Promise.reject(new TypeError("Failed to fetch")));
     expect(await readSheet(images)).toEqual({ kind: "model_unavailable" });
   });
+
+  it("returns cancelled when the caller aborts while submitting", async () => {
+    const controller = new AbortController();
+    mockFetch(
+      () =>
+        new Promise<Response>((_, reject) => {
+          controller.signal.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")), {
+            once: true,
+          });
+        }),
+    );
+    const pending = readSheet(images, { signal: controller.signal });
+    controller.abort();
+    await expect(pending).resolves.toEqual({ kind: "cancelled" });
+  });
+
+  it("cancels an uncooperative response body", async () => {
+    const controller = new AbortController();
+    mockFetch(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(stream) {
+            stream.enqueue(new TextEncoder().encode('{"event":"status","phase":"reading"}\n'));
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    const pending = readSheet(images, { signal: controller.signal });
+    await Promise.resolve();
+    controller.abort();
+    await expect(pending).resolves.toEqual({ kind: "cancelled" });
+  });
+
+  it("returns timed_out when processing exceeds the shared deadline", async () => {
+    vi.useFakeTimers();
+    try {
+      mockFetch(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(stream) {
+              stream.enqueue(new TextEncoder().encode('{"event":"status","phase":"reading"}\n'));
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+      const pending = readSheet(images);
+      await vi.advanceTimersByTimeAsync(READ_PROCESSING_TIMEOUT_MS + READ_RESPONSE_GRACE_MS + 1);
+      await expect(pending).resolves.toEqual({ kind: "timed_out" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it.each([
+    ["missing card", validCards.slice(1)],
+    ["duplicate card", [...validCards, validCards[0]]],
+    ["wrong source", validCards.map((card, i) => i === 1 ? { ...card, source: { ...card.source!, quote: "Different sheet" } } : card)],
+  ])("rejects a completed reading with %s before persistence", async (_, cards) => {
+    mockFetch(streamed([
+      ...cards.map((card) => `${JSON.stringify({ event: "card", card })}\n`),
+      `${JSON.stringify({ event: "done", reading })}\n`,
+    ]));
+    expect(await readSheet(images)).toEqual({ kind: "invalid_reading" });
+  });
+
+  it("bounds an uncooperative fetch and clears its timer", async () => {
+    vi.useFakeTimers();
+    mockFetch(() => new Promise<Response>(() => {}));
+    const pending = readSheet(images);
+    await vi.advanceTimersByTimeAsync(READ_SUBMISSION_TIMEOUT_MS);
+    expect(await pending).toEqual({ kind: "timed_out" });
+    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.mocked(fetch).mock.calls[0][1]?.signal?.aborted).toBe(true);
+  });
+
+  it("bounds a stalled error response body", async () => {
+    vi.useFakeTimers();
+    mockFetch(new Response(new ReadableStream({ start() {} }), { status: 413 }));
+    const pending = readSheet(images);
+    await vi.advanceTimersByTimeAsync(READ_SUBMISSION_TIMEOUT_MS);
+    expect(await pending).toEqual({ kind: "timed_out" });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not submit or invoke callbacks for an already cancelled read", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    mockFetch(streamed([cardLines, `${JSON.stringify({ event: "done", reading })}\n`]));
+    const onCard = vi.fn();
+    expect(await readSheet(images, { signal: controller.signal, onCard })).toEqual({ kind: "cancelled" });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(onCard).not.toHaveBeenCalled();
+  });
+
 });

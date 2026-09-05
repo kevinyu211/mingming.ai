@@ -1,69 +1,53 @@
 "use client";
 
 /**
- * The reading screen (Companion D): the photograph inside the dark card, a ring filling over it,
- * and one line saying which half of the job the reader is watching.
+ * The reading screen (Companion D): the photograph inside the dark card, elapsed time, and one
+ * line saying which stage of the job the reader is watching.
  *
- * Two things here are true and one is an estimate, and the screen is honest about which is which.
- * The photograph is the page that was sent. The line switches from 「讀緊 N 頁…」 to 「用簡單嘅話
- * 講。」 on a real event — the first card arriving from `/api/read`, which is the moment the model
- * has finished looking and started writing. The ring is a guess at how far along that is: it
- * climbs on a clock calibrated to how long a page takes, leaps forward when writing starts, and
- * never claims to be finished until the stream is. It is a mood, not a measurement, and the number
- * in it is there because a card that visibly moves is what stops a reader from tapping again.
+ * The stage changes on actual submission, model, and checking events from `/api/read`. Elapsed
+ * seconds show waiting without pretending to know how much model work remains.
  *
  * Nothing on this screen says anything about the sheet. The app has not read it yet.
  */
 import { useEffect, useState } from "react";
 import { useT } from "@/components/LocaleProvider";
+import ChunkyButton from "@/components/ChunkyButton";
+import type { ReadProgressPhase } from "@/lib/domain/read-policy";
 import Mascot from "@/components/Mascot";
 import { fill } from "@/components/home/format";
-
-export type ReadPhase = "reading" | "writing";
-
-/** About how long one page takes on the deployed model, with a floor for the fixed cost of a call. */
-const BASE_MS = 12_000;
-const PER_PAGE_MS = 14_000;
-/** The ring never reaches these on its own; only the stream ending does. */
-const READING_CAP = 62;
-const WRITING_CAP = 94;
-const RING = 2 * Math.PI * 42;
-
-function estimate(elapsed: number, pageCount: number, phase: ReadPhase): number {
-  const expected = BASE_MS + PER_PAGE_MS * Math.max(1, pageCount);
-  // Ease-out toward the cap: fast at first, then slower, never arriving.
-  const curve = 1 - Math.exp(-elapsed / (expected / 1.8));
-  if (phase === "writing") return Math.min(WRITING_CAP, Math.max(READING_CAP, READING_CAP + curve * (WRITING_CAP - READING_CAP)));
-  return Math.min(READING_CAP, curve * READING_CAP);
-}
 
 export default function ReadingProgress({
   pageCount,
   line = null,
-  phase = "reading",
+  phase = "submitting",
   pageImage = null,
+  onCancel,
 }: {
   pageCount: number;
   /** What 明明 is saying while he reads — a fixed line from `lib/i18n/ui.ts`, never a claim about the sheet. */
   line?: string | null;
-  /** `writing` once the first card has arrived. */
-  phase?: ReadPhase;
+  /** A stage reported by the read route. */
+  phase?: ReadProgressPhase;
   /** The first page, as a data URL, shown inside the card. Null on the sample path. */
   pageImage?: string | null;
+  onCancel: () => void;
 }) {
   const t = useT();
   const [startedAt] = useState(() => Date.now());
-  const [percent, setPercent] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const tick = () => setPercent(Math.round(estimate(Date.now() - startedAt, pageCount, phase)));
+    const tick = () => setElapsed(Date.now() - startedAt);
     tick();
     const id = setInterval(tick, 400);
     return () => clearInterval(id);
   }, [pageCount, phase, startedAt]);
 
-  const overlayLine =
-    phase === "writing" ? t("reading.writing") : fill(t("reading.scanning"), { n: Math.max(1, pageCount) });
+  const overlayLine = phase === "submitting"
+    ? t("reading.submitting")
+    : phase === "checking"
+      ? t("reading.checking")
+      : fill(t("reading.scanning"), { n: Math.max(1, pageCount) });
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
@@ -89,30 +73,13 @@ export default function ReadingProgress({
         <div className="absolute inset-[18px] rounded-[14px] border-[1.5px] border-white/35" />
 
         <div
-          role="status"
-          aria-live="polite"
           className="animate-fade-up absolute inset-0 flex flex-col items-center justify-center gap-4 text-white"
           style={{ background: "rgba(19,19,19,.88)" }}
         >
-          <span className="relative grid h-24 w-24 place-items-center">
-            <svg viewBox="0 0 96 96" className="absolute inset-0 h-full w-full" aria-hidden="true">
-              <circle cx="48" cy="48" r="42" fill="none" stroke="#2F2F2F" strokeWidth="2" />
-              <circle
-                cx="48"
-                cy="48"
-                r="42"
-                fill="none"
-                stroke="#ffffff"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeDasharray={`${(percent / 100) * RING} ${RING}`}
-                transform="rotate(-90 48 48)"
-                style={{ transition: "stroke-dasharray .5s ease" }}
-              />
-            </svg>
-            <span className="text-[22px] font-bold">{percent}%</span>
+          <span className="relative grid h-24 w-24 place-items-center rounded-full border-2 border-white/30">
+            <span className="text-[18px] font-semibold">{Math.floor(elapsed / 1000)}s</span>
           </span>
-          <p className="px-6 text-[17px] leading-[24px] font-semibold">{overlayLine}</p>
+          <p role="status" aria-live="polite" className="px-6 text-[17px] leading-[24px] font-semibold">{overlayLine}</p>
         </div>
       </div>
 
@@ -128,6 +95,10 @@ export default function ReadingProgress({
           {line}
         </p>
       ) : null}
+      {elapsed >= 30_000 ? <p className="text-[15px] text-muted">{t("reading.slow")}</p> : null}
+      <ChunkyButton type="button" variant="tinted" className="mt-1" onClick={onCancel}>
+        {t("reading.cancel")}
+      </ChunkyButton>
     </div>
   );
 }

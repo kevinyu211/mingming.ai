@@ -1,14 +1,26 @@
 /**
  * The browser half of `POST /api/read` (contracts/api-read.md).
  *
- * The route answers with newline-delimited JSON so the first card can be spoken while the rest
- * are still being written. This module turns that stream into callbacks plus one typed outcome,
+ * The route answers with newline-delimited JSON: immediate progress, then the complete validated
+ * card set. This module turns that stream into callbacks plus one typed outcome,
  * so a page never has to reason about HTTP status codes or half-arrived lines.
  *
  * Every failure is a named outcome, not an exception: the constitution treats failure paths as
  * features, and each one maps to a designed screen (S10) rather than a toast.
  */
-import type { Card, StoredReading } from "@/lib/domain/schemas";
+import {
+  CardSchema,
+  StoredReadingSchema,
+  type Card,
+  type StoredReading,
+} from "@/lib/domain/schemas";
+import {
+  READ_PROCESSING_TIMEOUT_MS,
+  READ_RESPONSE_GRACE_MS,
+  READ_SUBMISSION_TIMEOUT_MS,
+} from "@/lib/domain/read-policy";
+
+import { validateReadingCards } from "@/lib/sheets/cards";
 
 /** One downscaled page, as `lib/image/downscale.ts` produces it. */
 export interface ImageInput {
@@ -30,6 +42,8 @@ export type ReadOutcome =
   | { kind: "invalid_reading" }
   /** 502, or the request never reached the route. */
   | { kind: "model_unavailable" }
+  | { kind: "timed_out" }
+  | { kind: "cancelled" }
   /** 413: the pages are over the body limit. */
   | { kind: "too_large" }
   /** 400: the request was malformed, or the photo was rejected before reading. */
@@ -81,6 +95,10 @@ function outcomeForError(name: string | undefined, status: number): ReadOutcome 
       return { kind: "model_unavailable" };
     case "bad_request":
       return { kind: "bad_request", detail: null };
+    case "timed_out":
+      return { kind: "timed_out" };
+    case "cancelled":
+      return { kind: "cancelled" };
     default:
       break;
   }
@@ -110,43 +128,104 @@ async function errorOutcome(response: Response): Promise<ReadOutcome> {
 
 /**
  * The reading the client keeps: the server's `SheetReading` (with `recognisedType` already set
- * by the diet rules) plus the timestamp, which is set here and never sent to any model.
+ * by the diet rules) plus the server timestamp, which is never sent to any model.
  */
 function toStoredReading(value: unknown): StoredReading | null {
-  if (typeof value !== "object" || value === null) return null;
-  const reading = value as Partial<StoredReading>;
-  if (typeof reading.sheetType !== "string" || !Array.isArray(reading.medicines)) return null;
-  return {
-    ...(reading as StoredReading),
-    readAt: new Date().toISOString(),
-  };
+  const result = StoredReadingSchema.safeParse(value);
+  return result.success ? result.data : null;
+}
+
+function abortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+/** Settle even when an underlying transport does not react to cancellation. */
+function abortable<T>(signal: AbortSignal, call: () => Promise<T>): Promise<T> {
+  const aborted = () => new DOMException("Aborted", "AbortError");
+  if (signal.aborted) return Promise.reject(aborted());
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(aborted());
+    signal.addEventListener("abort", onAbort, { once: true });
+    const clean = () => signal.removeEventListener("abort", onAbort);
+    try {
+      Promise.resolve(call()).then(
+        (value) => {
+          clean();
+          if (signal.aborted) reject(aborted());
+          else resolve(value);
+        },
+        (error: unknown) => { clean(); reject(error); },
+      );
+    } catch (error) { clean(); reject(error); }
+  });
 }
 
 /**
- * Sends one or two downscaled pages to `/api/read` and consumes the NDJSON stream.
- *
- * Cards are handed to `onCard` as they arrive so the page can render (and prefetch audio for)
- * the warning card before the rest of the sheet is written. Resolves once the stream ends.
+ * Sends one to six downscaled pages to `/api/read`. Progress arrives immediately; cards are
+ * committed only after the complete reading and its card associations have been validated.
  */
 export async function readSheet(
   images: ImageInput[],
   handlers: ReadHandlers = {},
 ): Promise<ReadOutcome> {
+  const controller = new AbortController();
+  let phase: "submitting" | "processing" = "submitting";
+  let timedOut = false;
+  let cancelled = handlers.signal?.aborted === true;
+  let activeReader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+  const onAbort = () => {
+    cancelled = true;
+    controller.abort();
+    void activeReader?.cancel().catch(() => {});
+  };
+  if (handlers.signal) {
+    handlers.signal.addEventListener("abort", onAbort, { once: true });
+  }
+  const watchdog = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+    void activeReader?.cancel().catch(() => {});
+  }, READ_SUBMISSION_TIMEOUT_MS);
+  let processingWatchdog: ReturnType<typeof setTimeout> | null = null;
+  const stopWatchdogs = () => {
+    clearTimeout(watchdog);
+    if (processingWatchdog !== null) clearTimeout(processingWatchdog);
+    handlers.signal?.removeEventListener("abort", onAbort);
+  };
+  if (cancelled) {
+    stopWatchdogs();
+    controller.abort();
+    return { kind: "cancelled" };
+  }
   let response: Response;
   try {
-    response = await fetch("/api/read", {
+    response = await abortable(controller.signal, () => fetch("/api/read", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // Only the pixels. No profile, no dialect, no identifier (FR-019).
       body: JSON.stringify({ images }),
-      signal: handlers.signal,
-    });
-  } catch {
+      signal: controller.signal,
+    }));
+  } catch (error) {
+    stopWatchdogs();
+    if (cancelled || handlers.signal?.aborted) return { kind: "cancelled" };
+    if (timedOut || abortError(error)) return { kind: "timed_out" };
     return { kind: "model_unavailable" };
   }
 
-  if (!response.ok) return errorOutcome(response);
-  if (!response.body) return { kind: "model_unavailable" };
+  if (!response.ok) {
+    try {
+      return await abortable(controller.signal, () => errorOutcome(response));
+    } catch {
+      return cancelled ? { kind: "cancelled" } : { kind: "timed_out" };
+    } finally {
+      stopWatchdogs();
+    }
+  }
+  if (!response.body) {
+    stopWatchdogs();
+    return { kind: "model_unavailable" };
+  }
 
   // One holder object rather than five `let`s: the parser writes to it from a closure, and
   // TypeScript keeps the declared types honest across the reader loop that way.
@@ -159,19 +238,43 @@ export async function readSheet(
   } = { cards: [], reading: null, filter: null, declined: false, failure: null };
 
   const reader = response.body.getReader();
+  activeReader = reader;
   const decoder = new TextDecoder();
   let buffer = "";
 
   const handleLine = (line: string): void => {
+    if (controller.signal.aborted) return;
     const parsed = parseEvent(line);
     if (!parsed) return;
     switch (parsed.event) {
       case "status":
-        handlers.onStatus?.(parsed.phase ?? "reading");
+        {
+          const nextPhase = parsed.phase ?? "reading";
+          if (phase === "submitting" && nextPhase === "reading") {
+            phase = "processing";
+            clearTimeout(watchdog);
+            processingWatchdog = setTimeout(
+              () => {
+                timedOut = true;
+                controller.abort();
+                void reader.cancel().catch(() => {});
+              },
+              READ_PROCESSING_TIMEOUT_MS + READ_RESPONSE_GRACE_MS,
+            );
+          }
+          handlers.onStatus?.(nextPhase);
+        }
         break;
       case "card":
-        state.cards.push(parsed.card);
-        handlers.onCard?.(parsed.card);
+        {
+          const result = CardSchema.safeParse(parsed.card);
+          if (!result.success) {
+            state.failure = { kind: "invalid_reading" };
+            break;
+          }
+          state.cards.push(result.data);
+          handlers.onCard?.(result.data);
+        }
         break;
       case "unknown":
         state.declined = true;
@@ -188,7 +291,7 @@ export async function readSheet(
 
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await abortable(controller.signal, () => reader.read());
       if (value) {
         buffer += decoder.decode(value, { stream: true });
         const split = splitLines(buffer);
@@ -202,13 +305,25 @@ export async function readSheet(
     for (const line of tail.lines) handleLine(line);
   } catch {
     // The stream broke mid-reading. Anything already shown stays; the outcome is honest.
+    if (cancelled || handlers.signal?.aborted) return { kind: "cancelled" };
+    if (timedOut) return { kind: "timed_out" };
     return state.failure ?? { kind: "model_unavailable" };
   } finally {
-    reader.releaseLock();
+    stopWatchdogs();
+    activeReader = null;
+    try {
+      reader.releaseLock();
+    } catch {
+      // A canceled reader may already have released its lock.
+    }
   }
 
+  if (cancelled) return { kind: "cancelled" };
+  if (timedOut) return { kind: "timed_out" };
   if (state.failure) return state.failure;
   if (state.declined) return { kind: "unknown" };
   if (!state.reading) return { kind: "invalid_reading" };
-  return { kind: "reading", reading: state.reading, cards: state.cards, filter: state.filter };
+  const cards = validateReadingCards(state.reading, state.cards);
+  if (!cards) return { kind: "invalid_reading" };
+  return { kind: "reading", reading: state.reading, cards, filter: state.filter };
 }

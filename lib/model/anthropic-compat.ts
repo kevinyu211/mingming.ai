@@ -41,6 +41,7 @@ import {
   type AnswerInput,
   type ModelProvider,
   type UsageSummary,
+  type ModelCallOptions,
 } from "@/lib/model/client";
 import { scanEarlyAnswer, type EarlyAnswer } from "@/lib/model/early";
 import {
@@ -146,13 +147,13 @@ export class AnthropicCompatProvider implements ModelProvider {
     this.modelAsk = options.modelAsk;
   }
 
-  async readSheet(images: ImageInput[]) {
-    const { value, usage } = await this.send(this.readSpec(images));
+  async readSheet(images: ImageInput[], options?: ModelCallOptions) {
+    const { value, usage } = await this.send(this.readSpec(images), options);
     return { reading: value, usage };
   }
 
-  async readSheetStream(images: ImageInput[], onPartialText?: (delta: string) => void) {
-    const { value, usage } = await this.sendStreaming(this.readSpec(images), onPartialText);
+  async readSheetStream(images: ImageInput[], onPartialText?: (delta: string) => void, options?: ModelCallOptions) {
+    const { value, usage } = await this.sendStreaming(this.readSpec(images), onPartialText, options);
     return { reading: value, usage };
   }
 
@@ -200,7 +201,7 @@ export class AnthropicCompatProvider implements ModelProvider {
     };
   }
 
-  async phrase(input: PhraseInput) {
+  async phrase(input: PhraseInput, options?: ModelCallOptions) {
     const { value, usage } = await this.send({
       model: this.modelAsk,
       system: PHRASE_SYSTEM,
@@ -210,7 +211,7 @@ export class AnthropicCompatProvider implements ModelProvider {
       schema: PhraseResultSchema,
       budget: ASK_BUDGET,
       maxTokens: MAX_TOKENS,
-    });
+    }, options);
     return { result: value, usage };
   }
 
@@ -245,11 +246,15 @@ export class AnthropicCompatProvider implements ModelProvider {
     };
   }
 
-  private async send<T>(spec: CallSpec<T>): Promise<{ value: T; usage: UsageSummary }> {
+  private async send<T>(spec: CallSpec<T>, options?: ModelCallOptions): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
     let message: BetaMessage;
     try {
-      message = await this.client.beta.messages.create(this.params(spec), spec.budget);
+      message = await this.client.beta.messages.create(this.params(spec), {
+        ...spec.budget,
+        signal: options?.signal,
+        timeout: Math.min(spec.budget.timeout, options?.timeoutMs ?? spec.budget.timeout),
+      });
     } catch (error) {
       throw toAnthropicModelError(error);
     }
@@ -259,11 +264,16 @@ export class AnthropicCompatProvider implements ModelProvider {
   private async sendStreaming<T>(
     spec: CallSpec<T>,
     onPartialText?: (delta: string) => void,
+    options?: ModelCallOptions,
   ): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
     let message: BetaMessage;
     try {
-      const stream = this.client.beta.messages.stream(this.params(spec), spec.budget);
+      const stream = this.client.beta.messages.stream(this.params(spec), {
+        ...spec.budget,
+        signal: options?.signal,
+        timeout: Math.min(spec.budget.timeout, options?.timeoutMs ?? spec.budget.timeout),
+      });
       if (onPartialText) stream.on("text", (delta: string) => onPartialText(delta));
       message = await stream.finalMessage();
     } catch (error) {

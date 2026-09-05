@@ -17,8 +17,9 @@
 import { doseTargets, localDay } from "@/lib/rules/doses";
 import { draftPlan } from "@/lib/rules/plan-from-reading";
 import { sheetTitle } from "@/lib/sheets/title";
+import { InvalidReadingCardsError, validateReadingCards } from "@/lib/sheets/cards";
 import type { Sheet, SheetsState, ThreadMessage } from "@/lib/sheets/types";
-import type { StoredReading } from "@/lib/domain/schemas";
+import type { Card, StoredReading } from "@/lib/domain/schemas";
 import {
   loadState,
   saveSheets,
@@ -182,7 +183,17 @@ function isSameLanding(
  * counter can never drift away from the page it was quoting. The archive keeps the newest
  * `ARCHIVE_LIMIT` and drops the oldest.
  */
-export function startSheet(reading: StoredReading, pageCount: number): Sheet {
+export function startSheet(
+  reading: StoredReading,
+  pageCount: number,
+  validatedCards?: Card[],
+): Sheet {
+  const canonicalCards =
+    validatedCards === undefined ? undefined : validateReadingCards(reading, validatedCards);
+  if (validatedCards !== undefined && canonicalCards === null) {
+    throw new InvalidReadingCardsError();
+  }
+
   const state = loadState();
   const current = sheetsOf(state);
   const capturedAt = new Date().toISOString();
@@ -222,6 +233,7 @@ export function startSheet(reading: StoredReading, pageCount: number): Sheet {
     pageCount: pageCountOf(pageCount),
     title: sheetTitle(reading, localeOf(state)),
     reading,
+    ...(canonicalCards == null ? {} : { validatedCards: canonicalCards }),
     plan: draftPlan(reading),
     thread: [],
     doses: {},

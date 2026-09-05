@@ -118,7 +118,7 @@ export interface AnswerInput {
 }
 
 export interface ModelProvider {
-  readSheet(images: ImageInput[]): Promise<{ reading: SheetReading; usage: UsageSummary }>;
+  readSheet(images: ImageInput[], options?: ModelCallOptions): Promise<{ reading: SheetReading; usage: UsageSummary }>;
   /**
    * Same call, streamed, so the read route can start speaking before the whole reading lands.
    * `onPartialText` receives raw text deltas of the JSON body; full validation happens on the
@@ -127,6 +127,7 @@ export interface ModelProvider {
   readSheetStream(
     images: ImageInput[],
     onPartialText?: (delta: string) => void,
+    options?: ModelCallOptions,
   ): Promise<{ reading: SheetReading; usage: UsageSummary }>;
   answer(input: AnswerInput): Promise<{ result: AskResult; usage: UsageSummary }>;
   /**
@@ -139,7 +140,12 @@ export interface ModelProvider {
     input: AnswerInput,
     onEarly?: (early: EarlyAnswer) => void,
   ): Promise<{ result: AskResult; usage: UsageSummary }>;
-  phrase(input: PhraseInput): Promise<{ result: PhraseResult; usage: UsageSummary }>;
+  phrase(input: PhraseInput, options?: ModelCallOptions): Promise<{ result: PhraseResult; usage: UsageSummary }>;
+}
+
+export interface ModelCallOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
 }
 
 export type { EarlyAnswer };
@@ -198,6 +204,14 @@ export class ModelOutputError extends ModelError {
     super(`invalid_output:${reason}`, `the model output was not usable (${reason})`);
     this.issues = issues;
   }
+}
+
+export class ModelTimeoutError extends ModelError {
+  constructor() { super("timed_out", "the model call timed out"); }
+}
+
+export class ModelCancelledError extends ModelError {
+  constructor() { super("cancelled", "the model call was cancelled"); }
 }
 
 /**
@@ -294,13 +308,13 @@ export class GatewayProvider implements ModelProvider {
     this.stream = options.stream ?? streamText;
   }
 
-  async readSheet(images: ImageInput[]) {
-    const { value, usage } = await this.send(this.readSpec(images));
+  async readSheet(images: ImageInput[], options?: ModelCallOptions) {
+    const { value, usage } = await this.send(this.readSpec(images), options);
     return { reading: value, usage };
   }
 
-  async readSheetStream(images: ImageInput[], onPartialText?: (delta: string) => void) {
-    const { value, usage } = await this.sendStreaming(this.readSpec(images), onPartialText);
+  async readSheetStream(images: ImageInput[], onPartialText?: (delta: string) => void, options?: ModelCallOptions) {
+    const { value, usage } = await this.sendStreaming(this.readSpec(images), onPartialText, options);
     return { reading: value, usage };
   }
 
@@ -342,7 +356,7 @@ export class GatewayProvider implements ModelProvider {
     };
   }
 
-  async phrase(input: PhraseInput) {
+  async phrase(input: PhraseInput, options?: ModelCallOptions) {
     const { value, usage } = await this.send({
       route: "phrase",
       model: this.modelAsk,
@@ -350,7 +364,7 @@ export class GatewayProvider implements ModelProvider {
       content: buildPhraseUserContent(input),
       schema: PhraseResultSchema,
       timeoutMs: ASK_TIMEOUT_MS,
-    });
+    }, options);
     return { result: value, usage };
   }
 
@@ -366,7 +380,7 @@ export class GatewayProvider implements ModelProvider {
   }
 
   /** The request, identical for the streamed and unstreamed paths. */
-  params<T>(spec: CallSpec<T>) {
+  params<T>(spec: CallSpec<T>, options?: ModelCallOptions) {
     const messages: ModelMessage[] = [
       {
         role: "system",
@@ -384,16 +398,17 @@ export class GatewayProvider implements ModelProvider {
       output: Output.object({ schema: spec.schema }),
       maxOutputTokens: MAX_TOKENS,
       maxRetries: 2,
-      timeout: { totalMs: spec.timeoutMs },
+      timeout: { totalMs: Math.min(spec.timeoutMs, options?.timeoutMs ?? spec.timeoutMs) },
+      abortSignal: options?.signal,
       providerOptions: { gateway: { tags: [`route:${spec.route}`] } },
     };
   }
 
-  private async send<T>(spec: CallSpec<T>): Promise<{ value: T; usage: UsageSummary }> {
+  private async send<T>(spec: CallSpec<T>, options?: ModelCallOptions): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
     let result: Awaited<ReturnType<typeof generateText>>;
     try {
-      result = await this.generate(this.params(spec));
+      result = await this.generate(this.params(spec, options));
     } catch (error) {
       throw toModelError(error);
     }
@@ -412,6 +427,7 @@ export class GatewayProvider implements ModelProvider {
   private async sendStreaming<T>(
     spec: CallSpec<T>,
     onPartialText?: (delta: string) => void,
+    options?: ModelCallOptions,
   ): Promise<{ value: T; usage: UsageSummary }> {
     const startedAt = Date.now();
     let failure: unknown = null;
@@ -421,7 +437,7 @@ export class GatewayProvider implements ModelProvider {
     let modelId: string | undefined;
     try {
       const result = this.stream({
-        ...this.params(spec),
+        ...this.params(spec, options),
         // streamText reports transport errors here and ends the stream, rather than throwing.
         onError: ({ error }) => {
           failure = error;
@@ -552,10 +568,10 @@ function buildProvider(modelRead: string, modelAsk: string, compat: boolean): Mo
     const reader = isAnthropicSlug(modelRead) ? anthropic : sdk;
     const asker = isAnthropicSlug(modelAsk) ? anthropic : sdk;
     return {
-      readSheet: (images) => reader.readSheet(images),
-      readSheetStream: (images, onPartialText) => reader.readSheetStream(images, onPartialText),
+      readSheet: (images, options) => reader.readSheet(images, options),
+      readSheetStream: (images, onPartialText, options) => reader.readSheetStream(images, onPartialText, options),
       answer: (input) => asker.answer(input),
-      phrase: (input) => asker.phrase(input),
+      phrase: (input, options) => asker.phrase(input, options),
     };
   }
   return new GatewayProvider({ modelRead, modelAsk });

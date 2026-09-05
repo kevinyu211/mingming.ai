@@ -43,6 +43,7 @@ import BottomSheet from "@/components/BottomSheet";
 import ChunkyButton from "@/components/ChunkyButton";
 import { useLocale } from "@/components/LocaleProvider";
 import { downscale, type DownscaledImage } from "@/lib/image/downscale";
+import { pendingImagePayload } from "@/lib/image/payload";
 import { unlockAudio } from "@/lib/speech/tts";
 import type { UiLocale } from "@/lib/i18n/ui";
 
@@ -81,6 +82,16 @@ const PHOTO_FAILED: Copy = {
   hant: "呢張相讀唔到，再影一次。",
   hans: "这张照片读不到，再拍一次。",
   en: "That photo didn't come through. Try again.",
+};
+const SEND_FAILED: Copy = {
+  hant: "相片仲喺呢度，但準備傳送嗰陣出咗問題。請再試一次。",
+  hans: "照片还在这里，但准备发送时出了问题。请再试一次。",
+  en: "Your photos are still here, but they couldn't be prepared for sending. Try again.",
+};
+const PHOTOS_TOO_LARGE: Copy = {
+  hant: "呢批相片太大，傳送唔到。請將同一批頁面影清楚啲再試。",
+  hans: "这批照片太大，无法发送。请将同一批页面拍清楚一些再试。",
+  en: "These photos are too large to send together. Retake clearer photos of the same pages.",
 };
 const PAGE_LABEL: Copy = {
   hant: "第 {n} 頁",
@@ -133,6 +144,7 @@ export default function Capture() {
   const [pickOpen, setPickOpen] = useState(wantsPick);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [failureCopy, setFailureCopy] = useState<Copy>(PHOTO_FAILED);
   /** How many photos the last selection had to turn away at the ceiling. 0 when none were. */
   const [turnedAway, setTurnedAway] = useState(0);
 
@@ -161,6 +173,7 @@ export default function Capture() {
       if (!files || files.length === 0) return;
       setBusy(true);
       setFailed(false);
+      setFailureCopy(PHOTO_FAILED);
       try {
         // The ceiling is applied to the reader's OWN selection, before any work is done, so the
         // number reported back is the number of photos they actually chose and could not have —
@@ -241,21 +254,28 @@ export default function Capture() {
    * read, shows 讀住你張紙…, and only calls `startSheet()` once the reading has actually landed.
    */
   const startReading = useCallback(() => {
-    if (pages.length === 0) return;
+    if (pages.length === 0 || busy) return;
     // 講俾我聽 is the gesture immediately before a reading, so unlock here too. Costs nothing when
     // the consent tap already did it, and covers a second sheet read in the same session.
     unlockAudio();
     try {
+      const payload = pendingImagePayload(pages);
+      if (payload.tooLarge) {
+        setFailureCopy(PHOTOS_TOO_LARGE);
+        setFailed(true);
+        return;
+      }
       window.sessionStorage.setItem(
         PENDING_IMAGES_KEY,
-        JSON.stringify(pages.map((p) => ({ mediaType: p.mediaType, base64: p.base64 }))),
+        payload.pending,
       );
     } catch {
+      setFailureCopy(SEND_FAILED);
       setFailed(true);
       return;
     }
     router.push("/chat");
-  }, [pages, router]);
+  }, [pages, busy, router]);
 
   const leave = useCallback(() => {
     if (view === "camera" && pages.length > 0) {
@@ -316,7 +336,7 @@ export default function Capture() {
           onRetake={retake}
           onStart={startReading}
           pageLabel={(n) => label(PAGE_LABEL, n)}
-          failedText={PHOTO_FAILED[locale]}
+          failedText={failureCopy[locale]}
           turnedAwayText={(n) => label(TURNED_AWAY, n)}
         />
       )}

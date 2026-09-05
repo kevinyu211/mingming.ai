@@ -245,6 +245,10 @@ const hant = {
   "reading.metaLong": "{n} 頁 · 可能要幾分鐘",
   "reading.opening": "好，我睇下張紙先。睇完我會先講最緊要嗰啲。",
   "reading.still": "我仲睇緊，唔使急。",
+  "reading.submitting": "準備送出張紙…",
+  "reading.checking": "整理緊重點…",
+  "reading.slow": "仲未完成。你可以等，或者取消今次閱讀。",
+  "reading.cancel": "取消閱讀",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "返去記錄",
@@ -640,6 +644,10 @@ const hans: Record<UiKey, string> = {
   "reading.metaLong": "{n} 页 · 可能要几分钟",
   "reading.opening": "好，我先看看这张纸。看完我会先讲最要紧的。",
   "reading.still": "我还在看，不用急。",
+  "reading.submitting": "准备送出这张纸…",
+  "reading.checking": "正在整理重点…",
+  "reading.slow": "还没有完成。你可以继续等，或者取消这次阅读。",
+  "reading.cancel": "取消阅读",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "回到记录",
@@ -1000,6 +1008,10 @@ const en: Record<UiKey, string> = {
   "reading.metaLong": "{n} pages · this may take a few minutes",
   "reading.opening": "Right, let me read the sheet first. When I'm done I'll start with what matters most.",
   "reading.still": "Still reading — no rush.",
+  "reading.submitting": "Sending the sheet…",
+  "reading.checking": "Checking the important lines…",
+  "reading.slow": "This is taking longer than expected. You can wait or cancel this reading.",
+  "reading.cancel": "Cancel reading",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "Back to sheets",

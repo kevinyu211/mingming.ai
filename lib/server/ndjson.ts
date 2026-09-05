@@ -41,11 +41,13 @@ export class NdjsonBuffer {
   /** Resolves on the first `markOpen()`, or on `close()` if that comes first. */
   readonly opened: Promise<void>;
 
-  constructor() {
+  constructor(onCancel?: () => void) {
+    this.onCancel = onCancel;
     this.opened = new Promise<void>((resolve) => {
       this.resolveOpened = resolve;
     });
   }
+  private readonly onCancel?: () => void;
 
   /** True once the producer has asked for the response to become a stream. */
   get isOpen(): boolean {
@@ -122,6 +124,7 @@ export class NdjsonBuffer {
       },
       cancel: () => {
         this.cancelled = true;
+        this.onCancel?.();
         this.controller = null;
         this.queued = [];
       },

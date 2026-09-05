@@ -46,6 +46,20 @@ function message(text: string, extra: Record<string, unknown> = {}) {
 }
 
 describe("the request", () => {
+  it("forwards signal and clamps read timeout, including phrase calls", async () => {
+    const { client, create } = fakeClient(message(JSON.stringify(READING)));
+    const provider = new AnthropicCompatProvider({ client, modelRead: "anthropic/claude-sonnet-5", modelAsk: "anthropic/claude-sonnet-5" });
+    const signal = new AbortController().signal;
+    await provider.readSheet(IMAGES, { signal, timeoutMs: 999_999 });
+    let [, options] = create.mock.calls[0] as unknown as [unknown, { timeout: number; signal?: AbortSignal }];
+    expect(options.timeout).toBe(280_000);
+    expect(options.signal).toBe(signal);
+    create.mockResolvedValueOnce(message(JSON.stringify({ spoken: { yue: "x", cmn: "x", en: "x" } })));
+    await provider.phrase({ cardType: "medicine", facts: { name: "Amlodipine" }, source: { section: "x", lineIndex: 0, quote: "Amlodipine" }, avoid: [], dialect: "both" }, { timeoutMs: 4_000 });
+    [, options] = create.mock.calls[1] as unknown as [unknown, { timeout: number }];
+    expect(options.timeout).toBe(4_000);
+  });
+
   it("is the pre-Gateway shape: strict format, medium effort, cached system block, images first", async () => {
     const { client, create } = fakeClient(message(JSON.stringify(READING)));
     const provider = new AnthropicCompatProvider({ client, modelRead: "anthropic/claude-sonnet-5", modelAsk: "anthropic/claude-sonnet-5" });

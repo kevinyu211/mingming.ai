@@ -1,6 +1,6 @@
 # Contract: `POST /api/read`
 
-Reads one or two photographed pages into a `SheetReading`. **Model-generated** output, validated
+Reads one to six photographed pages into a `SheetReading`. **Model-generated** output, validated
 and filtered by rules before it is returned.
 
 ## Request
@@ -35,20 +35,22 @@ and filtered by rules before it is returned.
 
 ## Response
 
-Streamed as newline-delimited JSON events so the client can speak the first card early:
+Valid input receives HTTP 200 and a `reading` status before waiting for the model. Progress is
+streamed as newline-delimited JSON; all cards are withheld until extraction and safety checks finish:
 
 ```
 {"event":"status","phase":"reading"}
+{"event":"status","phase":"checking"}
 {"event":"card","card":{ ...Card... }}
 {"event":"card","card":{ ...Card... }}
-{"event":"done","reading":{ ...SheetReading with recognisedType added... },"filter":{"regenerated":1,"templated":0}}
+{"event":"done","reading":{ ...StoredReading with recognisedType and readAt added... },"filter":{"regenerated":1,"templated":0}}
 ```
 
 - Cards are emitted in the fixed order (warning signs first). If the model returns no warning signs,
   the server emits the rule-generated `noWarnings` card first.
 - `sheetType: "unknown"` → a single event `{"event":"unknown"}` and no cards (FR-006).
 - Every `Speakable` string in every card has passed the banned-term filter; on a hit the server
-  regenerated that card once via the phrase prompt, then substituted the template. `filter` reports
+  attempts one regeneration via the phrase prompt, then uses a checked template if needed. `filter` reports
   how many strings were regenerated or templated, for the eval log.
 
 ## Errors
@@ -57,13 +59,38 @@ Streamed as newline-delimited JSON events so the client can speak the first card
 | --- | --- | --- |
 | 400 | `{ "error": "bad_request", "detail": "..." }` | Show "try another photo" |
 | 413 | `{ "error": "too_large" }` | Client re-downscales and retries once |
-| 422 | `{ "error": "invalid_reading" }` (schema validation failed after one retry) | Show "couldn't read this sheet" state, offer sample sheet |
-| 502 | `{ "error": "model_unavailable" }` | Offer bundled sample sheet (FR-024) |
+
+After acceptance, errors are terminal NDJSON events on the HTTP 200 response:
+
+| Error event code | Meaning | Client behaviour |
+| --- | --- | --- |
+| `invalid_reading` | Schema invalid, including after the one permitted retry | Offer another photo or sample |
+| `model_unavailable` | Provider failed or refused | Offer retry or sample |
+| `timed_out` | Processing deadline reached | Offer retry or sample |
+| `cancelled` | Request cancelled | Stop processing without saving a reading |
+
+The client also accepts legacy JSON 422/502 errors. It checks the final card set against the
+reading (IDs, types, order, sources and facts) before persisting it. An incomplete, mismatched or
+failed read never replaces or archives the active sheet. Final validated cards are saved alongside
+the reading so repaired wording and warning markers survive reopening and sharing.
+
+## Time and cancellation budgets
+
+- Client submission/acknowledgment: 30 seconds. After the first `reading` event, one 240-second
+  processing budget plus 10 seconds of response grace; later heartbeats do not reset this clock.
+- Server extraction, optional schema retry and safety checks share 240 seconds, within the route's
+  300-second platform allowance. A schema retry needs at least 5 seconds remaining.
+- Repairs run at most two at a time and share a 10-second budget, also bounded by the server
+  deadline. Pending and failed repairs use checked deterministic templates; order is unchanged.
+- A deadline aborts the underlying model transport. A client disconnect or explicit cancellation
+  aborts active model/repair work. Request identity guards prevent late callbacks from saving data.
+- Capture checks the exact encoded JSON body against 8 MB before submission. Storage and size
+  failures retain the selected photos so the user can retry.
 
 ## Server guarantees
 
 - Image bytes exist only in the request handler's memory and are not written, cached or logged.
-- Request and response bodies are not logged; only timing, status and `filter` counts are.
+- Request and response bodies are not logged; only numeric stage timing, page/byte counts, status, fixed error codes and `filter` counts are.
 - Output validated against `sheet-reading.schema.json` (as a Zod schema) before any event is sent
   except `status`.
 - `dietLine.recognisedType` is set by `lib/rules/diet-line.ts`, not by the model.

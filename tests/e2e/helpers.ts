@@ -72,12 +72,11 @@ function fixture(id: FixtureId): SheetReading {
 }
 
 /**
- * The reading as `/api/read` returns it: `recognisedType` set by the diet rules (the route's job,
- * not the model's), and no `readAt` — the client stamps that itself and never sends it anywhere.
+ * The reading as `/api/read` returns it: diet rules and timestamp are set by the server.
  */
-export function wireReading(id: FixtureId): Omit<StoredReading, "readAt"> {
+export function wireReading(id: FixtureId): StoredReading {
   const raw = fixture(id);
-  return { ...raw, dietLine: applyDietRules(raw) };
+  return { ...raw, dietLine: applyDietRules(raw), readAt: "2026-09-02T09:00:00.000Z" };
 }
 
 /** The reading as it sits in `localStorage` after a read. The timestamp is fixed for stability. */

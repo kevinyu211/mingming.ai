@@ -4,12 +4,9 @@
  * HTTP only: parse, size-check, stream, map errors to statuses. Every safety gate lives in
  * `lib/server/reading-pipeline.ts`; every model call lives in `lib/model/client.ts`.
  *
- * Streaming and status codes pull against each other, so the route is explicit about the moment it
- * commits: `NdjsonBuffer` queues the first `status` line, the read starts, and the response only
- * becomes a stream when the model produces its first text delta. Fail before that — a refusal, an
- * outage, two unusable readings — and nothing has been flushed, so the client gets 422 or 502 and
- * can fall back to the bundled sample sheet (FR-024). Fail after it and the last line is
- * `{"event":"error","error":"…"}`, because the status is already 200 on the wire.
+ * Valid input is acknowledged immediately with a reading status. Extraction and all safety
+ * checks finish before cards are emitted. Failures after acceptance are terminal NDJSON errors;
+ * malformed or oversized requests retain ordinary 400/413 responses.
  *
  * Privacy (constitution V, contracts/api-read.md § Server guarantees): the decoded image never
  * leaves this function's scope — no module state, no disk, no cache. Nothing logs a request or
@@ -25,6 +22,8 @@ import {
   ModelOutputError,
   ModelRefusalError,
   ModelRequestError,
+  ModelTimeoutError,
+  ModelCancelledError,
   ModelUnavailableError,
   getModelProvider,
   type ImageInput,
@@ -32,6 +31,8 @@ import {
 } from "@/lib/model/client";
 import { NdjsonBuffer, jsonError, ndjsonResponse } from "@/lib/server/ndjson";
 import { runReadingPipeline, type FilterCounts } from "@/lib/server/reading-pipeline";
+import { READ_MAX_BODY_BYTES, READ_PROCESSING_TIMEOUT_MS } from "@/lib/domain/read-policy";
+import { abortFailure, callBudget, withinSignal } from "@/lib/server/call-budget";
 
 export const runtime = "nodejs";
 /**
@@ -42,7 +43,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /** contracts/api-read.md: "Request body limit 8 MB." */
-const MAX_BODY_BYTES = 8 * 1024 * 1024;
+const MAX_BODY_BYTES = READ_MAX_BODY_BYTES;
 
 /**
  * How many pages one read may carry. Must equal `MAX_PAGES` in `components/Capture.tsx`, which
@@ -81,6 +82,7 @@ const ReadRequestSchema = z.strictObject({
 
 type ReadEvent =
   | { event: "status"; phase: "reading"; chars?: number }
+  | { event: "status"; phase: "checking" }
   | { event: "card"; card: Card }
   | { event: "unknown" }
   | { event: "done"; reading: StoredReading; filter: FilterCounts }
@@ -95,13 +97,21 @@ const STATUS_READING: ReadEvent = { event: "status", phase: "reading" };
 export async function POST(request: Request): Promise<Response> {
   const startedAt = Date.now();
   let logged = false;
+  const stages = { bodyMs: 0, modelMs: 0, checkingMs: 0 };
+  let pageCount = 0;
+  let requestBytes = 0;
+  const timed = async <T>(stage: "modelMs" | "checkingMs", call: () => Promise<T>): Promise<T> => {
+    const started = Date.now();
+    try { return await call(); }
+    finally { stages[stage] = Date.now() - started; }
+  };
   const log = (status: number, filter: FilterCounts | null, code?: string): void => {
     if (logged) return;
     logged = true;
     // Codes only, never a body: `code` is our own error class's identifier plus, for a rejected
     // request, the HTTP status the provider gave us. Without it a 502 is unattributable, and
     // "the model refused" and "that model does not accept this parameter" look identical.
-    console.info({ route: "read", status, ms: Date.now() - startedAt, filter, code });
+    console.info({ route: "read", status, ms: Date.now() - startedAt, filter, code, ...stages, pageCount, requestBytes });
   };
   const fail = (status: number, body: { error: string; detail?: string }): Response => {
     log(status, null, body.error);
@@ -121,7 +131,9 @@ export async function POST(request: Request): Promise<Response> {
   } catch {
     return fail(400, { error: "bad_request", detail: "unreadable_body" });
   }
-  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+  requestBytes = Buffer.byteLength(raw, "utf8");
+  stages.bodyMs = Date.now() - startedAt;
+  if (requestBytes > MAX_BODY_BYTES) {
     return fail(413, { error: "too_large" });
   }
 
@@ -138,6 +150,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const images: ImageInput[] = parsed.data.images;
+  pageCount = images.length;
 
   // Defence in depth. Base64 always inflates, so the body check above dominates in practice; this
   // is the check that still holds if the body is ever read as a stream instead of a string.
@@ -147,7 +160,9 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const provider = getModelProvider();
-  const buffer = new NdjsonBuffer();
+  const deadline = Date.now() + READ_PROCESSING_TIMEOUT_MS;
+  const budget = callBudget(READ_PROCESSING_TIMEOUT_MS, request.signal);
+  const buffer = new NdjsonBuffer(budget.cancel);
   // A plain object, not `let` bindings: values written inside the worker are read after an await,
   // where narrowing on a closure-assigned local would be wrong.
   const outcome: { failure: unknown; filter: FilterCounts | null } = {
@@ -157,9 +172,15 @@ export async function POST(request: Request): Promise<Response> {
 
   const worker = (async () => {
     buffer.emit(STATUS_READING);
+    buffer.markOpen();
     try {
-      const { reading } = await readWithOneRetry(provider, images, buffer);
-      const result = await runReadingPipeline(reading, provider);
+      const { reading } = await timed("modelMs", () => withinSignal(budget.signal, () =>
+        readWithOneRetry(provider, images, buffer, budget.signal, deadline),
+      ));
+      buffer.emit({ event: "status", phase: "checking" });
+      const result = await timed("checkingMs", () => withinSignal(budget.signal, () =>
+        runReadingPipeline(reading, provider, { signal: budget.signal, deadline }),
+      ));
 
       if (result.kind === "unknown") {
         buffer.emit({ event: "unknown" });
@@ -170,28 +191,28 @@ export async function POST(request: Request): Promise<Response> {
       outcome.filter = result.filter;
       buffer.emit({ event: "done", reading: result.reading, filter: result.filter });
     } catch (error) {
-      outcome.failure = error;
+      outcome.failure = budget.signal.aborted ? abortFailure(budget.signal) : error;
       // Already streaming: the status is spent, so the failure goes out as the last line.
-      if (buffer.isOpen) buffer.emit({ event: "error", error: codeFor(error) });
+      if (buffer.isOpen) buffer.emit({ event: "error", error: codeFor(outcome.failure) });
     } finally {
+      budget.dispose();
       buffer.close();
     }
   })();
 
-  // Resolves at the first heartbeat, or when the worker finished without ever producing one.
+  // Valid input is acknowledged before waiting for the model's first text.
   await buffer.opened;
 
-  if (!buffer.isOpen && outcome.failure !== null) {
-    const failure = outcome.failure;
-    const detail =
-      failure instanceof ModelError
-        ? `${failure.code}${"status" in failure && failure.status ? `:${failure.status}` : ""}`
+  void worker.then(() => {
+    if (outcome.failure !== null) {
+      const failure = outcome.failure;
+      const code = failure instanceof ModelError
+        ? `${failure.code}${"status" in failure && typeof failure.status === "number" ? `:${failure.status}` : ""}`
         : "unknown";
-    log(statusFor(failure), null, detail);
-    return jsonError(statusFor(failure), { error: codeFor(failure) });
-  }
-
-  void worker.then(() => log(200, outcome.filter));
+      log(statusFor(failure), outcome.filter, code);
+    }
+    else log(200, outcome.filter);
+  });
   return ndjsonResponse(buffer.stream());
 }
 
@@ -208,12 +229,20 @@ async function readWithOneRetry(
   provider: ModelProvider,
   images: ImageInput[],
   buffer: NdjsonBuffer,
+  signal: AbortSignal,
+  deadline: number,
 ): Promise<{ reading: Awaited<ReturnType<ModelProvider["readSheet"]>>["reading"] }> {
+  if (signal.aborted) throw abortFailure(signal);
+  if (Date.now() >= deadline) throw new ModelTimeoutError();
   try {
-    return await provider.readSheetStream(images, heartbeat(buffer));
+    return await provider.readSheetStream(images, heartbeat(buffer), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
   } catch (error) {
     if (!(error instanceof ModelOutputError)) throw error;
-    return await provider.readSheetStream(images, heartbeat(buffer));
+    if (signal.aborted || deadline - Date.now() < 5_000) {
+      if (signal.aborted) throw abortFailure(signal);
+      throw new ModelTimeoutError();
+    }
+    return await provider.readSheetStream(images, heartbeat(buffer), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
   }
 }
 
@@ -244,6 +273,8 @@ function statusFor(error: unknown): number {
 }
 
 function codeFor(error: unknown): string {
+  if (error instanceof ModelTimeoutError) return "timed_out";
+  if (error instanceof ModelCancelledError) return "cancelled";
   if (error instanceof ModelOutputError) return "invalid_reading";
   if (
     error instanceof ModelUnavailableError ||

@@ -9,7 +9,7 @@
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ImageInput } from "@/lib/model/client";
 import type { SheetReading } from "@/lib/domain/schemas";
@@ -89,6 +89,8 @@ beforeEach(() => {
   vi.spyOn(console, "info").mockImplementation(() => {});
 });
 
+afterEach(() => vi.useRealTimers());
+
 /* -------------------------------------------------------------------------- */
 /* Tests                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -150,7 +152,7 @@ describe("POST /api/read — success", () => {
     const lines = await events(response);
 
     expect(response.status).toBe(200);
-    expect(lines.map((line) => line.event)).toEqual(["status", "status", "unknown"]);
+    expect(lines.map((line) => line.event)).toEqual(["status", "status", "status", "unknown"]);
   });
 
   it("reports the filter counts when a card had to be re-phrased", async () => {
@@ -257,12 +259,73 @@ describe("POST /api/read — request validation", () => {
 });
 
 describe("POST /api/read — model failures", () => {
+  it("times out a stalled read at the shared deadline and aborts the provider", async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    providerMock.readSheetStream.mockImplementation(async (_images: ImageInput[], _on, options?: { signal?: AbortSignal }) => {
+      signal = options?.signal;
+      return await new Promise<never>(() => {});
+    });
+    const response = await POST(post({ images: [IMAGE] }));
+    const result = events(response);
+    await vi.advanceTimersByTimeAsync(240_000);
+    const lines = await result;
+    expect(lines.at(-1)).toEqual({ event: "error", error: "timed_out" });
+    expect(lines.some((line) => line.event === "done")).toBe(false);
+    expect(providerMock.readSheetStream).toHaveBeenCalledTimes(1);
+    expect(signal?.aborted).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("does not call the provider for an already-aborted request", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const response = await POST(new Request("http://localhost/api/read", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ images: [IMAGE] }),
+      signal: controller.signal,
+    }));
+    expect(providerMock.readSheetStream).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect((await events(response)).at(-1)).toEqual({ event: "error", error: "cancelled" });
+  });
+
+  it("does not retry invalid output when less than five seconds remain", async () => {
+    vi.useFakeTimers();
+    providerMock.readSheetStream.mockImplementation(async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 236_000));
+      throw new ModelOutputError("schema");
+    });
+    const response = await POST(post({ images: [IMAGE] }));
+    const result = events(response);
+    await vi.advanceTimersByTimeAsync(236_000);
+    const lines = await result;
+    expect(lines.at(-1)).toEqual({ event: "error", error: "timed_out" });
+    expect(providerMock.readSheetStream).toHaveBeenCalledTimes(1);
+    expect(lines.some((line) => line.event === "done")).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("aborts an uncooperative read when the client cancels the stream", async () => {
+    let signal: AbortSignal | undefined;
+    providerMock.readSheetStream.mockImplementation(async (_images: ImageInput[], _on?: (delta: string) => void, options?: { signal?: AbortSignal }) => {
+      signal = options?.signal;
+      return await new Promise<never>(() => {});
+    });
+    const response = await POST(post({ images: [IMAGE] }));
+    const reader = response.body!.getReader();
+    await reader.read();
+    await reader.cancel();
+    expect(signal?.aborted).toBe(true);
+  });
+
   it("retries once on an unusable reading, then answers 422", async () => {
     providerMock.readSheetStream.mockRejectedValue(new ModelOutputError("schema"));
 
     const response = await POST(post({ images: [IMAGE] }));
-    expect(response.status).toBe(422);
-    expect(await response.json()).toEqual({ error: "invalid_reading" });
+    expect(response.status).toBe(200);
+    expect((await events(response)).at(-1)).toEqual({ event: "error", error: "invalid_reading" });
     expect(providerMock.readSheetStream).toHaveBeenCalledTimes(2);
   });
 
@@ -280,8 +343,8 @@ describe("POST /api/read — model failures", () => {
     providerMock.readSheetStream.mockRejectedValue(new ModelUnavailableError(503));
 
     const response = await POST(post({ images: [IMAGE] }));
-    expect(response.status).toBe(502);
-    expect(await response.json()).toEqual({ error: "model_unavailable" });
+    expect(response.status).toBe(200);
+    expect((await events(response)).at(-1)).toEqual({ event: "error", error: "model_unavailable" });
     expect(providerMock.readSheetStream).toHaveBeenCalledTimes(1);
   });
 
@@ -289,8 +352,8 @@ describe("POST /api/read — model failures", () => {
     providerMock.readSheetStream.mockRejectedValue(new ModelRefusalError("policy"));
 
     const response = await POST(post({ images: [IMAGE] }));
-    expect(response.status).toBe(502);
-    expect(await response.json()).toEqual({ error: "model_unavailable" });
+    expect(response.status).toBe(200);
+    expect((await events(response)).at(-1)).toEqual({ event: "error", error: "model_unavailable" });
   });
 
   it("sends an error event as the last line when the stream already started", async () => {

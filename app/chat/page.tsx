@@ -63,7 +63,7 @@ import { PENDING_IMAGES_KEY } from "@/components/Capture";
 import ChatBar from "@/components/chat/ChatBar";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessage from "@/components/chat/ChatMessage";
-import ReadingProgress, { type ReadPhase } from "@/components/chat/ReadingProgress";
+import ReadingProgress from "@/components/chat/ReadingProgress";
 import { ThreadWidgetView } from "@/components/chat/Widgets";
 import {
   ListeningBubble,
@@ -85,13 +85,14 @@ import { classifyReply, classifySection, isQuestionLike } from "@/components/cha
 import { useVoice } from "@/components/chat/useVoice";
 import { ask } from "@/lib/client/ask-stream";
 import { readSheet, type ImageInput } from "@/lib/client/read-stream";
-import { DEFAULT_SAMPLE, filterCards, isSampleId, loadSampleReading } from "@/lib/client/sample";
+import type { ReadProgressPhase } from "@/lib/domain/read-policy";
+import { DEFAULT_SAMPLE, isSampleId, loadSampleReading } from "@/lib/client/sample";
 import type { Card, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import { downscale } from "@/lib/image/downscale";
 import { scriptForDialect, toScript } from "@/lib/i18n/script";
 import type { UiLocale } from "@/lib/i18n/ui";
 import { memoryBrief, rememberExchange, rememberReading } from "@/lib/memory";
-import { buildCards, cardTitle } from "@/lib/rules/card-order";
+import { cardTitle } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
 import { remaining } from "@/lib/rules/doses";
 import { detectMedicineChange } from "@/lib/rules/refusal";
@@ -99,6 +100,7 @@ import { REFUSED_MEDICINE_CHANGE } from "@/lib/rules/template-fallback";
 import { detectShareIntent } from "@/lib/share/card";
 import {
   appendMessage,
+  getSheetCards,
   loadSheets,
   sheetTitle,
   startSheet,
@@ -175,7 +177,7 @@ function ChatScreen() {
   const [variant, setVariant] = useState<DeclineVariant>("notASheet");
   const [pageCount, setPageCount] = useState(0);
   /** Which half of the read the reader is watching, and the page they sent, for the reading card. */
-  const [readPhase, setReadPhase] = useState<ReadPhase>("reading");
+  const [readPhase, setReadPhase] = useState<ReadProgressPhase>("submitting");
   const [firstPage, setFirstPage] = useState<string | null>(null);
   const [speakerOn, setSpeakerOn] = useState(true);
   const [langOpen, setLangOpen] = useState(false);
@@ -197,6 +199,7 @@ function ChatScreen() {
   /** What 明明 says while the sheet is being read: fixed lines, never a claim about the page. */
   const [readingLine, setReadingLine] = useState<string | null>(null);
   const stillReading = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const beginTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** One clock per mount for the widgets' counters, exactly as 跟進 does it. */
   const [today] = useState(() => new Date());
@@ -208,6 +211,8 @@ function ChatScreen() {
   const started = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const request = useRef<AbortController | null>(null);
+  const readRequest = useRef<AbortController | null>(null);
+  const readSequence = useRef(0);
   /** True while 明明 is mid-sentence, so nothing else may start talking over him. */
   const driving = useRef(false);
   /** True from the moment the script starts playing until it ends or the reader cuts in. */
@@ -247,19 +252,20 @@ function ChatScreen() {
       timers.current.forEach(clearTimeout);
       timers.current = [];
       request.current?.abort();
+      readRequest.current?.abort();
+      if (stillReading.current !== null) clearTimeout(stillReading.current);
+      stillReading.current = null;
+      cancel();
+      readSequence.current += 1;
     },
-    [],
+    [cancel],
   );
 
   /* -------------------------------------------------------------------- cards */
 
-  // The order guarantee. Rebuilt from the reading rather than stored, so a card can never drift
-  // out of `CARD_ORDER`, and re-filtered because a rebuilt body has not been through the route's
-  // banned-term pass (`lib/client/sample.ts`).
-  const cards = useMemo<Card[]>(
-    () => (reading ? filterCards(buildCards(reading)) : []),
-    [reading],
-  );
+  // The store owns the validated card set. Consumers must not rebuild from the reading and lose
+  // source, status, uncertainty, or template metadata carried by the read route.
+  const cards = useMemo<Card[]>(() => (sheet ? getSheetCards(sheet) : []), [sheet]);
 
   /** Converts display text into the reader's script. Verbatim page quotes are never converted. */
   const display = useCallback(
@@ -850,14 +856,14 @@ function ChatScreen() {
 
   const seedSample = useCallback(
     async (id: typeof DEFAULT_SAMPLE) => {
-      const { reading: sampleReading } = await loadSampleReading(id);
+      const { reading: sampleReading, cards: sampleCards } = await loadSampleReading(id);
       // Deliberately NOT `saveReading()`. The top-level `reading` field is the pre-v2 shape, and
       // `lib/sheets/store.ts` reads it only to migrate an old phone forward. Writing it here made
       // `loadSheets()` materialise a phantom "migrated" sheet out of it a millisecond before
       // `startSheet` ran — which `startSheet` then dutifully archived, so one photograph left two
       // sheets and 記錄 said 「以前嘅 (1)」 on a phone that had read exactly one page.
+      startSheet(sampleReading, 1, sampleCards);
       rememberReading(sampleReading, dialect);
-      startSheet(sampleReading, 1);
       setSheets(loadSheets());
       setStatus("ready");
     },
@@ -865,11 +871,11 @@ function ChatScreen() {
   );
 
   const land = useCallback(
-    (next: StoredReading, pages: number) => {
+    (next: StoredReading, pages: number, nextCards?: Card[]) => {
       if (stillReading.current !== null) clearTimeout(stillReading.current);
       // See `seedSample`: writing the legacy `reading` field here forged a sheet to archive.
+      startSheet(next, pages, nextCards);
       rememberReading(next, dialect);
-      startSheet(next, pages);
       setSheets(loadSheets());
       setStatus("ready");
     },
@@ -886,6 +892,17 @@ function ChatScreen() {
     [cancel],
   );
 
+  const cancelRead = useCallback(() => {
+    readSequence.current += 1;
+    readRequest.current?.abort();
+    readRequest.current = null;
+    if (stillReading.current !== null) clearTimeout(stillReading.current);
+    stillReading.current = null;
+    cancel();
+    setStatus("boot");
+    router.push("/");
+  }, [cancel, router]);
+
   const begin = useCallback(async () => {
     const requested = searchParams.get("sample");
     if (isSampleId(requested)) {
@@ -897,9 +914,12 @@ function ChatScreen() {
 
     const images = takePendingImages();
     if (images) {
+      const sequence = ++readSequence.current;
+      const readController = new AbortController();
+      readRequest.current = readController;
       setPageCount(images.length);
       setFirstPage(`data:${images[0].mediaType};base64,${images[0].base64}`);
-      setReadPhase("reading");
+      setReadPhase("submitting");
       setStatus("reading");
       // The read takes twenty seconds or more, and a phone that goes silent for that long looks
       // broken. 明明 says he is reading — a fixed line, spoken and shown — and once more a while
@@ -908,24 +928,34 @@ function ChatScreen() {
       setReadingLine(opening);
       say(opening);
       stillReading.current = setTimeout(() => {
+        if (readController.signal.aborted || sequence !== readSequence.current) return;
         const still = t("reading.still");
         setReadingLine(still);
         say(still);
       }, STILL_READING_MS);
-      // The first card arriving is the one true progress event: looking is over, writing has begun.
-      const readHandlers = { onCard: () => setReadPhase("writing") };
+      // Status events describe progress; cards are committed only with a complete validated reading.
+      const readHandlers = {
+        signal: readController.signal,
+        onStatus: (phase: string) => {
+          if (readController.signal.aborted || sequence !== readSequence.current) return;
+          if (phase === "reading" || phase === "checking") setReadPhase(phase);
+        },
+      };
       let outcome = await readSheet(images, readHandlers);
+      if (readController.signal.aborted || sequence !== readSequence.current) return;
 
       // contracts/api-read.md: on 413 the client re-downscales and retries ONCE. The pages are
       // shrunk further in memory and never stored; a second 413 falls to the honest decline.
       if (outcome.kind === "too_large") {
-        const smaller = await shrinkImages(images, RETRY_LONG_EDGE);
+        const smaller = await shrinkImages(images, RETRY_LONG_EDGE, readController.signal);
         if (smaller) outcome = await readSheet(smaller, readHandlers);
       }
 
+      if (readController.signal.aborted || sequence !== readSequence.current) return;
+
       switch (outcome.kind) {
         case "reading":
-          land(outcome.reading, images.length);
+          land(outcome.reading, images.length, outcome.cards);
           return;
         case "unknown":
           decline("notASheet");
@@ -936,6 +966,12 @@ function ChatScreen() {
           decline("invalidReading");
           return;
         case "model_unavailable":
+          decline("modelUnavailable");
+          return;
+        case "cancelled":
+          decline("modelUnavailable");
+          return;
+        case "timed_out":
           decline("modelUnavailable");
           return;
       }
@@ -951,9 +987,16 @@ function ChatScreen() {
   }, [decline, land, router, say, searchParams, seedSample, t]);
 
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
-    void begin();
+    beginTimer.current = setTimeout(() => {
+      beginTimer.current = null;
+      if (started.current) return;
+      started.current = true;
+      void begin();
+    }, 0);
+    return () => {
+      if (beginTimer.current !== null) clearTimeout(beginTimer.current);
+      beginTimer.current = null;
+    };
   }, [begin]);
 
   /* ------------------------------------------------- the automatic driver */
@@ -1108,6 +1151,7 @@ function ChatScreen() {
           line={readingLine}
           phase={readPhase}
           pageImage={firstPage}
+          onCancel={cancelRead}
         />
       </main>
     );
@@ -1262,12 +1306,18 @@ function ChatScreen() {
  * Re-encodes already-downscaled pages at a smaller long edge, in memory only. Returns null when
  * the browser cannot decode them, in which case the caller shows the honest decline instead.
  */
-async function shrinkImages(images: ImageInput[], maxLongEdge: number): Promise<ImageInput[] | null> {
+async function shrinkImages(
+  images: ImageInput[],
+  maxLongEdge: number,
+  signal?: AbortSignal,
+): Promise<ImageInput[] | null> {
   try {
     const smaller: ImageInput[] = [];
     for (const image of images) {
+      if (signal?.aborted) return null;
       const blob = await (await fetch(`data:${image.mediaType};base64,${image.base64}`)).blob();
       const { mediaType, base64 } = await downscale(blob, maxLongEdge);
+      if (signal?.aborted) return null;
       smaller.push({ mediaType, base64 });
     }
     return smaller;

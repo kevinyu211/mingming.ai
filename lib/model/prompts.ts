@@ -21,7 +21,7 @@ export type PhraseDialect = Dialect | "both";
 /** The one line in each prompt that is allowed to contain banned words. */
 export const BANNED_WORDS_LINE_PREFIX = "BANNED WORDS";
 
-export const READ_SYSTEM = `You read a photograph of a hospital discharge sheet and turn what is printed on it into structured data. The sheet is either a Hong Kong public-hospital sheet written in English with clinical abbreviations, or a mainland Chinese 出院記錄 / 出院小結 written in Chinese. One or two pages are supplied as images, in order: the first image is page 1, the second, when present, is page 2. Read them as one document.
+export const READ_SYSTEM = `You read photographs of a hospital discharge sheet and turn what is printed on them into structured data. The sheet is either a Hong Kong public-hospital sheet written in English with clinical abbreviations, or a mainland Chinese 出院記錄 / 出院小結 written in Chinese. Up to six pages may be supplied as images, in order. Read every supplied page as one document; do not omit later pages.
 
 Return only the JSON object described by the response schema. No prose, no commentary, no extra keys.
 
@@ -150,7 +150,7 @@ ${BANNED_WORDS_LINE_PREFIX} — none of these may appear anywhere in a \`yue\`, 
 Rewrite this one card only, at the scope of the facts given. Do not explain what changed.`;
 
 const READ_USER_INSTRUCTION =
-  "Read the page or pages above and return the structured reading. Images are in page order: the first is page 1, a second, when present, is page 2.";
+  "Read the page or pages above and return the structured reading. Up to six images are in page order: the first is page 1, then page 2, and so on through the number supplied. Read every supplied page.";
 
 const DIALECT_NAMES: Record<PhraseDialect, string> = {
   yue: "Cantonese (yue)",

@@ -85,6 +85,14 @@ here whether that was needed.
 
 - 2026-09-03T11:47:39.568Z — `claude-opus-5` — hk_en 1/1 runs, meds 100% exact; cn_zh 1/1 runs, meds 100% exact; cn_zh_photo 1/1 runs, meds 100% exact; invented 0, missing 0, banned 0 — SC-002 PASS, SC-003 PASS (detail in tests/eval/results.md)
 
+- 2026-09-05T11:58:08.805Z — `anthropic/claude-sonnet-5-medium-candidate` — hk_en 0/1 runs, meds 0% exact; cn_zh_photo 0/1 runs, meds 0% exact; invented 0, missing 0, banned 0 — SC-002 FAIL, SC-003 PASS (detail in tests/eval/results.md)
+
+- 2026-09-05T12:02:44.390Z — `anthropic/claude-sonnet-5` — hk_en 1/1 runs, meds 100% exact; cn_zh_photo 1/1 runs, meds 100% exact; invented 0, missing 0, banned 0 — SC-002 PASS, SC-003 PASS (detail in tests/eval/results.md)
+
+- 2026-09-05T12:04:53.728Z — `anthropic/claude-sonnet-5` — cn_zh_photo 1/1 runs, meds 100% exact; invented 0, missing 0, banned 0 — SC-002 PASS, SC-003 PASS (detail in tests/eval/results.md)
+
+- 2026-09-05T12:06:03.564Z — `anthropic/claude-sonnet-5` — cn_zh_photo 1/1 runs, meds 100% exact; invented 0, missing 0, banned 0 — SC-002 PASS, SC-003 PASS (detail in tests/eval/results.md)
+
 ---
 
 PICK: _(pending)_ because _(pending)_

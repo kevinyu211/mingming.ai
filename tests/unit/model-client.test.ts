@@ -229,6 +229,21 @@ afterEach(() => {
 /* -------------------------------------------------------------------------- */
 
 describe("GatewayProvider.readSheet request", () => {
+  it("forwards a caller signal and clamps a generous timeout to the read default", async () => {
+    generateMock.mockResolvedValue(canned());
+    const signal = new AbortController().signal;
+    await provider().readSheet(IMAGES, { signal, timeoutMs: READ_TIMEOUT_MS + 60_000 });
+    const request = lastRequest(generateMock) as RecordedRequest & { abortSignal?: AbortSignal };
+    expect(request.abortSignal).toBe(signal);
+    expect(request.timeout).toEqual({ totalMs: READ_TIMEOUT_MS });
+  });
+
+  it("uses a shorter remaining timeout when supplied", async () => {
+    generateMock.mockResolvedValue(canned());
+    await provider().readSheet(IMAGES, { timeoutMs: 4_000 });
+    expect(lastRequest(generateMock).timeout).toEqual({ totalMs: 4_000 });
+  });
+
   it("uses MODEL_READ from the environment, defaulting to google/gemini-3.8-flash", async () => {
     generateMock.mockResolvedValue(canned());
 

@@ -29,7 +29,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { Card, SheetReading, StoredReading } from "../../lib/domain/schemas";
-import { buildCards } from "../../lib/rules/card-order";
+import {
+  READ_PROCESSING_TIMEOUT_MS,
+  READ_RESPONSE_GRACE_MS,
+  READ_SUBMISSION_TIMEOUT_MS,
+} from "../../lib/domain/read-policy";
+import { validateReadingCards } from "../../lib/sheets/cards";
 import {
   RESULTS_HEADER,
   RESULTS_MARKER,
@@ -51,8 +56,9 @@ const READING_FILE = join(HERE, "reading.md");
 /** Runs are inserted here, newest first, so the PICK line stays the last line of the file. */
 const READING_RUNS_MARKER = "<!-- tests/eval/reading.ts appends run lines below this line. -->";
 
-/** A whole read, including one server-side retry, must fit inside this. */
-const REQUEST_TIMEOUT_MS = 180_000;
+/** A whole read, including submission, processing, response grace and one server-side retry. */
+const REQUEST_TIMEOUT_MS =
+  READ_SUBMISSION_TIMEOUT_MS + READ_PROCESSING_TIMEOUT_MS + READ_RESPONSE_GRACE_MS;
 
 interface Fixture {
   id: string;
@@ -124,6 +130,7 @@ interface ReadOutcome {
   reading: StoredReading | null;
   regenerated: number;
   templated: number;
+  msToAccepted: number | null;
   msToFirstCard: number | null;
   msToDone: number | null;
   error: string | null;
@@ -131,6 +138,7 @@ interface ReadOutcome {
 
 interface ReadEventShape {
   event?: string;
+  phase?: string;
   card?: Card;
   reading?: StoredReading;
   filter?: { regenerated?: number; templated?: number };
@@ -151,6 +159,7 @@ async function readOnce(base: string, fixture: Fixture, base64: string): Promise
     reading: null,
     regenerated: 0,
     templated: 0,
+    msToAccepted: null,
     msToFirstCard: null,
     msToDone: null,
     error: null,
@@ -197,6 +206,11 @@ async function readOnce(base: string, fixture: Fixture, base64: string): Promise
       return;
     }
     switch (event.event) {
+      case "status":
+        if (event.phase === "reading" && out.msToAccepted === null) {
+          out.msToAccepted = Date.now() - startedAt;
+        }
+        break;
       case "card":
         if (out.msToFirstCard === null) out.msToFirstCard = Date.now() - startedAt;
         if (event.card) out.cards.push(event.card);
@@ -219,15 +233,26 @@ async function readOnce(base: string, fixture: Fixture, base64: string): Promise
     }
   };
 
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffered += decoder.decode(value, { stream: true });
-    const lines = buffered.split("\n");
-    buffered = lines.pop() ?? "";
-    for (const line of lines) handle(line);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffered += decoder.decode(value, { stream: true });
+      const lines = buffered.split("\n");
+      buffered = lines.pop() ?? "";
+      for (const line of lines) handle(line);
+    }
+    handle(buffered);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    out.error = out.error ?? `stream failed: ${detail.slice(0, 120)}`;
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // A broken response may already have released the reader.
+    }
   }
-  handle(buffered);
 
   if (!out.reading && !out.error) out.error = "stream ended without a done event";
   return out;
@@ -401,6 +426,7 @@ async function main(): Promise<void> {
   console.log("");
 
   const records: RunRecord[] = [];
+  const timingLines: string[] = [];
 
   for (const fixture of options.sheets) {
     const expected = JSON.parse(
@@ -411,16 +437,18 @@ async function main(): Promise<void> {
     for (let run = 1; run <= options.runs; run += 1) {
       const outcome = await readOnce(options.base, fixture, base64);
       const reading = outcome.reading;
-      // Cards are rebuilt locally as well: the scan must cover the fixed card order even if the
-      // server streamed nothing (a `done` with no card events is still a reading to check).
-      const cards = outcome.cards.length > 0 ? outcome.cards : reading ? buildCards(reading) : [];
+      // The final card stream is authoritative. Missing or mismatched cards are a failed run;
+      // rebuilding them locally would hide a truncated response and lose pipeline flags.
+      const cards = reading ? validateReadingCards(reading, outcome.cards) : null;
+      const cardError = reading !== null && cards === null ? "invalid canonical card set" : null;
+      const error = outcome.error ?? cardError;
       const record: RunRecord = {
         sheet: fixture.id,
         run,
-        ok: reading !== null,
-        error: outcome.error,
+        ok: reading !== null && error === null,
+        error,
         diff: reading ? diffReading(expected, reading) : null,
-        banned: reading ? scanBanned(reading, cards) : null,
+        banned: reading && cards ? scanBanned(reading, cards) : null,
         msToFirstCard: outcome.msToFirstCard,
         msToDone: outcome.msToDone,
         regenerated: outcome.regenerated,
@@ -428,11 +456,22 @@ async function main(): Promise<void> {
       };
       records.push(record);
 
+      const timing =
+        `- ${fixture.id} run ${run}: accepted ${ms(outcome.msToAccepted)}, ` +
+        `first card ${ms(outcome.msToFirstCard)}, done ${ms(outcome.msToDone)}`;
+      timingLines.push(timing);
+      if (reading && record.diff && (!record.diff.warningSigns.countOk || record.diff.warningSigns.coverage < 1)) {
+        // This runner only reads bundled synthetic fixtures. Preserve the mismatching warning
+        // evidence for human review; runtime routes never log document text.
+        timingLines.push(`- ${fixture.id} warning review (synthetic): ${JSON.stringify(reading.warningSigns.map((warning) => ({ quote: warning.source.quote, symptom: warning.symptom.en, action: warning.action.en })))}`);
+      }
+
       const verdict = record.error
         ? `FAIL ${record.error}`
         : `${record.diff?.ok ? "ok  " : "diff"} meds ${record.diff?.medicines.exact ? "exact" : "differ"}, banned ${record.banned?.hits ?? 0}`;
       console.log(
-        `  ${fixture.id} ${run}/${options.runs}  ${ms(outcome.msToFirstCard)} first card, ` +
+        `  ${fixture.id} ${run}/${options.runs}  ${ms(outcome.msToAccepted)} accepted, ` +
+          `${ms(outcome.msToFirstCard)} first card, ` +
           `${ms(outcome.msToDone)} done  ${verdict}`,
       );
     }
@@ -462,6 +501,10 @@ async function main(): Promise<void> {
     `- Filter: ${regenerated} regenerated, ${templated} templated`,
     "",
     ...markdownTable(rows),
+    "",
+    "Timings:",
+    "",
+    ...timingLines,
     "",
     "Findings:",
     "",
