@@ -58,7 +58,7 @@ export type CheckinState = "none" | "pending" | "open" | "done";
  * `components/chat/briefing.ts`, never by a model turn, and every widget reads its facts live off
  * the active sheet rather than off the message — a counter in a widget is always today's.
  */
-export type ThreadWidget = "summary" | "pills" | "visits" | "flags";
+export type ThreadWidget = "summary" | "pills" | "visits" | "flags" | "share";
 
 /** One line in the 傾偈 thread. The briefing and the answers share one conversation. */
 export interface ThreadMessage {

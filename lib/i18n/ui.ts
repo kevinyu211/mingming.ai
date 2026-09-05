@@ -401,6 +401,18 @@ const hant = {
   "companion.language": "揀用邊種話",
   "companion.ai": "AI",
 
+  // --- Companion D · share card and scanning -------------------------------
+  "share.cardEyebrow": "出院卡",
+  "share.cardLine": "呢張卡可以直接傳畀屋企人，入面淨係張紙寫嘅嘢。",
+  "share.cardMeds": "藥（照張紙寫）",
+  "share.image": "分享圖片",
+  "share.save": "儲存圖片",
+  "share.saved": "已儲存圖片",
+  "share.text": "抄文字",
+  "share.more": "仲有 {n} 樣，睇返張紙",
+  "reading.scanning": "讀緊 {n} 頁…",
+  "reading.writing": "用簡單嘅話講。",
+
   "disclaimer":
     "本工具僅供健康信息參考與支持，不構成醫療建議，不能取代專業醫護人員的診斷或治療。如有健康疑慮，請諮詢註冊醫生或相關專業人士。AI 生成內容可能不準確。",
   "aiChip": "AI 寫嘅，可能有錯",
@@ -719,6 +731,18 @@ const hans: Record<UiKey, string> = {
   "companion.talk": "和明明聊聊",
   "companion.language": "选用哪种语言",
   "companion.ai": "AI",
+
+  // --- Companion D · share card and scanning -------------------------------
+  "share.cardEyebrow": "出院卡",
+  "share.cardLine": "这张卡可以直接发给家人，里面只有纸上写的内容。",
+  "share.cardMeds": "药（照纸上写）",
+  "share.image": "分享图片",
+  "share.save": "保存图片",
+  "share.saved": "已保存图片",
+  "share.text": "复制文字",
+  "share.more": "还有 {n} 项，看纸上",
+  "reading.scanning": "正在读 {n} 页…",
+  "reading.writing": "正在用简单的话说。",
 
   "disclaimer":
     "本工具仅供健康信息参考与支持，不构成医疗建议，不能取代专业医护人员的诊断或治疗。如有健康疑虑，请咨询注册医生或相关专业人士。AI 生成内容可能不准确。",
@@ -1045,6 +1069,18 @@ const en: Record<UiKey, string> = {
   "companion.talk": "Talk to Ming",
   "companion.language": "Choose a language",
   "companion.ai": "AI",
+
+  // --- Companion D · share card and scanning -------------------------------
+  "share.cardEyebrow": "DISCHARGE CARD",
+  "share.cardLine": "Here is a card you can send to your family. It only says what the sheet says.",
+  "share.cardMeds": "Medicines, as printed",
+  "share.image": "Share image",
+  "share.save": "Save image",
+  "share.saved": "Image saved",
+  "share.text": "Copy text",
+  "share.more": "{n} more on the sheet",
+  "reading.scanning": "Reading {n} pages…",
+  "reading.writing": "Putting it in plain words.",
 
   "disclaimer":
     "This tool provides health information reference and support only. It is not medical advice and cannot replace diagnosis or treatment by professional medical staff. If you have health concerns, consult a registered doctor or relevant professional. AI-generated content may be inaccurate.",

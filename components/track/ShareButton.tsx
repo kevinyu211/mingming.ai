@@ -1,74 +1,36 @@
 "use client";
 
 /**
- * 分享俾屋企人 — hands the reading to whoever the reader lives with.
- *
- * The share sheet on a phone (`navigator.share`) so it lands in WhatsApp or WeChat in one tap; the
- * clipboard where there is no share sheet, with the button itself saying so. The text is built on
- * the device from the filtered cards (`lib/share/text.ts`); nothing is sent anywhere by this app.
+ * 分享俾屋企人 — opens the discharge card (Companion D) in a sheet: the PNG to share, and the
+ * plain-text version one tap behind it. The text is built on the device from the filtered cards
+ * (`lib/share/text.ts`) and the image from the same facts (`lib/share/card.ts`); nothing is sent
+ * anywhere by this app.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import BottomSheet from "@/components/BottomSheet";
 import { useLocale } from "@/components/LocaleProvider";
-import { filterCards } from "@/lib/client/sample";
-import type { StoredReading } from "@/lib/domain/schemas";
-import { toScript } from "@/lib/i18n/script";
-import { buildCards } from "@/lib/rules/card-order";
-import { buildShareText } from "@/lib/share/text";
+import ShareCard from "@/components/share/ShareCard";
+import type { Sheet } from "@/lib/sheets/types";
 
-const COPIED_MS = 2500;
-
-export default function ShareButton({ reading }: { reading: StoredReading }) {
-  const { t, dialect, script } = useLocale();
-  const [copied, setCopied] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(
-    () => () => {
-      if (timer.current !== null) clearTimeout(timer.current);
-    },
-    [],
-  );
-
-  const share = useCallback(async () => {
-    const text = buildShareText(
-      filterCards(buildCards(reading)),
-      dialect,
-      {
-        title: t("share.title"),
-        warnings: t("share.warnings"),
-        medicines: t("share.medicines"),
-        followUp: t("share.followUp"),
-        other: t("share.other"),
-        footer: t("share.footer"),
-        disclaimer: t("disclaimer"),
-      },
-      (line) => toScript(line, script),
-    );
-
-    try {
-      if (typeof navigator.share === "function") {
-        await navigator.share({ text });
-        return;
-      }
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      if (timer.current !== null) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopied(false), COPIED_MS);
-    } catch {
-      // The reader closed the share sheet, or the clipboard was refused. Nothing to do.
-    }
-  }, [dialect, reading, script, t]);
+export default function ShareButton({ sheet }: { sheet: Sheet }) {
+  const { t } = useLocale();
+  const [open, setOpen] = useState(false);
 
   return (
-    <button
-      type="button"
-      onClick={() => void share()}
-      aria-live="polite"
-      className="tap chunky inline-flex min-h-12 w-full max-w-[280px] items-center justify-center gap-2 rounded-full border border-hairline bg-card px-5 text-[15px] font-semibold text-ink"
-    >
-      <ShareMark />
-      {copied ? t("share.copied") : t("share.button")}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="tap chunky inline-flex min-h-12 w-full max-w-[280px] items-center justify-center gap-2 rounded-full border border-hairline bg-card px-5 text-[15px] font-semibold text-ink"
+      >
+        <ShareMark />
+        {t("share.button")}
+      </button>
+
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={t("share.button")}>
+        <ShareCard sheet={sheet} compact />
+      </BottomSheet>
+    </>
   );
 }
 
