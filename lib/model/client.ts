@@ -38,6 +38,8 @@ import {
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { z } from "zod";
 
+import { AnthropicCompatProvider, isAnthropicSlug } from "@/lib/model/anthropic-compat";
+
 import {
   ASK_SYSTEM,
   PHRASE_SYSTEM,
@@ -478,16 +480,43 @@ function envModel(name: "MODEL_READ" | "MODEL_ASK"): string {
 /* Singleton                                                                  */
 /* -------------------------------------------------------------------------- */
 
-let cached: { key: string; provider: GatewayProvider } | null = null;
+let cached: { key: string; provider: ModelProvider } | null = null;
 
 /**
  * The process-wide provider. Cached on the resolved model ids so a route never rebuilds it per
  * request.
+ *
+ * `anthropic/*` slugs take the Anthropic-compatible path (strict `output_config.format`, effort
+ * medium — see ./anthropic-compat) whenever a Gateway key is present; every other slug, and the
+ * key-less local case, takes the AI SDK path above.
  */
 export function getModelProvider(): ModelProvider {
-  const key = `${envModel("MODEL_READ")}|${envModel("MODEL_ASK")}`;
+  const modelRead = envModel("MODEL_READ");
+  const modelAsk = envModel("MODEL_ASK");
+  const compat = Boolean(process.env.AI_GATEWAY_API_KEY?.trim());
+  const key = `${modelRead}|${modelAsk}|${compat ? "compat" : "sdk"}`;
   if (!cached || cached.key !== key) {
-    cached = { key, provider: new GatewayProvider() };
+    cached = { key, provider: buildProvider(modelRead, modelAsk, compat) };
   }
   return cached.provider;
+}
+
+function buildProvider(modelRead: string, modelAsk: string, compat: boolean): ModelProvider {
+  if (compat && isAnthropicSlug(modelRead) && isAnthropicSlug(modelAsk)) {
+    return new AnthropicCompatProvider({ modelRead, modelAsk });
+  }
+  if (compat && (isAnthropicSlug(modelRead) || isAnthropicSlug(modelAsk))) {
+    // Mixed vendors: each route goes to the provider that suits its model.
+    const anthropic = new AnthropicCompatProvider({ modelRead, modelAsk });
+    const sdk = new GatewayProvider({ modelRead, modelAsk });
+    const reader = isAnthropicSlug(modelRead) ? anthropic : sdk;
+    const asker = isAnthropicSlug(modelAsk) ? anthropic : sdk;
+    return {
+      readSheet: (images) => reader.readSheet(images),
+      readSheetStream: (images, onPartialText) => reader.readSheetStream(images, onPartialText),
+      answer: (input) => asker.answer(input),
+      phrase: (input) => asker.phrase(input),
+    };
+  }
+  return new GatewayProvider({ modelRead, modelAsk });
 }
