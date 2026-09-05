@@ -34,7 +34,7 @@ bundled sample sheets (`/chat?sample=hk_en`), which exercise the whole UI.
 ## Environment
 
 See `.env.example`. Model calls go through the Vercel AI Gateway; `MODEL_READ` / `MODEL_ASK` are
-Gateway slugs (`provider/model`) and default to `google/gemini-3.8-flash`. `TTS_PROVIDER` defaults
+Gateway slugs (`provider/model`); the deployed build runs `anthropic/claude-sonnet-5` for both. `TTS_PROVIDER` defaults
 to `browser` (the phone's own voice); the demo build runs `minimax`. `.env.example` ships
 `STT_PROVIDER=openai` with `NEXT_PUBLIC_STT_MODE=cloud`, so a spoken question is recorded and
 transcribed by OpenAI; set both to `browser` to keep audio on the phone. What each provider receives
@@ -73,7 +73,7 @@ Playwright uses the installed Google Chrome (`channel: "chrome"`); run
 app/            pages (/ 記錄, /chat 傾偈, /track 跟進, /capture, /settings; /read, /ask and /plan redirect) and API routes (read, ask, phrase, tts, stt)
 components/     UI
 lib/domain/     Zod schemas (single source of truth)
-lib/model/      Anthropic client and frozen prompts (server only)
+lib/model/      Gateway client and frozen prompts (server only)
 lib/rules/      deterministic gates: card order, banned terms, diet line, refusal, crisis, plan
 lib/server/     read and ask pipelines, NDJSON streaming
 lib/speech/     TTS/STT provider adapters and the client speech layer

@@ -25,14 +25,19 @@ demo.
 
 ## Model and service providers
 
-- **Reading, answering and phrasing**: Anthropic Claude Opus 5 (`claude-opus-5`), reasoning effort
-  `medium`, through the official SDK with structured outputs and prompt caching.
-- Opus was kept **by measurement, not preference**. Sonnet 5 matched it on medicine fields and beat
-  it on two of the four hard fixtures, but dropped a warning sign on both of its completed `messy`
-  runs and produced the only hard failure in 44 runs. Warnings are the one card that must never be
-  missed. Effort was dropped from `high` to `medium` on the same evidence: identical readings,
-  roughly a third off the wait. Both decisions are recorded in `tests/eval/results.md` and
-  `tests/eval/stress.md`, including the argument for **not** adding a second vision model.
+- **Reading, answering and phrasing**: Anthropic Claude Sonnet 5 (`anthropic/claude-sonnet-5`)
+  through the Vercel AI Gateway (AI SDK 6, structured outputs, prompt caching). The model is one
+  environment variable per route; the deployed build runs Sonnet 5 for both since 4 September.
+- **Opus 5 was the measured pick; Sonnet 5 is what is deployed, and the gap is on record.** In
+  the 44-run comparison Sonnet 5 matched Opus on every medicine field and beat it on two of the
+  four hard fixtures, but dropped a warning sign on both of its completed `messy` runs and produced
+  the only hard failure. On 4 September the Anthropic organisation's spend cap was reached and
+  every model call moved to the Vercel AI Gateway, where the deployed build runs Sonnet 5 for
+  reading and answering. The deployed build reads the `hk_en` fixture correctly through the Gateway
+  (3/3 medicines verbatim, 23 s, measured 4 September); the three demo fixtures in `fixtures/demo/`
+  were validated the same day on Opus 5 directly, and their re-read on the deployed build, like
+  the `messy` warning-sign risk, is carried here as an open item, not a closed one. Effort was dropped from `high` to `medium` on
+  the original evidence: identical readings,
 - **Voice**: MiniMax `speech-2.8-hd` through its international endpoint, behind a provider adapter.
   ElevenLabs and Azure Speech adapters are written and switchable by one environment variable; the
   phone's own `speechSynthesis` is the fallback and the shipped default. **The blind listening test

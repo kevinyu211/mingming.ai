@@ -89,7 +89,8 @@ byte appears in any log line.
 
 ## Cross-border processing
 
-- **Model**: Google Gemini through the Vercel AI Gateway, servers outside Hong Kong (United States).
+- **Model**: Anthropic Claude Sonnet 5 through the Vercel AI Gateway, servers outside Hong Kong
+  (United States).
   Every page image and every question goes there. The model is one environment variable; the
   statement in the app names whichever is configured.
 - **Voice**: MiniMax, international endpoint `api.minimax.io`, on the demo build. Card and answer
