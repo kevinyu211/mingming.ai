@@ -90,6 +90,22 @@ export const BOUNDARY: Speakable = {
   en: "That one I can't answer, because it's about how you are — it's one for the doctor. What the sheet says, I can go over again any time.",
 };
 
+/**
+ * The boundary fallback for a question about food or drink when the sheet printed a diet line:
+ * the line itself, verbatim, and the rest handed to the doctor. 「我可以吃水果吗？」 is the
+ * commonest boundary question there is, and the model's own wording for it keeps landing on
+ * 能吃 / 不能吃 — the one phrase the rulebook bans — so the generic sentence above was what the
+ * reader heard. Built from the printed `raw` only; the caller checks it against the diet quote.
+ */
+export function boundaryDietTemplate(raw: string): Speakable {
+  const line = unpunctuated(raw.trim());
+  return {
+    yue: `呢樣張紙冇講到，不過飲食嗰行寫住：${line}。其他嘅要問返醫生或者藥劑師。`,
+    cmn: `这个纸上没有讲到，不过饮食那行写着：${line}。其他的要问回医生或者药剂师。`,
+    en: `The sheet doesn't say about that one, but the food line reads: ${line}. Anything beyond that is for the doctor or the pharmacist.`,
+  };
+}
+
 /** Small talk: a greeting or a thank-you. */
 export const SMALL_TALK: Speakable = {
   yue: "我幾好呀，多謝你問。想繼續講張紙嘅嘢，隨時話我知。",

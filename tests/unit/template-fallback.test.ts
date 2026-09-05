@@ -8,6 +8,7 @@ import {
   OFF_TOPIC,
   REFUSED_MEDICINE_CHANGE,
   SMALL_TALK,
+  boundaryDietTemplate,
   templateFor,
   type TemplateFacts,
 } from "@/lib/rules/template-fallback";
@@ -396,5 +397,15 @@ describe("the conversational fallbacks", () => {
   it("OFF_TOPIC says what the app does and answers nothing else", () => {
     expect(OFF_TOPIC.yue).toContain("出院紙");
     expect(OFF_TOPIC.en).toContain("discharge sheet");
+  });
+});
+
+describe("the diet-line boundary fallback", () => {
+  it("is clean and carries the printed line verbatim", () => {
+    const spoken = boundaryDietTemplate("低鹽低脂飲食。");
+    expectClean("boundaryDietTemplate", spoken);
+    expect(spoken.yue).toContain("低鹽低脂飲食");
+    expect(spoken.en).toContain("低鹽低脂飲食");
+    expect(spoken.yue).not.toContain("。。");
   });
 });

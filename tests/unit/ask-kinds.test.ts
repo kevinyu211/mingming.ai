@@ -18,6 +18,7 @@ import {
   NOT_ON_SHEET,
   OFF_TOPIC,
   SMALL_TALK,
+  boundaryDietTemplate,
 } from "../../lib/rules/template-fallback";
 import {
   AskReadingSchema,
@@ -389,5 +390,36 @@ describe("an early sentence that is only the start of the final one", () => {
 
     const events = await collect("PRN係咩意思？", streamingProvider);
     expect(events[2]).toMatchObject({ event: "answer", answer: { yue: said } });
+  });
+});
+
+describe("a food question whose wording fails gets the printed diet line", () => {
+  const diet = cards.find((card) => card.type === "diet");
+
+  it("quotes the diet line and cites it", async () => {
+    answer.mockResolvedValue({
+      result: { kind: "boundary", citedCardIds: [], answer: ADVICE },
+      usage: USAGE,
+    });
+
+    const events = await collect("我可以吃水果吗？");
+    expect(diet?.facts?.raw).toBeTruthy();
+    expect(events).toEqual([
+      { event: "outcome", outcome: "boundary", citedCardIds: ["diet"], sources: [diet?.source] },
+      { event: "answer", answer: boundaryDietTemplate(diet?.facts?.raw ?? "") },
+      { event: "done" },
+    ]);
+    expect(checkSpeakable(boundaryDietTemplate(diet?.facts?.raw ?? "")).ok).toBe(true);
+  });
+
+  it("still uses the generic sentence for a question that is not about food", async () => {
+    answer.mockResolvedValue({
+      result: { kind: "boundary", citedCardIds: [], answer: ADVICE },
+      usage: USAGE,
+    });
+
+    const [outcome, spoken] = await collect("我成日咁攰，係咪正常？");
+    expect(outcome).toEqual({ event: "outcome", outcome: "boundary", citedCardIds: [], sources: [] });
+    expect(spoken).toEqual({ event: "answer", answer: BOUNDARY });
   });
 });

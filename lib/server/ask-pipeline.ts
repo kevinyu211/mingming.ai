@@ -59,6 +59,7 @@ import {
   OFF_TOPIC,
   REFUSED_MEDICINE_CHANGE,
   SMALL_TALK,
+  boundaryDietTemplate,
   templateFor,
 } from "@/lib/rules/template-fallback";
 
@@ -409,6 +410,24 @@ export async function* runAsk(
   if (result.kind === "boundary") {
     const cleaned = cleanForms(result.answer, dialect, spoken, quotes);
     if (cleaned === null) {
+      // A food question with a printed diet line gets the line itself rather than the generic
+      // sentence; the template is built from the page's own words and checked against them.
+      const diet = looksLikeFood(question.text) ? cards.find((card) => card.type === "diet") : undefined;
+      const raw = diet?.facts?.raw;
+      if (diet !== undefined && typeof raw === "string" && raw.trim().length > 0) {
+        const template = boundaryDietTemplate(raw);
+        if (checkSpeakableAgainstQuotes(template, [diet.source?.quote]).ok) {
+          yield {
+            event: "outcome",
+            outcome: "boundary",
+            citedCardIds: [diet.id],
+            sources: sourcesOf([diet]),
+          };
+          yield { event: "answer", answer: template };
+          yield { event: "done" };
+          return;
+        }
+      }
       yield { event: "outcome", outcome: "boundary", citedCardIds: [], sources: [] };
       yield { event: "answer", answer: BOUNDARY };
       yield { event: "done" };
@@ -434,8 +453,10 @@ export async function* runAsk(
   const cited = citations[0];
 
   let answer: Speakable = result.answer;
+  let repaired = false;
   const check = checkSpeakableAgainstQuotes(answer, quotes);
   if (!check.ok) {
+    repaired = true;
     // One regenerate, then the fixed template (constitution VI). `phrase` is given only the card's
     // typed facts and its source line — never the question, never the model's rejected wording.
     const facts = cited.facts ?? {};
@@ -477,8 +498,16 @@ export async function* runAsk(
     citedCardIds: citations.map((card) => card.id),
     sources: sourcesOf(citations),
   };
-  yield { event: "answer", answer: withSpoken(answer, dialect, spoken) };
+  yield { event: "answer", answer: withSpoken(answer, dialect, spoken, repaired) };
   yield { event: "done" };
+}
+
+/** A question about food or drink, in any of the three languages. A rule, so it cannot drift. */
+const FOOD_WORDS =
+  /食|吃|飲|饮|喝|湯|汤|水果|茶|酒|咖啡|奶|\b(?:eat|eating|drink|drinking|food|fruit|diet|meals?|coffee|tea|alcohol|beer|wine|milk)\b/i;
+
+function looksLikeFood(text: string): boolean {
+  return FOOD_WORDS.test(text.normalize("NFKC"));
 }
 
 function sourcesOf(cards: readonly Card[]): SourceReference[] {
@@ -554,8 +583,11 @@ function withSpoken(
   answer: Speakable,
   dialect: "yue" | "cmn" | "en",
   spoken: string | null,
+  /** True when `answer` is a rephrase or a template: a different sentence, never a continuation. */
+  repaired = false,
 ): Speakable {
-  const own = settle(answer[dialect], spoken);
+  if (spoken === null) return answer;
+  const own = repaired ? spoken : settle(answer[dialect], spoken);
   return own === answer[dialect] ? answer : { ...answer, [dialect]: own };
 }
 
