@@ -77,6 +77,33 @@ export const REFUSED_MEDICINE_CHANGE: Speakable = {
   en: "Whether to take it, and how much — the sheet doesn't say. That one's for the pharmacist, or ring the number printed on the sheet.",
 };
 
+/**
+ * The fixed fallbacks for the three conversational kinds `/api/ask` gained in 1.2.0. The model
+ * writes those replies itself; these are what is said when its wording trips the filter, so each
+ * one is a complete, warm turn on its own and states nothing about the person or the page.
+ */
+
+/** A judgement about the person was asked for: the doctor's to make, not the app's. */
+export const BOUNDARY: Speakable = {
+  yue: "呢樣我答唔到你，因為係關於你身體嘅情況，要問返醫生。張紙上面寫住嘅嘢，我可以再同你講一次。",
+  cmn: "这个我答不了你，因为是关于你身体的情况，要问回医生。纸上写的内容，我可以再跟你讲一次。",
+  en: "That one I can't answer, because it's about how you are — it's one for the doctor. What the sheet says, I can go over again any time.",
+};
+
+/** Small talk: a greeting or a thank-you. */
+export const SMALL_TALK: Speakable = {
+  yue: "我幾好呀，多謝你問。想繼續講張紙嘅嘢，隨時話我知。",
+  cmn: "我挺好的，谢谢你问。想继续讲纸上的内容，随时告诉我。",
+  en: "I'm well, thanks for asking. Whenever you'd like, we can carry on with the sheet.",
+};
+
+/** Not health, not this sheet. */
+export const OFF_TOPIC: Speakable = {
+  yue: "呢樣唔係我識嘅嘢，我淨係幫手睇出院紙。想問張紙上面嘅嘢，隨時問我。",
+  cmn: "这个不是我会的，我只帮忙看出院纸。想问纸上的内容，随时问我。",
+  en: "That's outside what I do — I only help with the discharge sheet. Ask me anything on it whenever you like.",
+};
+
 /** Appended to every spoken output that came from the model (compliance: AI content is labelled). */
 export const CAUTION_SUFFIX: Speakable = {
   yue: "AI 寫嘅，可能有錯。",

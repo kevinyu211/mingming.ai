@@ -151,20 +151,31 @@ export type StoredReading = z.infer<typeof StoredReadingSchema>;
  * Structured output of /api/ask's model call.
  *
  * `kind` is the whole safety boundary of this route, and it is the model's ONE job to place a
- * question in the right box (constitution IV, amended 1.1.0):
+ * message in the right box (constitution IV, amended 1.2.0):
  *
- *   sheet    the answer is on a supplied card. `citedCardId` names it. The reader is being told
- *            what THEIR page says, so it must trace to a line.
- *   general  the question asked what a word or a routine practice MEANS — "what does fasting
- *            mean", "why is blood taken on an empty stomach". Answered from general knowledge,
- *            cites nothing, and the UI labels it as general so it is never mistaken for the page.
- *   none     neither. The honest, expected outcome.
+ *   sheet      the answer is on a supplied card. `citedCardIds` names them. The reader is being
+ *              told what THEIR page says, so it must trace to a line.
+ *   general    the question asked what something MEANS — a word, an abbreviation, a test, a
+ *              routine practice, what a medicine named on the page is commonly for, what a
+ *              condition the page prints is. Answered from general knowledge, cites nothing, and
+ *              the UI labels it as general so it is never mistaken for the page.
+ *   boundary   the question asks for a judgement about THIS person — is this normal, is it
+ *              serious, is this food all right for me, do I need to go in. The model says kindly
+ *              that this is one for the doctor and gives what the page does say, citing it when
+ *              it does. Never a verdict.
+ *   chat       a greeting, thanks, small talk. One warm line and an offer to go on with the sheet.
+ *   off_topic  outside health and this sheet altogether — sums, jokes, other tasks. One friendly
+ *              line saying what this app does, and an offer. The request itself is not answered.
+ *   none       a question about this sheet whose answer the page does not print. The honest,
+ *              expected outcome; a fixed sentence says the sheet does not say.
  *
  * The line is action, not knowledge. A definition is `general`; anything that would change what
- * the reader DOES — a dose, a decision to go to hospital, what is normal for them — is `none`,
- * and the medicine-change and crisis gates have already refused most of it before this runs.
+ * the reader DOES — a dose, a decision to go to hospital, what is normal for them — is
+ * `boundary`, and the medicine-change and crisis gates have already refused most of it before
+ * this runs. The three conversational kinds exist because a greeting, a sum and "is this normal"
+ * used to share one fixed "the sheet doesn't say" sentence, which is the wrong answer to all three.
  */
-export const AskKindSchema = z.enum(["sheet", "general", "none"]);
+export const AskKindSchema = z.enum(["sheet", "general", "boundary", "chat", "off_topic", "none"]);
 export type AskKind = z.infer<typeof AskKindSchema>;
 
 export const AskResultSchema = z.strictObject({
@@ -181,7 +192,7 @@ export const AskResultSchema = z.strictObject({
    */
   citedCardIds: z
     .array(z.string())
-    .describe('Ids of every card the answer comes from. Empty unless kind is "sheet".'),
+    .describe('Ids of every card the answer comes from. Empty unless kind is "sheet" or "boundary".'),
   answer: SpeakableSchema.nullable(),
 });
 export type AskResult = z.infer<typeof AskResultSchema>;

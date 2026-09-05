@@ -37,7 +37,13 @@ import type {
 } from "@/lib/domain/schemas";
 import type { ReferralResource } from "@/lib/i18n/referral";
 import { crisisReferral } from "@/lib/rules/crisis";
-import { NOT_ON_SHEET, REFUSED_MEDICINE_CHANGE } from "@/lib/rules/template-fallback";
+import {
+  BOUNDARY,
+  NOT_ON_SHEET,
+  OFF_TOPIC,
+  REFUSED_MEDICINE_CHANGE,
+  SMALL_TALK,
+} from "@/lib/rules/template-fallback";
 
 /** The route to ask. Exported so the test does not have to hard-code the string twice. */
 export const ASK_ENDPOINT = "/api/ask";
@@ -51,9 +57,22 @@ export type AnswerOutcome =
    * so it is never mistaken for something the reader's own sheet says.
    */
   | "explained"
+  /**
+   * The reader asked for a judgement about themselves. 明明 hands it to the doctor and gives what
+   * the page does say, so it may carry cited cards and sources like an answer — and the UI
+   * labels it, because the first sentence is a refusal even when the rest quotes the page.
+   */
+  | "boundary"
+  /** A greeting or a thank-you, answered in kind. No card, no source. */
+  | "chat"
+  /** Not health, not this sheet: one friendly line about what the app does. No card, no source. */
+  | "off_topic"
   | "refused_medicine_change"
   | "not_on_sheet"
   | "crisis_referral";
+
+/** The outcomes whose sentence the server may send ahead of the rest, for the phone to say. */
+export type SpokenOutcome = "answered" | "explained" | "boundary" | "chat" | "off_topic";
 
 /** Outcomes for a request that never produced an answer (contracts/api-ask.md, Errors). */
 export type FailureOutcome = "bad_request" | "model_unavailable";
@@ -109,7 +128,7 @@ export interface AskHandlers {
    * The reader's own spoken form of the answer, before the rest of it has been written. Fires at
    * most once, before `onOutcome`. What it carries has passed every gate and may be said at once.
    */
-  onEarly?: (event: { text: string; outcome: "answered" | "explained" }) => void;
+  onEarly?: (event: { text: string; outcome: SpokenOutcome }) => void;
   /** Fires as soon as the outcome is known, before the sentence arrives, so the card can style itself. */
   onOutcome?: (event: {
     outcome: AnswerOutcome;
@@ -162,10 +181,25 @@ type AskEvent = OutcomeEvent | EarlyEvent | AnswerEvent | DoneEvent | ErrorEvent
 const ANSWER_OUTCOMES: ReadonlySet<string> = new Set<AnswerOutcome>([
   "answered",
   "explained",
+  "boundary",
+  "chat",
+  "off_topic",
   "refused_medicine_change",
   "not_on_sheet",
   "crisis_referral",
 ]);
+
+const SPOKEN_OUTCOMES: ReadonlySet<string> = new Set<SpokenOutcome>([
+  "answered",
+  "explained",
+  "boundary",
+  "chat",
+  "off_topic",
+]);
+
+function isSpokenOutcome(value: unknown): value is SpokenOutcome {
+  return typeof value === "string" && SPOKEN_OUTCOMES.has(value);
+}
 
 function isAnswerOutcome(value: string): value is AnswerOutcome {
   return ANSWER_OUTCOMES.has(value);
@@ -212,6 +246,9 @@ function isSpeakable(value: unknown): value is Speakable {
 function templateAnswer(outcome: AnswerOutcome): Speakable | undefined {
   if (outcome === "refused_medicine_change") return REFUSED_MEDICINE_CHANGE;
   if (outcome === "not_on_sheet") return NOT_ON_SHEET;
+  if (outcome === "boundary") return BOUNDARY;
+  if (outcome === "chat") return SMALL_TALK;
+  if (outcome === "off_topic") return OFF_TOPIC;
   return undefined;
 }
 
@@ -305,7 +342,7 @@ export async function ask(request: AskRequest, handlers: AskHandlers = {}): Prom
     if (event.event === "early") {
       if (result.early !== undefined) return;
       if (typeof event.text !== "string" || event.text.trim().length === 0) return;
-      if (event.outcome !== "answered" && event.outcome !== "explained") return;
+      if (!isSpokenOutcome(event.outcome)) return;
       if (event.dialect !== request.dialect) return;
       result.early = event.text;
       handlers.onEarly?.({ text: event.text, outcome: event.outcome });

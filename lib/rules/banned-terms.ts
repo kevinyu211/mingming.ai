@@ -173,19 +173,59 @@ export interface CheckResult {
   matches: string[];
 }
 
-/** Runs every rule over one string. */
-export function checkText(text: string): CheckResult {
+interface Hit {
+  term: string;
+  group: BannedGroup;
+}
+
+/** Every rule over one string, keeping which group each match came from. */
+function scan(text: string): Hit[] {
   const normalised = normalise(text);
-  const matches: string[] = [];
+  const hits: Hit[] = [];
   const seen = new Set<string>();
   for (const rule of ALL_BANNED_RULES) {
     for (const hit of normalised.matchAll(rule.pattern)) {
       const term = hit[0].trim();
       if (term.length === 0 || seen.has(term)) continue;
       seen.add(term);
-      matches.push(term);
+      hits.push({ term, group: rule.group });
     }
   }
+  return hits;
+}
+
+/** Runs every rule over one string. */
+export function checkText(text: string): CheckResult {
+  const matches = scan(text).map((hit) => hit.term);
+  return { ok: matches.length === 0, matches };
+}
+
+/** The lines a generated string is allowed to lean on: verbatim page text, or nothing. */
+export type PrintedLines = readonly (string | null | undefined)[];
+
+/**
+ * `checkText`, with the one exemption principle VI allows: a NUMBER the page itself prints.
+ *
+ * The numeric rules exist to stop the app setting a target of its own — grams a day, a blood
+ * pressure, a sugar reading the doctor never wrote. A threshold copied off the printed line is
+ * not that: 「血糖低於 4.0 mmol/L」 is the sheet's own warning sign, and a spoken card that
+ * replaced it with "look at the sheet" hid the one number the family most needed to hear (the
+ * heart-failure and diabetes fixtures both lost their sugar warnings this way on 5 September).
+ *
+ * So a numeric match is dropped when the normalised match is found, character for character,
+ * inside one of the supplied `quotes` — the source lines of the cards the string stands on. The
+ * word rules (診斷, treat, "you should") are never exempted: a page that prints "Treatment and
+ * Outcome" as a heading does not license generated text to use the word.
+ */
+export function checkTextAgainstQuotes(text: string, quotes: PrintedLines): CheckResult {
+  const printed = quotes
+    .filter((quote): quote is string => typeof quote === "string" && quote.length > 0)
+    .map(normalise);
+  const matches = scan(text)
+    .filter(
+      (hit) => !(hit.group === "numeric" && printed.some((quote) => quote.includes(hit.term))),
+    )
+    .map((hit) => hit.term);
   return { ok: matches.length === 0, matches };
 }
 
@@ -195,8 +235,17 @@ export function checkText(text: string): CheckResult {
  * sentence slips into, so a `Speakable` whose Chinese halves are clean is not yet a clean line.
  */
 export function checkSpeakable(s: Speakable): CheckResult {
+  return checkSpeakableAgainstQuotes(s, []);
+}
+
+/** `checkSpeakable` with the printed-number exemption of `checkTextAgainstQuotes`. */
+export function checkSpeakableAgainstQuotes(s: Speakable, quotes: PrintedLines): CheckResult {
   const matches = [
-    ...new Set([...checkText(s.yue).matches, ...checkText(s.cmn).matches, ...checkText(s.en).matches]),
+    ...new Set([
+      ...checkTextAgainstQuotes(s.yue, quotes).matches,
+      ...checkTextAgainstQuotes(s.cmn, quotes).matches,
+      ...checkTextAgainstQuotes(s.en, quotes).matches,
+    ]),
   ];
   return { ok: matches.length === 0, matches };
 }
@@ -204,10 +253,11 @@ export function checkSpeakable(s: Speakable): CheckResult {
 /**
  * Checks a card's generated body only. `card.source.quote` is verbatim page text and is never
  * checked — a sheet may legitimately print "Treatment and Outcome" or a drug name containing
- * "cure", and hiding that would break principle IV (everything traces to a line).
+ * "cure", and hiding that would break principle IV (everything traces to a line). The quote is,
+ * however, what a number in the body is allowed to match: see `checkTextAgainstQuotes`.
  */
 export function checkCard(card: Card): CheckResult {
-  return checkSpeakable(card.body);
+  return checkSpeakableAgainstQuotes(card.body, [card.source?.quote]);
 }
 
 /**

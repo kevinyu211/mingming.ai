@@ -241,8 +241,8 @@ describe("JSON schema export for structured outputs", () => {
    * The three boxes, and the one that is new: a general explanation cites nothing, because it is
    * not a claim about this person's page (constitution IV, amended 1.1.0).
    */
-  it("accepts the three answer kinds and nothing else", () => {
-    for (const kind of ["sheet", "general", "none"]) {
+  it("accepts the six answer kinds and nothing else", () => {
+    for (const kind of ["sheet", "general", "boundary", "chat", "off_topic", "none"]) {
       expect(
         AskResultSchema.safeParse({ kind, citedCardIds: [], answer: null }).success,
         kind,

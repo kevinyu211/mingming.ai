@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { CardTypeSchema, SourceReferenceSchema, type Speakable } from "@/lib/domain/schemas";
 import { getModelProvider } from "@/lib/model/client";
-import { checkSpeakable } from "@/lib/rules/banned-terms";
+import { checkSpeakableAgainstQuotes } from "@/lib/rules/banned-terms";
 import { jsonError } from "@/lib/server/ndjson";
 import { NO_SOURCE, safeTemplate } from "@/lib/server/reading-pipeline";
 
@@ -104,8 +104,10 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   // Second strike: the fixed template, built only from the facts (contracts/api-phrase.md).
-  const filtered = !checkSpeakable(spoken).ok;
-  const answer = filtered ? safeTemplate(cardType, facts) : spoken;
+  // A number the source line itself prints is allowed through (lib/rules/banned-terms.ts).
+  const quote = parsed.data.source?.quote ?? null;
+  const filtered = !checkSpeakableAgainstQuotes(spoken, [quote]).ok;
+  const answer = filtered ? safeTemplate(cardType, facts, quote) : spoken;
 
   log(200, filtered);
   return new Response(JSON.stringify({ spoken: answer, filtered }), {

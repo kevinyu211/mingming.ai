@@ -26,7 +26,7 @@ import {
 } from "@/lib/domain/schemas";
 import { ModelOutputError, type ModelProvider } from "@/lib/model/client";
 import type { PhraseDialect } from "@/lib/model/prompts";
-import { checkCard, checkSpeakable } from "@/lib/rules/banned-terms";
+import { checkCard, checkSpeakableAgainstQuotes } from "@/lib/rules/banned-terms";
 import { buildCards } from "@/lib/rules/card-order";
 import { applyDietRules } from "@/lib/rules/diet-line";
 import { templateFor, type TemplateFacts } from "@/lib/rules/template-fallback";
@@ -67,10 +67,18 @@ export const SEE_THE_SHEET: Speakable = {
   en: "Have a look at this line on the sheet itself, or ring the number printed on it and ask.",
 };
 
-/** `templateFor`, with the principle VI guarantee actually enforced. */
-export function safeTemplate(type: CardType, facts: TemplateFacts): Speakable {
+/**
+ * `templateFor`, with the principle VI guarantee actually enforced. `quote` is the printed line
+ * the card stands on: a number the template copied off it is allowed through, a number it did
+ * not is not (see `checkTextAgainstQuotes`).
+ */
+export function safeTemplate(
+  type: CardType,
+  facts: TemplateFacts,
+  quote?: string | null,
+): Speakable {
   const template = templateFor(type, facts);
-  return checkSpeakable(template).ok ? template : SEE_THE_SHEET;
+  return checkSpeakableAgainstQuotes(template, [quote]).ok ? template : SEE_THE_SHEET;
 }
 
 /**
@@ -190,7 +198,7 @@ async function repair(
     regenerated = null;
   }
 
-  if (regenerated !== null && checkSpeakable(regenerated).ok) {
+  if (regenerated !== null && checkSpeakableAgainstQuotes(regenerated, [card.source?.quote]).ok) {
     filter.regenerated += 1;
     return { ...card, body: regenerated };
   }
@@ -208,7 +216,7 @@ async function repair(
   // `lib/rules/card-order.ts` copies `status` into `facts`, so `templateFor` dispatches to
   // `stoppedMedicineTemplate` on its own: the drug is named verbatim, the fact is attributed to
   // the page, and no frequency, amount or duration is stated.
-  const body = safeTemplate(card.type, facts);
+  const body = safeTemplate(card.type, facts, card.source?.quote);
   // A template is rule-generated, so the AI label comes off with the AI text.
   return { ...card, body, aiGenerated: false };
 }

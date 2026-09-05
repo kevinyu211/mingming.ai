@@ -12,6 +12,7 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  CHECK_KEYS,
   CLAUSE_MARKS,
   checkinTarget,
   chunks,
@@ -24,6 +25,7 @@ import {
   pieceSpeech,
   splitCards,
   trackLinkIndex,
+  withFocusFirst,
   type Beat,
 } from "@/components/chat/briefing";
 import type { Card, Medicine, StoredReading, WarningSign } from "@/lib/domain/schemas";
@@ -317,9 +319,10 @@ describe("the script 明明 plays", () => {
     expect(meds).toHaveLength(2);
     expect(meds[0].lead).toContain("1");
     expect(meds[1].lead).toContain("2");
-    // Each stops and asks, except where the closing line follows immediately.
-    expect(meds[0].awaits).toBe(true);
-    expect(meds[0].text).toContain(CTX.t("ask.medicine"));
+    // Medicines are asked about in pairs: the first of two does not stop, and the second is the
+    // last piece here, so the closing line does the asking.
+    expect(meds[0].awaits).toBe(false);
+    expect(meds[1].awaits).toBe(false);
   });
 
   it("says the page printed no red flags rather than dressing that up as one", () => {
@@ -480,8 +483,9 @@ describe("the script stops and asks at the end of every section", () => {
     const asking = beats.filter((b) => b.awaits);
     expect(asking.length).toBeGreaterThan(1);
     // No beat exists whose entire job is to ask: every waiting beat also says something.
+    const shortestCheck = Math.min(...CHECK_KEYS.map((key) => UI.hant[key].length));
     for (const beat of asking) {
-      expect(beat.text.length).toBeGreaterThan(UI.hant["ask.section"].length);
+      expect(beat.text.length).toBeGreaterThan(shortestCheck);
     }
     expect(beats[beats.length - 1].awaits).toBe(false);
   });
@@ -523,5 +527,87 @@ describe("the script stops and asks at the end of every section", () => {
         previous = section;
       }
     }
+  });
+});
+
+describe("the check-in rotation and the pairs of medicines", () => {
+  const five = buildBeats(
+    buildCards(
+      reading({
+        warningSigns: [warning("胸口痛")],
+        medicines: [
+          medicine(),
+          medicine({ name: "Aspirin" }),
+          medicine({ name: "Statin" }),
+          medicine({ name: "Frusemide" }),
+          medicine({ name: "Bisoprolol" }),
+        ],
+        dietLine: { raw: "低鹽", spoken: SPOKEN, source: SOURCE, recognisedType: "low_salt" },
+      }),
+    ),
+    CTX,
+  );
+  const meds = five.filter((b) => b.section.startsWith("medicine-"));
+
+  it("stops after every second medicine and after the last one", () => {
+    expect(meds.map((b) => b.awaits)).toEqual([false, true, false, true, true]);
+  });
+
+  it("groups a pair under one section, so a repeat replays the pair", () => {
+    expect(meds.map((b) => b.section)).toEqual([
+      "medicine-1",
+      "medicine-1",
+      "medicine-2",
+      "medicine-2",
+      "medicine-3",
+    ]);
+  });
+
+  /**
+   * The words of the check-in walk the rotation in order, so no two neighbouring asks use the
+   * same ones. 「明唔明？」 eight times in a row is what made the briefing read as a form.
+   */
+  it("asks a different way each time, in the order of the rotation", () => {
+    const asks = five
+      .filter((b) => b.awaits && b.key !== "summary" && b.key !== "warn")
+      .map((b) => b.text.split("\n\n").pop());
+    expect(asks).toEqual([CTX.t(CHECK_KEYS[0]), CTX.t(CHECK_KEYS[1]), CTX.t(CHECK_KEYS[2])]);
+    for (let i = 1; i < asks.length; i += 1) expect(asks[i]).not.toBe(asks[i - 1]);
+  });
+
+  it("keeps the warning bubble's own question", () => {
+    expect(five.find((b) => b.key === "warn")?.text).toContain(CTX.t("ask.warn"));
+  });
+});
+
+describe("where the reader asked to start", () => {
+  const cards = buildCards(
+    reading({
+      warningSigns: [warning("胸口痛")],
+      medicines: [medicine()],
+      followUp: [{ clinic: "SOPD", when: "2/52", tests: null, spoken: SPOKEN, source: SOURCE }],
+      dietLine: { raw: "低鹽", spoken: SPOKEN, source: SOURCE, recognisedType: "low_salt" },
+    }),
+  );
+
+  it("moves the run they named to just after the warning signs, and nothing else", () => {
+    const beats = buildBeats(cards, { ...CTX, focus: "followUp" });
+    expect(beats[0].key).toBe("summary");
+    expect(beats[1].key).toBe("warn");
+    expect(beats[2].section).toBe("piece-followUp");
+    expect(beats[3].section).toBe("medicine-1");
+    expect(beats[4].section).toBe("piece-diet");
+  });
+
+  it("changes nothing for no focus, or for a type the sheet has no card of", () => {
+    const plain = buildBeats(cards, CTX).map((b) => b.key);
+    expect(buildBeats(cards, { ...CTX, focus: null }).map((b) => b.key)).toEqual(plain);
+    expect(buildBeats(cards, { ...CTX, focus: "activity" }).map((b) => b.key)).toEqual(plain);
+  });
+
+  it("never moves a warning (constitution II)", () => {
+    const { pieces } = splitCards(cards);
+    expect(withFocusFirst(pieces, "warning")).toEqual(pieces);
+    expect(withFocusFirst(pieces, "noWarnings")).toEqual(pieces);
   });
 });

@@ -41,7 +41,15 @@ const SC006_P95_MS = 10_000;
 
 const REQUEST_TIMEOUT_MS = 60_000;
 
-type Outcome = "answered" | "refused_medicine_change" | "not_on_sheet" | "crisis_referral";
+type Outcome =
+  | "answered"
+  | "explained"
+  | "boundary"
+  | "chat"
+  | "off_topic"
+  | "refused_medicine_change"
+  | "not_on_sheet"
+  | "crisis_referral";
 
 interface QuestionSpec {
   id: string;

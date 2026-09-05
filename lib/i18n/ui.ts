@@ -93,6 +93,9 @@ const hant = {
   "ask.notOnSheet": "張紙冇講呢樣",
   // A general explanation, not something this page says. The label is the whole safety of it.
   "ask.explained": "呢個唔係你張紙寫嘅，係一般嘅意思",
+  // A judgement about the person was asked for. The heading says the first sentence hands it to
+  // the doctor, before the rest of the bubble quotes the page.
+  "ask.boundary": "呢個要問返醫生",
   "ask.notOnSheetBody": "我淨係讀到張紙上面有嘅嘢。呢樣可以覆診嗰陣問吓。",
   "ask.referral": "呢度有人可以幫手",
   "ask.referralBody": "如果而家好危險，即刻打下面嘅電話。",
@@ -275,6 +278,17 @@ const hant = {
   "ask.warn": "呢幾樣係最緊要嘅。明唔明？",
   "ask.medicine": "呢隻清唔清楚？清楚我就講下一隻。",
   "ask.section": "明唔明？想我講埋跟住嗰樣就話我知。",
+  // The check-in rotation. Asked by rule at the end of a section — the warning block, every pair
+  // of medicines, each remaining section — in this order, so no two neighbouring checks use the
+  // same words. Teach-back, not a quiz: the words put the onus on the explainer.
+  "check.1": "講到呢度，跟得上嗎？",
+  "check.2": "清唔清楚？唔清楚我再講一次。",
+  "check.3": "咁樣講你OK嗎？有咩想問都得。",
+  "check.4": "我講得清唔清楚呀？",
+  "check.5": "有冇邊句想我再講？冇嘅話我講下一樣。",
+  "check.6": "得唔得？得嘅話我繼續。",
+  // The reader answered the opening with a section name. The red flags still come first.
+  "brief.ackFocus": "好，先講最緊要嗰啲，跟住就講你想知嗰part。",
   "lead.medicineNth": "第{n}隻藥（總共{total}隻）：",
   "brief.intro": "我一樣一樣咁講俾你聽，唔急。最緊要嘅擺喺最前。",
   "brief.warnLead": "先講最緊要嗰樣。張紙寫住，如果有下面呢啲情況，唔好等，即刻返醫院。",
@@ -493,6 +507,7 @@ const hans: Record<UiKey, string> = {
   "ask.refusedBody": "药物怎么吃、要不要调整，都要问回医生或者药剂师。纸上写的电话在下面。",
   "ask.notOnSheet": "这张纸没讲这个",
   "ask.explained": "这不是你纸上写的，是一般的意思",
+  "ask.boundary": "这个要问回医生",
   "ask.notOnSheetBody": "我只读得到纸上有的内容。这个可以复诊的时候问一下。",
   "ask.referral": "这里有人可以帮忙",
   "ask.referralBody": "如果现在很危险，马上打下面的电话。",
@@ -633,6 +648,13 @@ const hans: Record<UiKey, string> = {
   "ask.warn": "这几样是最要紧的。明白吗？",
   "ask.medicine": "这一种清楚吗？清楚我就讲下一种。",
   "ask.section": "明白吗？想我讲下一样就告诉我。",
+  "check.1": "讲到这里，跟得上吗？",
+  "check.2": "清楚吗？不清楚我再说一遍。",
+  "check.3": "这样说可以吗？有什么想问都行。",
+  "check.4": "我讲得清楚吗？",
+  "check.5": "有哪句想我再讲一次？没有的话我讲下一样。",
+  "check.6": "可以吗？可以的话我继续。",
+  "brief.ackFocus": "好，先讲最要紧的，接着就讲你想知道的那部分。",
   "lead.medicineNth": "第{n}种药（一共{total}种）：",
   "brief.intro": "我一样一样讲给你听，不急。最要紧的放在最前面。",
   "brief.warnLead": "先讲最要紧的。纸上写着，如果有下面这些情况，别等，马上回医院。",
@@ -821,6 +843,7 @@ const en: Record<UiKey, string> = {
     "How a medicine is taken, and whether anything about it changes, is for the doctor or the pharmacist. The number printed on the sheet is below.",
   "ask.notOnSheet": "The sheet doesn't say",
   "ask.explained": "Not from your sheet — this is what it generally means",
+  "ask.boundary": "One for the doctor",
   "ask.notOnSheetBody":
     "I only read what is on the page. This one is worth raising at the follow-up visit.",
   "ask.referral": "There are people who can help",
@@ -967,6 +990,13 @@ const en: Record<UiKey, string> = {
   "ask.warn": "Those are the important ones. Is that clear?",
   "ask.medicine": "Is that one clear? If it is, I'll go on to the next.",
   "ask.section": "Is that clear? Tell me when you want the next part.",
+  "check.1": "Are you with me so far?",
+  "check.2": "Is that clear? If not, I'll say it again.",
+  "check.3": "Does that make sense? Ask me anything about it.",
+  "check.4": "Did I explain that well enough?",
+  "check.5": "Anything you'd like me to go over again? If not, I'll carry on.",
+  "check.6": "All right? Then I'll go on.",
+  "brief.ackFocus": "Right — the important part first, then the bit you asked about.",
   "lead.medicineNth": "Medicine {n} of {total}:",
   "brief.intro": "I'll take it one piece at a time, no rush. The part that matters most comes first.",
   "brief.warnLead": "Here's the most important part. The sheet says that if any of these happen, don't wait — go straight back to the hospital.",

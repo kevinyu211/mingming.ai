@@ -1,5 +1,10 @@
 <!--
 Sync Impact Report
+- Version change: 1.1.0 → 1.2.0 (2026-09-05). MINOR: IV widens "what it means" to what a test
+  measures, what a medicine named on the page is commonly for and what a condition the page
+  prints is, and names three conversational reply kinds (a greeting, an off-topic request, a
+  judgement about the person) so none of them shares the not-on-the-sheet sentence; VI lets a
+  number the sheet itself prints on the cited line pass the numeric filter. Earlier entry below.
 - Version change: 1.0.0 → 1.1.0
 - Modified principles: IV (Everything Traces to a Line → Everything About the Sheet Traces to a
   Line). MINOR: the provenance requirement is unchanged for every claim about the sheet; what is
@@ -71,6 +76,17 @@ stomach", "what is a low-salt diet", "what does BD mean" — MAY be answered fro
 Such an answer MUST be visibly labelled as general rather than as something the page says, MUST
 cite no line, and MUST NOT contradict the sheet.
 
+**Amended 1.2.0.** "What it means" includes what a test measures, what a medicine named on the page
+is commonly for, and what a condition the page prints is — each still labelled as general, each
+ending with the reminder that the sheet does not say why in this case, and none of them a statement
+about what this person has or needs. Three further kinds of reply are named so that a greeting, an
+off-topic request and a request for a judgement about the person stop sharing the not-on-the-sheet
+sentence: a greeting is answered in kind and the sheet offered; an off-topic request (sums, jokes,
+other tasks) gets one line about what the app does and no answer; and a judgement question ("is
+this normal for me") is handed to the doctor in one sentence, followed only by what the page prints,
+cited. None of the three MAY state anything about the person, and every one of them passes the
+banned-term filter like any other generated string.
+
 The line between the two is **action, not knowledge**: an answer that changes what the person DOES
 is refused; an answer that only tells them what something MEANS is allowed. Explaining that fasting
 means not eating beforehand is a definition. Saying whether to skip tonight's dose, whether to go to
@@ -99,7 +115,10 @@ cross-border disclosure; on-device storage satisfies all three with one sentence
 Every generated string MUST pass a banned-term filter before it is shown or spoken. The list
 MUST include at minimum: 诊断, 治疗, 处方, 治愈, 能吃, 不能吃, their traditional-character
 forms, their English equivalents (diagnose, treat, cure, prescribe), and any numeric target about
-the person. On a hit the app MUST regenerate once and then fall back to a fixed template. The
+the person. A number the sheet itself prints on the line a string stands on is not a target the
+app set: it MAY pass, matched character for character against that line's verbatim quote; every
+other numeric match, and every word on the list, is enforced whatever the page prints (1.2.0). On
+a hit the app MUST regenerate once and then fall back to a fixed template. The
 product name, UI copy, marketing copy and pitch script MUST obey the same list. Rationale: the
 negative list in the track rules eliminates entries for this language regardless of intent, so
 the guarantee has to be structural.
@@ -150,4 +169,4 @@ wording. Any amendment touching Principles I–VI MUST also update the cross-ref
 a compliance check against this document, and any complexity that violates the Development
 Workflow MUST be justified in writing in the plan.
 
-**Version**: 1.1.0 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-04
+**Version**: 1.2.0 | **Ratified**: 2026-09-02 | **Last Amended**: 2026-09-05

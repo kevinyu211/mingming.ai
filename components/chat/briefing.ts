@@ -221,21 +221,71 @@ export interface BeatContext {
    * title; the greeting says what the document is.
    */
   sheetWord: string;
+  /**
+   * The section the reader asked to hear first, when the opening offered a choice and they took
+   * it. Only the runs AFTER the warning block move: the red flags stay first by construction
+   * (constitution II). Absent or null keeps the card order exactly as `buildCards` emits it.
+   */
+  focus?: CardType | null;
+}
+
+/**
+ * The check-in rotation, in the order it is used. Six phrasings, so a long sheet rarely comes
+ * back round to one — 「明唔明？」 asked eight times in a row is what made the briefing read as a
+ * form. Chosen by rule, in sequence, never by a model turn, so the words are always the app's own.
+ */
+export const CHECK_KEYS = [
+  "check.1",
+  "check.2",
+  "check.3",
+  "check.4",
+  "check.5",
+  "check.6",
+] as const satisfies readonly UiKey[];
+
+/**
+ * How many medicines are said before 明明 stops to ask. One check per medicine was a quiz; one per
+ * sheet was a monologue. Two is a rhythm a listener can keep up with.
+ */
+export const MEDICINES_PER_CHECK = 2;
+
+/**
+ * The pieces with the run the reader asked for moved to the front, the rest in card order. A
+ * warning is never a piece, so a "focus" on it changes nothing; an absent or unknown type leaves
+ * the order alone.
+ */
+export function withFocusFirst(pieces: Card[], focus: CardType | null | undefined): Card[] {
+  if (!focus || !pieces.some((card) => card.type === focus)) return pieces;
+  return [
+    ...pieces.filter((card) => card.type === focus),
+    ...pieces.filter((card) => card.type !== focus),
+  ];
 }
 
 /**
  * The whole briefing, start to finish.
  *
- * Two greeting beats, then the warning lead-in and one bubble per warning sign, then the
- * teach-back question, then one bubble per remaining card with its connective, then the closing
- * line. A connective is printed only on the FIRST card of a run — three medicines get one
- * 「跟住講藥。」 between them, not three, because a connective repeated on every line stops being
- * speech and becomes a column heading.
+ * The opening summary, then the warning lead-in and every warning sign in one amber bubble with
+ * its question, then one bubble per remaining card with its connective — stopping to ask after
+ * every pair of medicines and after each other section, with a different check-in each time —
+ * then the closing line. A connective is printed only on the FIRST card of a run — three
+ * medicines get one 「跟住講藥。」 between them, not three, because a connective repeated on every
+ * line stops being speech and becomes a column heading.
  */
 export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
-  const { warnings, pieces, empty } = splitCards(cards);
+  const split = splitCards(cards);
+  const { warnings, empty } = split;
+  const pieces = withFocusFirst(split.pieces, ctx.focus);
   const { t, display, dialect } = ctx;
   const beats: Beat[] = [];
+
+  let checks = 0;
+  /** The next check-in phrasing in the rotation. */
+  const nextCheck = (): string => {
+    const key = CHECK_KEYS[checks % CHECK_KEYS.length];
+    checks += 1;
+    return display(t(key));
+  };
 
   const rule = (
     key: string,
@@ -349,9 +399,15 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
     }
 
     const last = i === pieces.length - 1;
-    const askKey = isMedicine && !last ? "ask.medicine" : "ask.section";
-    // The last piece asks nothing: the closing line follows it and does the asking.
-    const ask = last ? "" : `${ASK_GAP}${display(t(askKey))}`;
+    // A medicine stops to ask only at the end of its group of MEDICINES_PER_CHECK, or when it is
+    // the last medicine; everything else asks at the end of its section. The last piece asks
+    // nothing: the closing line follows it and does the asking.
+    const groupEnd =
+      !isMedicine ||
+      medicineNumber % MEDICINES_PER_CHECK === 0 ||
+      medicineNumber === medicines.length;
+    const asks = !last && groupEnd;
+    const ask = asks ? `${ASK_GAP}${nextCheck()}` : "";
 
     beats.push({
       key: `piece-${i}`,
@@ -363,8 +419,12 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       link: i === trackAt ? "track" : null,
       stopped: card.stopped === true,
       unverified: card.unverified === true,
-      awaits: !last,
-      section: isMedicine ? `medicine-${medicineNumber}` : `piece-${card.type}`,
+      awaits: asks,
+      // A medicine's section is its GROUP, so "say that again" replays the pair that was asked
+      // about rather than the single bubble the question happened to sit under.
+      section: isMedicine
+        ? `medicine-${Math.ceil(medicineNumber / MEDICINES_PER_CHECK)}`
+        : `piece-${card.type}`,
       // The checklist goes with the 睇「跟進」 offer, under the last medicine; the visit rows go
       // under the first follow-up bubble. Everything else has nothing to draw.
       widget:

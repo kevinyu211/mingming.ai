@@ -197,7 +197,8 @@ number printed on the sheet. It never collects a diagnosis.
 **"You just said it explains things — where's the line?"** Action, not knowledge. "What does fasting
 mean" is a definition and the same for everyone. "Should I fast before Tuesday" is their plan, and
 that either comes off the page with a citation or is refused. "Is this normal for me" is a judgement
-about them and is always refused.
+about them: he says so in one sentence, hands it to the doctor, and reads out what the page says to
+watch for — never a verdict.
 
 **"What if it misreads a medicine?"** Fields are verbatim, every card carries its source quote, and
 anything it can't read it flags rather than guesses. On four deliberately hard fixtures: zero

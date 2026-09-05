@@ -6,7 +6,9 @@ import {
   ALL_BANNED_RULES,
   checkCard,
   checkSpeakable,
+  checkSpeakableAgainstQuotes,
   checkText,
+  checkTextAgainstQuotes,
   isExemptQuote,
   normalise,
 } from "@/lib/rules/banned-terms";
@@ -252,5 +254,47 @@ describe("quote exemption", () => {
     expect(isExemptQuote("醫生嘅診斷係肺炎", quote)).toBe(false);
     expect(isExemptQuote("anything", null)).toBe(false);
     expect(isExemptQuote("", quote)).toBe(false);
+  });
+});
+
+describe("a number the page prints is not a target the app set", () => {
+  const printed = "血糖低於 4.0 mmol/L 並感到冒汗、手震";
+
+  it("checkTextAgainstQuotes lets the printed threshold through", () => {
+    const line = "血糖低過 4.0 mmol/L 要即刻去急症室";
+    expect(checkText(line).ok).toBe(false);
+    expect(checkTextAgainstQuotes(line, [printed]).ok).toBe(true);
+  });
+
+  it("but not a number the page does not print", () => {
+    expect(checkTextAgainstQuotes("血糖要低過 7.0 mmol/L", [printed]).ok).toBe(false);
+    expect(checkTextAgainstQuotes("血糖要低過 7.0 mmol/L", [printed]).matches).toEqual(["7.0 mmol"]);
+  });
+
+  it("never exempts a word, whatever the page prints", () => {
+    expect(checkTextAgainstQuotes("醫生嘅診斷係肺炎", ["醫生嘅診斷係肺炎"]).ok).toBe(false);
+    expect(checkTextAgainstQuotes("The doctor will treat it", ["Treatment and Outcome"]).ok).toBe(false);
+  });
+
+  it("ignores empty and missing quotes", () => {
+    expect(checkTextAgainstQuotes("4.0 mmol", [null, undefined, ""]).ok).toBe(false);
+    expect(checkSpeakableAgainstQuotes({ yue: "4.0 mmol", cmn: "4.0 mmol", en: "4.0 mmol" }, []).ok).toBe(false);
+  });
+
+  it("checkCard matches a number against the card's own quote", () => {
+    const sugar: Card = {
+      id: "warning-5",
+      type: "warning",
+      body: {
+        yue: "血糖低過 4.0 mmol/L，即刻去急症室",
+        cmn: "血糖低于 4.0 mmol/L，马上去急诊",
+        en: "Blood sugar below 4.0 mmol/L, go straight to A&E",
+      },
+      source: { section: "警示徵狀", lineIndex: 5, quote: printed },
+      aiGenerated: true,
+    };
+    expect(checkCard(sugar).ok).toBe(true);
+    expect(checkCard({ ...sugar, source: { section: "警示徵狀", lineIndex: 0, quote: "持續嘔吐" } }).ok).toBe(false);
+    expect(checkCard({ ...sugar, source: null }).ok).toBe(false);
   });
 });

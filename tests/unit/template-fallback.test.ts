@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { CardTypeSchema, type CardType, type Speakable } from "@/lib/domain/schemas";
 import { checkSpeakable, checkText } from "@/lib/rules/banned-terms";
 import {
+  BOUNDARY,
   CAUTION_SUFFIX,
   NOT_ON_SHEET,
+  OFF_TOPIC,
   REFUSED_MEDICINE_CHANGE,
+  SMALL_TALK,
   templateFor,
   type TemplateFacts,
 } from "@/lib/rules/template-fallback";
@@ -372,5 +375,26 @@ describe("fixed refusals and the caution suffix", () => {
       cmn: `${spoken.cmn}${CAUTION_SUFFIX.cmn}`,
       en: `${spoken.en} ${CAUTION_SUFFIX.en}`,
     });
+  });
+});
+
+describe("the conversational fallbacks", () => {
+  it.each([
+    ["BOUNDARY", BOUNDARY],
+    ["SMALL_TALK", SMALL_TALK],
+    ["OFF_TOPIC", OFF_TOPIC],
+  ])("%s is clean in all three forms", (label, spoken) => {
+    expectClean(label, spoken);
+  });
+
+  it("BOUNDARY hands the question to the doctor and claims nothing about the page", () => {
+    expect(BOUNDARY.yue).toContain("醫生");
+    expect(BOUNDARY.cmn).toContain("医生");
+    expect(BOUNDARY.en).toContain("doctor");
+  });
+
+  it("OFF_TOPIC says what the app does and answers nothing else", () => {
+    expect(OFF_TOPIC.yue).toContain("出院紙");
+    expect(OFF_TOPIC.en).toContain("discharge sheet");
   });
 });

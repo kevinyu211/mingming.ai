@@ -195,7 +195,7 @@ describe("the brief reaches the model as background", () => {
     expect(text).toContain("not citable");
     expect(text.indexOf("BACKGROUND")).toBeLessThan(text.indexOf("\nCARDS\n"));
     // …and the question is still the last thing the model reads.
-    expect(text.indexOf("\nCARDS\n")).toBeLessThan(text.indexOf("QUESTION (asked in"));
+    expect(text.indexOf("\nCARDS\n")).toBeLessThan(text.indexOf("READER'S MESSAGE (in"));
 
     const [plain] = buildAskUserContent(cards, "白色嗰粒點食？", "yue", "yue");
     expect(plain.type === "text" ? plain.text : "").not.toContain("BACKGROUND");

@@ -38,7 +38,7 @@ export const DATA_STATEMENT_PROVIDERS: DataStatementProviders = {
 /** Paragraph templates. `{model}`, `{voice}` and `{transcription}` are interpolated. */
 const TEMPLATES: Record<UiLocale, readonly string[]> = {
   hant: [
-    "你影嘅出院紙同你問嘅問題，會傳去模型供應商喺香港以外嘅伺服器處理。",
+    "你影嘅出院紙、你問嘅問題，同埋你哋之前講過嘅對話，會傳去模型供應商喺香港以外嘅伺服器處理。",
     "每張卡同每個答案嘅文字會傳去語音供應商讀出嚟；你用講嘅問題會錄低，傳去語音辨識供應商寫成文字。你講緊嗰陣，瀏覽器自己嘅引擎同時聽住，即刻喺畫面顯示出嚟；用 Chrome 嘅話，嗰段聲同時會上傳去 Google。",
     "呢個 app 冇伺服器儲存。張相處理完即刻掉咗，唔會留低，唔會記入 log。",
     "稱呼、計劃同讀過嘅紙淨係存喺你部電話，隨時撳「刪除所有資料」就冇晒。",
@@ -47,7 +47,7 @@ const TEMPLATES: Record<UiLocale, readonly string[]> = {
     "供應商：模型 {model}；語音 {voice}；語音辨識 {transcription}。",
   ],
   hans: [
-    "你拍的出院纸和你问的问题，会传到模型供应商在香港以外的服务器处理。",
+    "你拍的出院纸、你问的问题，还有你们之前讲过的对话，会传到模型供应商在香港以外的服务器处理。",
     "每张卡和每个答案的文字会传到语音供应商念出来；你用讲的问题会录下来，传到语音识别供应商写成文字。你讲的时候，浏览器自己的引擎同时听着，马上在画面显示出来；用 Chrome 的话，那段声音同时会上传到 Google。",
     "这个 app 没有服务器存储。照片处理完马上丢掉，不留底，不写进日志。",
     "称呼、计划和读过的纸只存在你的手机里，随时按「删除所有资料」就全没了。",
@@ -56,7 +56,7 @@ const TEMPLATES: Record<UiLocale, readonly string[]> = {
     "供应商：模型 {model}；语音 {voice}；语音识别 {transcription}。",
   ],
   en: [
-    "The discharge sheet you photograph and the question you ask are sent to the model provider's API, on servers outside Hong Kong.",
+    "The discharge sheet you photograph, the question you ask and the conversation so far are sent to the model provider's API, on servers outside Hong Kong.",
     "The text of each card and each answer is sent to the voice provider to be spoken; a spoken question is recorded and the recording is sent to the transcription provider. While you speak, the browser's own engine listens as well, so the words appear on screen straight away — and on Chrome that audio goes to Google too.",
     "This app has no server storage. The photo is discarded as soon as the reading comes back: not kept, not logged.",
     "The word you chose, the plan and the last sheet stay on your phone, and “Delete everything” removes all of it.",

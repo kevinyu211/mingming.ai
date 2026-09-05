@@ -7,7 +7,7 @@
  * costs one wasted answer.
  */
 import { describe, expect, it } from "vitest";
-import { classifyReply } from "@/components/chat/turns";
+import { classifyReply, classifySection, isQuestionLike } from "@/components/chat/turns";
 
 describe("replies that mean carry on", () => {
   const yes = [
@@ -98,5 +98,49 @@ describe("replies that are questions", () => {
   /** Long replies are the reader telling us something, whatever word they open with. */
   it("does not read a long sentence as a yes just because it starts with one", () => {
     expect(classifyReply("好呀不過我想問吓隻白色藥係做咩用嘅")).toBe("question");
+  });
+});
+
+describe("the answers the check-in rotation invites", () => {
+  for (const reply of ["清楚", "清楚喇", "跟得上", "得嘅", "清楚了", "alright", "All right.", "makes sense", "clear"]) {
+    it(`reads ${JSON.stringify(reply)} as continue`, () => {
+      expect(classifyReply(reply)).toBe("continue");
+    });
+  }
+  for (const reply of ["唔清楚", "唔係好清楚", "跟唔上", "不太清楚", "not really clear", "you lost me"]) {
+    it(`reads ${JSON.stringify(reply)} as repeat`, () => {
+      expect(classifyReply(reply)).toBe("repeat");
+    });
+  }
+});
+
+describe("the section the reader wants first", () => {
+  const cases: [string, ReturnType<typeof classifySection>][] = [
+    ["藥", "medicine"],
+    ["先講啲藥", "medicine"],
+    ["食藥嗰part", "medicine"],
+    ["the medicines please", "medicine"],
+    ["覆診", "followUp"],
+    ["复诊", "followUp"],
+    ["食嘢", "diet"],
+    ["飲食方面", "diet"],
+    ["運動", "activity"],
+    ["傷口", "activity"],
+    ["明白", null],
+    ["hello", null],
+    ["", null],
+  ];
+  for (const [reply, wanted] of cases) {
+    it(`reads ${JSON.stringify(reply)} as ${String(wanted)}`, () => {
+      expect(classifySection(reply)).toBe(wanted);
+    });
+  }
+
+  it("tells a section name from a question about the section", () => {
+    expect(isQuestionLike("藥")).toBe(false);
+    expect(isQuestionLike("食嘢")).toBe(false);
+    expect(isQuestionLike("幾時覆診？")).toBe(true);
+    expect(isQuestionLike("幾時覆診")).toBe(true);
+    expect(isQuestionLike("what about food")).toBe(true);
   });
 });

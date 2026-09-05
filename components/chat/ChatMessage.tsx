@@ -118,7 +118,11 @@ export default function ChatMessage({
         ? t("ask.notOnSheet")
         : message.outcome === "explained"
           ? t("ask.explained")
-          : null;
+          : // A boundary reply opens by handing the question to the doctor, then quotes the page.
+            // The heading says which of the two the bubble is, before the reader hears either.
+            message.outcome === "boundary"
+            ? t("ask.boundary")
+            : null;
 
   const bubble = warn
     ? "bg-warn-bg text-warn-ink"

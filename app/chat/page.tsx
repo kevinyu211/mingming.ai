@@ -81,7 +81,7 @@ import {
   hasCountableDose,
   pauseAfter,
 } from "@/components/chat/briefing";
-import { classifyReply } from "@/components/chat/turns";
+import { classifyReply, classifySection, isQuestionLike } from "@/components/chat/turns";
 import { useVoice } from "@/components/chat/useVoice";
 import { ask } from "@/lib/client/ask-stream";
 import { readSheet, type ImageInput } from "@/lib/client/read-stream";
@@ -267,13 +267,18 @@ function ChatScreen() {
   // flips the fallback 出院紙 / 出院纸 / Discharge sheet. Still `sheetTitle()`, still never invented.
   const title = useMemo(() => sheetTitle(reading, locale), [reading, locale]);
 
-  /** The whole briefing, in order, before a word of it has been said. */
+  /**
+   * The whole briefing, in order, before a word of it has been said. `focus` is the section the
+   * reader asked for at the opening, if they took the choice; it moves that run to just after the
+   * warning signs and nothing else.
+   */
+  const focus = sheet?.briefing.focus ?? null;
   const beats = useMemo<Beat[]>(
     () =>
       cards.length > 0
-        ? buildBeats(cards, { dialect, t, display, sheetWord: t("cards.header") })
+        ? buildBeats(cards, { dialect, t, display, sheetWord: t("cards.header"), focus })
         : [],
-    [cards, dialect, display, t],
+    [cards, dialect, display, focus, t],
   );
 
   // `briefing.step` is deliberately NOT read into a render value: the driver reads it back out of
@@ -285,7 +290,8 @@ function ChatScreen() {
   /* --------------------------------------------------------- the briefing */
 
   const setBriefing = useCallback((nextPhase: Sheet["briefing"]["phase"], nextStep: number) => {
-    updateActive(() => ({ briefing: { phase: nextPhase, step: nextStep } }));
+    // Spread, so the reader's chosen `focus` survives every step of the script.
+    updateActive((s) => ({ briefing: { ...s.briefing, phase: nextPhase, step: nextStep } }));
   }, []);
 
   /** Once the whole sheet has been said, and only when the page printed a countable frequency. */
@@ -626,6 +632,28 @@ function ChatScreen() {
       const live = loadSheets().active;
       if (live?.briefing.phase === "waiting") {
         const step = live.briefing.step;
+
+        /**
+         * The opening offered a choice of where to start, and the reader took it.
+         *
+         * 「藥」 at that one moment is not a question for the model, it is the answer to 明明's —
+         * so the run they named moves to just after the warning signs (which nothing moves:
+         * constitution II) and the script goes on from there. Only at the opening (`step` 1 is
+         * the beat after the summary), and only for a reply that is not shaped like a question:
+         * once the sheet is being read out, a section name in a reply is a question like any
+         * other. The beats are rebuilt from the stored `focus`; the warning beat is at index 1 in
+         * both orders, so resuming there is the same beat either way.
+         */
+        if (step === 1) {
+          const wanted = classifySection(text);
+          if (wanted !== null && !isQuestionLike(text)) {
+            updateActive((s) => ({ briefing: { ...s.briefing, focus: wanted } }));
+            pendingAck.current = display(t("brief.ackFocus"));
+            resumeFrom(step);
+            return;
+          }
+        }
+
         const intent = classifyReply(text);
 
         if (intent === "continue") {
@@ -648,15 +676,17 @@ function ChatScreen() {
       request.current = controller;
 
       /**
-       * The last few turns travel with the question.
+       * The conversation travels with the question.
        *
-       * Without them a follow-up is unanswerable: 「有冇其他藥？」 has no referent on its own, and
+       * Without it a follow-up is unanswerable: 「有冇其他藥？」 has no referent on its own, and
        * came back as "the sheet doesn't say" on a sheet listing three medicines — the reader had
-       * just been told about one and the app had already forgotten. Six turns, the reader's own
-       * words and 明明's own replies, both already on this device.
+       * just been told about one and the app had already forgotten. It used to be the last six
+       * turns, which meant 明明 forgot the start of the briefing by the third question; now it is
+       * the whole thread about this sheet, up to the forty turns `/api/ask` accepts. The reader's
+       * own words and 明明's own replies, both already on this device.
        */
       const context = withheldTurnsRemoved(loadSheets().active?.thread ?? [])
-        .slice(-6)
+        .slice(-40)
         .map((message) => ({
           role: message.role === "user" ? ("user" as const) : ("agent" as const),
           text: message.text.slice(0, 600),
@@ -670,7 +700,11 @@ function ChatScreen() {
        * answer is heard about as soon as the model has written it, not after it has written the
        * same thing twice more in the other two languages.
        */
-      const early: { text: string | null; outcome: "answered" | "explained" | null; committed: boolean } = {
+      const early: {
+        text: string | null;
+        outcome: NonNullable<ThreadMessage["outcome"]> | null;
+        committed: boolean;
+      } = {
         text: null,
         outcome: null,
         committed: false,
@@ -740,7 +774,7 @@ function ChatScreen() {
         }
         rememberExchange({
           question: text,
-          outcome: settledOutcome as "answered" | "not_on_sheet" | "refused_medicine_change",
+          outcome: settledOutcome ?? "not_on_sheet",
           citedCardId: result.citedCardIds?.[0] ?? null,
         });
         return;
@@ -783,7 +817,7 @@ function ChatScreen() {
       if (!failed) {
         rememberExchange({
           question: text,
-          outcome: result.outcome as "answered" | "not_on_sheet" | "refused_medicine_change",
+          outcome: result.outcome,
           citedCardId: result.citedCardIds?.[0] ?? null,
         });
       }

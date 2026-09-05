@@ -10,7 +10,7 @@
  * Types only — no values, no clock, no storage. `lib/sheets/store.ts` is the only writer.
  */
 import type { AnswerOutcome } from "@/lib/client/ask-stream";
-import type { SourceReference, StoredReading } from "@/lib/domain/schemas";
+import type { CardType, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import type { DraftPlan } from "@/lib/rules/plan-from-reading";
 
 /**
@@ -140,7 +140,13 @@ export interface Sheet {
   thread: ThreadMessage[];
   /** Keyed by `DoseTarget.key`. A medicine with no entry has been taken zero times today. */
   doses: Record<string, DoseState>;
-  briefing: { phase: BriefPhase; step: number };
+  /**
+   * `focus` is the section the reader asked to hear first when the opening offered the choice —
+   * 「藥」 in answer to 「想我由邊樣講起？」. The briefing puts that run straight after the warning
+   * signs (which nothing moves: constitution II) and reads the rest in card order. Absent or
+   * null means the card order as built.
+   */
+  briefing: { phase: BriefPhase; step: number; focus?: CardType | null };
   checkin: CheckinState;
   /** ISO timestamp once this sheet stopped being the active one; null while it is active. */
   archivedAt: string | null;

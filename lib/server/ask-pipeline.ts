@@ -33,6 +33,7 @@ import {
   SheetReadingSchema,
   type AskResult,
   type Card,
+  type Dialect,
   type SourceReference,
   type Speakable,
 } from "@/lib/domain/schemas";
@@ -44,13 +45,20 @@ import {
   type EarlyAnswer,
   type ModelProvider,
 } from "@/lib/model/client";
-import { checkSpeakable, checkText } from "@/lib/rules/banned-terms";
+import {
+  checkSpeakableAgainstQuotes,
+  checkTextAgainstQuotes,
+  type PrintedLines,
+} from "@/lib/rules/banned-terms";
 import { buildCards } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
 import { detectMedicineChange } from "@/lib/rules/refusal";
 import {
+  BOUNDARY,
   NOT_ON_SHEET,
+  OFF_TOPIC,
   REFUSED_MEDICINE_CHANGE,
+  SMALL_TALK,
   templateFor,
 } from "@/lib/rules/template-fallback";
 
@@ -94,10 +102,17 @@ export const AskQuestionSchema = z.strictObject({
  * bound is the server's own, not a courtesy: a client that sent a longer one is not sending a
  * brief.
  */
-/** How much of the conversation travels. Six turns is enough to resolve "are there any more?". */
-const MAX_TURNS = 6;
+/**
+ * How much of the conversation travels: the whole thread about this sheet, up to forty turns.
+ *
+ * Six used to be the cap — enough to resolve "are there any more?", and nothing else. It meant
+ * 明明 had forgotten the start of the briefing by the third question, could not tell which check-in
+ * he had already used, and re-explained what he had explained. Forty turns is a long conversation
+ * about one sheet, costs about two thousand tokens, and is already on the device.
+ */
+export const MAX_TURNS = 40;
 /** One turn's ceiling. A briefing bubble is the longest thing either side says. */
-const MAX_TURN_CHARS = 600;
+export const MAX_TURN_CHARS = 600;
 
 export const AskRequestSchema = z.strictObject({
   reading: AskReadingSchema,
@@ -132,9 +147,15 @@ export type AskRequest = z.infer<typeof AskRequestSchema>;
 export type AskOutcome =
   | "answered"
   | "explained"
+  | "boundary"
+  | "chat"
+  | "off_topic"
   | "refused_medicine_change"
   | "not_on_sheet"
   | "crisis_referral";
+
+/** The outcomes whose sentence a phone may say the moment it has been written. */
+export type SpokenOutcome = "answered" | "explained" | "boundary" | "chat" | "off_topic";
 
 export interface ReferralPayload {
   text: string;
@@ -146,11 +167,25 @@ export type AskEvent =
   | { event: "outcome"; outcome: "refused_medicine_change" }
   | { event: "outcome"; outcome: "not_on_sheet" }
   /**
-   * A general explanation: what a word or a routine practice MEANS. Carries no card and no source
-   * line, because it is not a claim about this person's page — the UI labels it as general so the
-   * two can never be confused (constitution IV, amended 1.1.0).
+   * A general explanation: what a word, a test, a routine practice, a medicine or a condition
+   * MEANS. Carries no card and no source line, because it is not a claim about this person's
+   * page — the UI labels it as general so the two can never be confused (constitution IV).
    */
   | { event: "outcome"; outcome: "explained" }
+  /** A greeting or a thank-you, answered in kind. Nothing about the page, nothing cited. */
+  | { event: "outcome"; outcome: "chat" }
+  /** Not health, not this sheet: a friendly line about what the app does, and nothing else. */
+  | { event: "outcome"; outcome: "off_topic" }
+  /**
+   * The reader asked for a judgement about themselves. The reply hands that to the doctor and
+   * then gives what the page does say, so it MAY cite cards; every id is one this server built.
+   */
+  | {
+      event: "outcome";
+      outcome: "boundary";
+      citedCardIds: string[];
+      sources: SourceReference[];
+    }
   | {
       event: "outcome";
       outcome: "answered";
@@ -164,7 +199,7 @@ export type AskEvent =
    * citations are already known, and the `answer` event that follows carries this exact string in
    * that field. A phone may start saying it at once; nothing it can say has skipped a gate.
    */
-  | { event: "early"; dialect: "yue" | "cmn" | "en"; outcome: "answered" | "explained"; text: string }
+  | { event: "early"; dialect: "yue" | "cmn" | "en"; outcome: SpokenOutcome; text: string }
   | { event: "answer"; answer: Speakable }
   | { event: "done" }
   | { event: "error"; error: "model_unavailable" };
@@ -337,25 +372,59 @@ export async function* runAsk(
   }
 
   /**
-   * A general explanation leaves here, before any of the card machinery below.
+   * The kinds that cite nothing leave here, before any of the card machinery below.
    *
-   * It cites nothing by construction, so there is no card to check it against and no template to
-   * fall back to — if the banned-term filter rejects the wording there is nothing safe left to
-   * say, and it becomes "not on the sheet" rather than a rephrase. Explanations are a convenience;
-   * the sheet is the product, and only the sheet gets the repair path.
+   * A general explanation, a greeting and an off-topic redirect have no card to be checked
+   * against and no card template to fall back to. The two conversational ones have a fixed
+   * sentence of their own — a greeting answered with "the sheet doesn't say" is the failure those
+   * kinds exist to remove. A general explanation whose own wording fails has nothing safe left to
+   * say and becomes "not on the sheet", as before; the sheet is the product, and only the sheet
+   * gets the repair path.
    */
-  if (result.kind === "general") {
-    if (!checkSpeakable(result.answer).ok) {
+  if (result.kind === "general" || result.kind === "chat" || result.kind === "off_topic") {
+    const kind = result.kind;
+    const outcome = kind === "general" ? "explained" : kind;
+    const cleaned = cleanForms(result.answer, dialect, spoken, []);
+    if (cleaned === null && kind === "general") {
       yield* notOnSheetEvents();
       return;
     }
-    yield { event: "outcome", outcome: "explained" };
-    yield { event: "answer", answer: withSpoken(result.answer, dialect, spoken) };
+    yield { event: "outcome", outcome };
+    yield { event: "answer", answer: cleaned ?? (kind === "chat" ? SMALL_TALK : OFF_TOPIC) };
     yield { event: "done" };
     return;
   }
 
   const citations = citedCards(cards, result.citedCardIds);
+  /** The printed lines this answer stands on: what a number in it is allowed to match. */
+  const quotes: PrintedLines = citations.map((card) => card.source?.quote);
+
+  /**
+   * A boundary reply: the reader asked for a judgement about themselves, and 明明 hands that to
+   * the doctor, then gives what the page does say. The citations are optional — the closest card
+   * may be a warning sign or the contact line, or there may be none — and every id is verified
+   * exactly as a sheet answer's is. A wording that fails the filter falls to the fixed sentence,
+   * which cites nothing because it says nothing about the page.
+   */
+  if (result.kind === "boundary") {
+    const cleaned = cleanForms(result.answer, dialect, spoken, quotes);
+    if (cleaned === null) {
+      yield { event: "outcome", outcome: "boundary", citedCardIds: [], sources: [] };
+      yield { event: "answer", answer: BOUNDARY };
+      yield { event: "done" };
+      return;
+    }
+    yield {
+      event: "outcome",
+      outcome: "boundary",
+      citedCardIds: citations.map((card) => card.id),
+      sources: sourcesOf(citations),
+    };
+    yield { event: "answer", answer: cleaned };
+    yield { event: "done" };
+    return;
+  }
+
   if (citations.length === 0) {
     yield* notOnSheetEvents();
     return;
@@ -365,7 +434,7 @@ export async function* runAsk(
   const cited = citations[0];
 
   let answer: Speakable = result.answer;
-  const check = checkSpeakable(answer);
+  const check = checkSpeakableAgainstQuotes(answer, quotes);
   if (!check.ok) {
     // One regenerate, then the fixed template (constitution VI). `phrase` is given only the card's
     // typed facts and its source line — never the question, never the model's rejected wording.
@@ -388,15 +457,16 @@ export async function* runAsk(
       }
     }
     answer =
-      rephrased !== null && checkSpeakable(rephrased).ok
+      rephrased !== null && checkSpeakableAgainstQuotes(rephrased, quotes).ok
         ? rephrased
         : templateFor(cited.type, facts);
   }
 
-  // The template is built from verbatim page text, so it can itself carry a printed numeric target
-  // (see lib/rules/template-fallback.ts). Nothing filtered is ever emitted; the sheet's own line
-  // stays visible on the card behind the answer.
-  if (!checkSpeakable(answer).ok) {
+  // The template is built from verbatim page text, so it can carry a number the page prints —
+  // which the quote exemption lets through — or, rarely, one it does not (see
+  // lib/rules/template-fallback.ts). Nothing filtered is ever emitted; the sheet's own line stays
+  // visible on the card behind the answer.
+  if (!checkSpeakableAgainstQuotes(answer, quotes).ok) {
     yield* notOnSheetEvents();
     return;
   }
@@ -405,30 +475,72 @@ export async function* runAsk(
     event: "outcome",
     outcome: "answered",
     citedCardIds: citations.map((card) => card.id),
-    sources: citations
-      .map((card) => card.source)
-      .filter((source): source is SourceReference => source !== null),
+    sources: sourcesOf(citations),
   };
   yield { event: "answer", answer: withSpoken(answer, dialect, spoken) };
   yield { event: "done" };
 }
 
+function sourcesOf(cards: readonly Card[]): SourceReference[] {
+  return cards
+    .map((card) => card.source)
+    .filter((source): source is SourceReference => source !== null);
+}
+
 /**
- * The gates the early sentence must pass before a phone may say it — the same three the final
+ * The gates the early sentence must pass before a phone may say it — the same ones the final
  * answer passes, applied to what is known so far: `kind` is one that may speak; a sheet answer
- * cites at least one card this server built; the sentence itself carries no banned term. When any
- * of them fails, nothing is sent early and the full path decides as before.
+ * cites at least one card this server built; the sentence itself carries no banned term, with a
+ * number the cited lines print allowed through exactly as in the full path. When any of them
+ * fails, nothing is sent early and the full path decides as before.
  */
 export function earlyGate(
   early: EarlyAnswer,
   cards: readonly Card[],
-): { outcome: "answered" | "explained"; text: string } | null {
+): { outcome: SpokenOutcome; text: string } | null {
   if (early.text === null || early.text.trim().length === 0) return null;
-  if (!checkText(early.text).ok) return null;
-  if (early.kind === "general") return { outcome: "explained", text: early.text };
-  if (early.kind !== "sheet") return null;
-  if (early.citedCardIds === null || citedCards(cards, early.citedCardIds).length === 0) return null;
-  return { outcome: "answered", text: early.text };
+  const kind = early.kind;
+  if (kind === "general" || kind === "chat" || kind === "off_topic") {
+    if (!checkTextAgainstQuotes(early.text, []).ok) return null;
+    return { outcome: kind === "general" ? "explained" : kind, text: early.text };
+  }
+  if (kind !== "sheet" && kind !== "boundary") return null;
+  const cited = early.citedCardIds === null ? [] : citedCards(cards, early.citedCardIds);
+  if (kind === "sheet" && cited.length === 0) return null;
+  const quotes: PrintedLines = cited.map((card) => card.source?.quote);
+  if (!checkTextAgainstQuotes(early.text, quotes).ok) return null;
+  return { outcome: kind === "sheet" ? "answered" : "boundary", text: early.text };
+}
+
+const FORMS = ["yue", "cmn", "en"] as const;
+
+/**
+ * The three forms of a reply that cites no card template, each through the filter, with the
+ * reader's own form as the one that decides.
+ *
+ * The client shows and speaks only `answer[dialect]` (app/chat/page.tsx), and the early event has
+ * usually said that sentence aloud already. So the reader's form must be clean: when it is not,
+ * null — nothing was said early, because the early gate ran the same check on the same string —
+ * and the caller falls to its fixed sentence. A form in ANOTHER language that fails is replaced
+ * by the reader's clean one rather than costing the whole turn. Throwing away a sentence the phone
+ * had already spoken and then contradicting it with "the sheet doesn't say" was the live failure on
+ * 「空腹係咩意思？」: early=explained, final=not_on_sheet, from one English word. Nothing filtered
+ * is ever emitted (principle VI), and what is emitted agrees with what was heard.
+ */
+function cleanForms(
+  answer: Speakable,
+  dialect: Dialect,
+  spoken: string | null,
+  quotes: PrintedLines,
+): Speakable | null {
+  const own = spoken ?? answer[dialect];
+  if (!checkTextAgainstQuotes(own, quotes).ok) return null;
+  const out: Speakable = { ...answer, [dialect]: own };
+  for (const form of FORMS) {
+    if (form === dialect) continue;
+    if (!checkTextAgainstQuotes(out[form], quotes).ok) out[form] = own;
+  }
+  return out;
 }
 
 /**
