@@ -392,7 +392,7 @@ test.describe("A stopped medicine is never a dose (brief §2 rule 8)", () => {
     await seedSheet(page, activeSheet(ALL_WITHDRAWN, { checkin: "pending" }));
     await page.goto("/");
 
-    await expect(page.getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
     // No question about a medicine the page has withdrawn…
     await expect(page.getByText(UI.hant["checkin.question"].split("{name}")[0])).toHaveCount(0);
     // …and no dose line, on either of the two branches it collapses into.

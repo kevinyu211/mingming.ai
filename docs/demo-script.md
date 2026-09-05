@@ -138,6 +138,11 @@ Tap **睇張紙點寫** on one.
 > all**. Same for crisis phrases — those get a referral, not an answer. Zero-second responses,
 > because nothing leaves the phone."
 
+*If a judge asks why the voice isn't a realtime speech-to-speech model:* "Because you can't put a
+guardrail on audio. Every sentence he says is text first, checked against a banned-term list and
+the card it cites, and only then spoken. We stream the one language she's listening to the moment
+it's written, so it feels live — but it never skips the check."
+
 *Numbers if pressed: 20 of 20 outcomes correct on the last live eval, zero banned terms.*
 
 ---
@@ -157,6 +162,12 @@ Point at a dose card.
 > a time of day it stops describing a document and starts prescribing. There's a rule that refuses
 > to count anything it can't read as a number of times, and a test that sweeps this screen for
 > anything resembling a time."
+
+Tap **分享俾屋企人** at the bottom. The share sheet opens with the warning signs, the medicines and
+the visit as plain text.
+
+> "One tap and the daughter in Toronto has the same sheet. Built on the phone from the same checked
+> sentences — no name, nothing we invented."
 
 If a stopped medicine is on the sheet, point at it:
 

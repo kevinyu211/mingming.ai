@@ -19,5 +19,5 @@ export default function CapturePage() {
 }
 
 function Booting() {
-  return <div className="mx-auto w-full max-w-md flex-1 px-6 pt-4" aria-hidden="true" />;
+  return <div className="mx-auto w-full max-w-md flex-1 px-6 pt-4 lg:max-w-3xl" aria-hidden="true" />;
 }

@@ -44,6 +44,7 @@ import {
   type ModelProvider,
   type UsageSummary,
 } from "@/lib/model/client";
+import { scanEarlyAnswer, type EarlyAnswer } from "@/lib/model/early";
 import {
   ASK_SYSTEM,
   PHRASE_SYSTEM,
@@ -58,6 +59,7 @@ import {
   AskResultSchema,
   PhraseResultSchema,
   SheetReadingSchema,
+  type AskResult,
   type SheetReading,
 } from "@/lib/model/schemas";
 
@@ -136,7 +138,31 @@ export class AnthropicCompatProvider implements ModelProvider {
   }
 
   async answer(input: AnswerInput) {
-    const { value, usage } = await this.send({
+    const { value, usage } = await this.send(this.answerSpec(input));
+    return { result: value, usage };
+  }
+
+  /**
+   * `answer`, streamed. `onEarly` fires at most once, as soon as `kind` and the reader's own
+   * spoken form have both closed their quotes, with exactly the strings the validated result will
+   * carry — the same contract as the AI SDK provider's `answerStream`.
+   */
+  async answerStream(input: AnswerInput, onEarly?: (early: EarlyAnswer) => void) {
+    let text = "";
+    let fired = false;
+    const { value, usage } = await this.sendStreaming(this.answerSpec(input), (delta) => {
+      if (fired || onEarly === undefined) return;
+      text += delta;
+      const early = scanEarlyAnswer(text, input.dialect);
+      if (early.kind === null || early.text === null) return;
+      fired = true;
+      onEarly(early);
+    });
+    return { result: value, usage };
+  }
+
+  private answerSpec(input: AnswerInput): CallSpec<AskResult> {
+    return {
       model: this.modelAsk,
       system: ASK_SYSTEM,
       content: buildAskUserContent(
@@ -151,8 +177,7 @@ export class AnthropicCompatProvider implements ModelProvider {
       format: ASK_OUTPUT_FORMAT,
       schema: AskResultSchema,
       timeoutMs: ASK_TIMEOUT_MS,
-    });
-    return { result: value, usage };
+    };
   }
 
   async phrase(input: PhraseInput) {

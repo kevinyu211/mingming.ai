@@ -384,7 +384,7 @@ function CameraChrome({
     // Stops above the fixed disclaimer rather than running to the bottom edge: the disclaimer has
     // to stay visible on every screen (rules.md §16), the camera included.
     <div
-      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-30 overflow-hidden"
+      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-30 overflow-hidden lg:left-[var(--sidebar-width)]"
       style={{ background: "var(--cam-ground)" }}
     >
       <div
@@ -567,7 +567,7 @@ function ReviewGrid({
   const empty = pages.length === 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-3.5 pb-8">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-3.5 pb-8 lg:max-w-3xl lg:px-10 lg:pt-8">
       <button
         type="button"
         onClick={onBack}
@@ -594,7 +594,7 @@ function ReviewGrid({
         </p>
       )}
 
-      <ul className="grid list-none grid-cols-2 gap-3.5 p-0">
+      <ul className="grid list-none grid-cols-2 gap-3.5 p-0 lg:grid-cols-3">
         {pages.map((page, index) => (
           <li
             key={`${index}-${page.base64.length}`}
@@ -746,7 +746,7 @@ function PickerBody({
         </p>
       ) : null}
 
-      <ul className="grid list-none grid-cols-3 gap-2.5 p-0">
+      <ul className="grid list-none grid-cols-3 gap-2.5 p-0 lg:grid-cols-6">
         {slots.map((index) => {
           const page = pages[index];
           if (page) {

@@ -38,8 +38,13 @@ import {
 } from "@/lib/domain/schemas";
 import type { ReferralResource } from "@/lib/i18n/referral";
 import { MAX_BRIEF_CHARS } from "@/lib/memory/context";
-import { ModelOutputError, getModelProvider, type ModelProvider } from "@/lib/model/client";
-import { checkSpeakable } from "@/lib/rules/banned-terms";
+import {
+  ModelOutputError,
+  getModelProvider,
+  type EarlyAnswer,
+  type ModelProvider,
+} from "@/lib/model/client";
+import { checkSpeakable, checkText } from "@/lib/rules/banned-terms";
 import { buildCards } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
 import { detectMedicineChange } from "@/lib/rules/refusal";
@@ -153,6 +158,13 @@ export type AskEvent =
       citedCardIds: string[];
       sources: SourceReference[];
     }
+  /**
+   * The reader's own spoken form of the answer, sent as soon as it has closed its quote — before
+   * the other two languages exist. It has passed the banned-term filter on its own, `kind` and the
+   * citations are already known, and the `answer` event that follows carries this exact string in
+   * that field. A phone may start saying it at once; nothing it can say has skipped a gate.
+   */
+  | { event: "early"; dialect: "yue" | "cmn" | "en"; outcome: "answered" | "explained"; text: string }
   | { event: "answer"; answer: Speakable }
   | { event: "done" }
   | { event: "error"; error: "model_unavailable" };
@@ -260,20 +272,62 @@ export async function* runAsk(
     .map((turn) => ({ role: turn.role, text: turn.text.trim() }))
     .filter((turn) => turn.text.length > 0);
 
+  const request = {
+    cards,
+    question: question.text,
+    inputLanguage: question.inputLanguage,
+    dialect,
+    ...(memory ? { memory } : {}),
+    ...(context.length > 0 ? { context } : {}),
+  };
+
+  /*
+   * The streamed path, when the provider has one. The early sentence arrives through a callback
+   * in the middle of the model call, and a generator cannot yield from inside a callback — so the
+   * call is started, and the first of "the early sentence landed" and "the call finished" is
+   * awaited. Whichever it is, the call itself is awaited afterwards; nothing is emitted twice.
+   */
+  let early: EarlyAnswer | null = null;
+  let earlyLanded: () => void = () => {};
+  const earlyArrived = new Promise<void>((resolve) => {
+    earlyLanded = resolve;
+  });
+  const call: Promise<{ ok: true; result: AskResult } | { ok: false; error: unknown }> = (
+    provider.answerStream
+      ? provider.answerStream(request, (partial) => {
+          early = partial;
+          earlyLanded();
+        })
+      : provider.answer(request)
+  ).then(
+    ({ result }) => ({ ok: true as const, result }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
+
+  const first = await Promise.race([
+    call.then(() => "done" as const),
+    earlyArrived.then(() => "early" as const),
+  ]);
+
+  /** Locked once said aloud: the final `answer` carries this string in the reader's language. */
+  let spoken: string | null = null;
+  if (first === "early" && early !== null) {
+    const partial: EarlyAnswer = early;
+    const gate = earlyGate(partial, cards);
+    if (gate !== null) {
+      spoken = gate.text;
+      yield { event: "early", dialect, outcome: gate.outcome, text: gate.text };
+    }
+  }
+
+  const settled = await call;
   let result: AskResult | null;
-  try {
-    ({ result } = await provider.answer({
-      cards,
-      question: question.text,
-      inputLanguage: question.inputLanguage,
-      dialect,
-      ...(memory ? { memory } : {}),
-      ...(context.length > 0 ? { context } : {}),
-    }));
-  } catch (error) {
+  if (settled.ok) {
+    result = settled.result;
+  } else {
     // Invalid JSON, a truncated reply or a schema failure is not a transient outage: there is
     // nothing to retry and nothing safe to say, so it lands on the template rather than a 502.
-    if (!(error instanceof ModelOutputError)) throw new AskModelUnavailableError();
+    if (!(settled.error instanceof ModelOutputError)) throw new AskModelUnavailableError();
     result = null;
   }
 
@@ -296,7 +350,7 @@ export async function* runAsk(
       return;
     }
     yield { event: "outcome", outcome: "explained" };
-    yield { event: "answer", answer: result.answer };
+    yield { event: "answer", answer: withSpoken(result.answer, dialect, spoken) };
     yield { event: "done" };
     return;
   }
@@ -355,6 +409,40 @@ export async function* runAsk(
       .map((card) => card.source)
       .filter((source): source is SourceReference => source !== null),
   };
-  yield { event: "answer", answer };
+  yield { event: "answer", answer: withSpoken(answer, dialect, spoken) };
   yield { event: "done" };
+}
+
+/**
+ * The gates the early sentence must pass before a phone may say it — the same three the final
+ * answer passes, applied to what is known so far: `kind` is one that may speak; a sheet answer
+ * cites at least one card this server built; the sentence itself carries no banned term. When any
+ * of them fails, nothing is sent early and the full path decides as before.
+ */
+export function earlyGate(
+  early: EarlyAnswer,
+  cards: readonly Card[],
+): { outcome: "answered" | "explained"; text: string } | null {
+  if (early.text === null || early.text.trim().length === 0) return null;
+  if (!checkText(early.text).ok) return null;
+  if (early.kind === "general") return { outcome: "explained", text: early.text };
+  if (early.kind !== "sheet") return null;
+  if (early.citedCardIds === null || citedCards(cards, early.citedCardIds).length === 0) return null;
+  return { outcome: "answered", text: early.text };
+}
+
+/**
+ * Pins the reader's language to the sentence already said aloud. The two paths agree by
+ * construction — the early string is the model's own, unchanged — except when a banned term in
+ * ANOTHER language sent the whole answer through `phrase`, which rewrites all three. A phone that
+ * has already spoken one sentence must not be handed a different one for the same turn, and the
+ * early string passed the filter on its own, so keeping it breaks no rule.
+ */
+function withSpoken(
+  answer: Speakable,
+  dialect: "yue" | "cmn" | "en",
+  spoken: string | null,
+): Speakable {
+  if (spoken === null || answer[dialect] === spoken) return answer;
+  return { ...answer, [dialect]: spoken };
 }

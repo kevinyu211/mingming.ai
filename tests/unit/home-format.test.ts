@@ -16,8 +16,13 @@ import {
   formatYmd,
 } from "@/components/home/format";
 import { countableTargets, remainingToday } from "@/components/home/CheckinNotice";
+import {
+  HOME_PREVIEW_GLYPHS,
+  homePreview,
+  homeUnread,
+} from "@/components/home/conversation";
 import type { Medicine, Speakable, StoredReading } from "@/lib/domain/schemas";
-import type { Sheet } from "@/lib/sheets";
+import type { Sheet, ThreadMessage } from "@/lib/sheets";
 
 const SPOKEN: Speakable = { yue: "yue", cmn: "cmn", en: "en" };
 const SOURCE = { section: "Medications", lineIndex: 0, quote: "quoted line" };
@@ -124,7 +129,11 @@ function reading(medicines: Medicine[]): StoredReading {
   };
 }
 
-function sheet(medicines: Medicine[], doses: Sheet["doses"] = {}): Sheet {
+function sheet(
+  medicines: Medicine[],
+  doses: Sheet["doses"] = {},
+  extras: Partial<Pick<Sheet, "checkin" | "briefing" | "thread">> = {},
+): Sheet {
   return {
     id: "sheet-1",
     capturedAt: CAPTURED,
@@ -132,11 +141,21 @@ function sheet(medicines: Medicine[], doses: Sheet["doses"] = {}): Sheet {
     title: "出院紙",
     reading: reading(medicines),
     plan: { items: [], followUpDate: null },
-    thread: [],
+    thread: extras.thread ?? [],
     doses,
-    briefing: { phase: "end", step: 3 },
-    checkin: "pending",
+    briefing: extras.briefing ?? { phase: "end", step: 3 },
+    checkin: extras.checkin ?? "pending",
     archivedAt: null,
+  };
+}
+
+function message(text: string, role: ThreadMessage["role"] = "agent"): ThreadMessage {
+  return {
+    id: "m1",
+    role,
+    text,
+    at: CAPTURED,
+    origin: role === "user" ? "user" : "rule",
   };
 }
 
@@ -154,8 +173,8 @@ describe("which medicines a counter may exist for", () => {
   });
 
   it("finds nothing countable on a sheet that printed no schedule at all", () => {
-    // §6 makes the check-in conditional on there being something countable, so this is the case
-    // where 記錄 shows no notification rather than a question with no clause to quote.
+    // §6 makes the check-in question conditional on there being something countable, so this is
+    // the case where 記錄 omits the question rather than quoting a clause the page never printed.
     expect(countableTargets(sheet([medicine({ frequency: "每四小時一次" })]))).toHaveLength(0);
     expect(countableTargets(sheet([]))).toHaveLength(0);
   });
@@ -188,5 +207,92 @@ describe("今日嘅藥：仲有 N 次", () => {
       remainingToday(sheet([medicine({ status: "stopped", frequency: "每日兩次" })]), DAY_3),
     ).toBe(0);
     expect(remainingToday(sheet([medicine({ frequency: "需要時食" })]), DAY_3)).toBe(0);
+  });
+});
+
+const PREVIEW = {
+  "checkin.question": "Have you had {name} today? The sheet says {printed}.",
+  "home.chatNotStarted": "Not read yet",
+} as const;
+
+function previewT(key: keyof typeof PREVIEW): string {
+  return PREVIEW[key];
+}
+
+describe("whether 明明 is waiting on 記錄", () => {
+  it("is unread while a check-in is pending, even after the briefing has ended", () => {
+    expect(homeUnread(sheet([medicine({ frequency: "每日兩次" })]))).toBe(true);
+  });
+
+  it("is unread while the briefing has not ended, including idle and partway", () => {
+    expect(
+      homeUnread(
+        sheet([], {}, { checkin: "none", briefing: { phase: "idle", step: 0 } }),
+      ),
+    ).toBe(true);
+    expect(
+      homeUnread(
+        sheet([], {}, { checkin: "none", briefing: { phase: "waiting", step: 1 } }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is quiet once the briefing has ended and the check-in is not pending", () => {
+    expect(
+      homeUnread(sheet([], {}, { checkin: "done", briefing: { phase: "end", step: 3 } })),
+    ).toBe(false);
+    expect(
+      homeUnread(sheet([], {}, { checkin: "none", briefing: { phase: "end", step: 3 } })),
+    ).toBe(false);
+    expect(
+      homeUnread(sheet([], {}, { checkin: "open", briefing: { phase: "end", step: 3 } })),
+    ).toBe(false);
+  });
+});
+
+describe("the conversation preview on 記錄", () => {
+  it("fills the fixed check-in question when a countable medicine is pending", () => {
+    expect(homePreview(sheet([medicine({ frequency: "每日兩次，隨餐" })]), previewT)).toBe(
+      "Have you had Metoprolol 25mg today? The sheet says 每日兩次，隨餐.",
+    );
+  });
+
+  it("does not invent a check-in question when nothing is countable", () => {
+    expect(
+      homePreview(sheet([medicine({ frequency: "每四小時一次" })]), previewT),
+    ).toBe("Not read yet");
+  });
+
+  it("falls back to the last thread line, sliced to forty glyphs", () => {
+    const long = "跟住講藥。".repeat(20);
+    expect(
+      homePreview(
+        sheet([], {}, { checkin: "none", briefing: { phase: "waiting", step: 1 }, thread: [message(long)] }),
+        previewT,
+      ),
+    ).toBe(long.slice(0, HOME_PREVIEW_GLYPHS));
+  });
+
+  it("uses the last agent or user line when the check-in is not a countable pending", () => {
+    expect(
+      homePreview(
+        sheet(
+          [],
+          {},
+          {
+            checkin: "none",
+            briefing: { phase: "end", step: 3 },
+            thread: [message("第一句"), message("我食咗", "user")],
+          },
+        ),
+        previewT,
+      ),
+    ).toBe("我食咗");
+  });
+
+  it("says the chat has not started when the thread is empty", () => {
+    expect(
+      homePreview(sheet([], {}, { checkin: "none", briefing: { phase: "idle", step: 0 } }), previewT),
+    ).toBe("Not read yet");
   });
 });

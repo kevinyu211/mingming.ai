@@ -131,6 +131,8 @@ const hant = {
   "settings.deleteConfirm": "刪除",
   "settings.cancel": "唔刪住",
   "settings.deleted": "全部刪咗喇。",
+  "settings.companion": "明明",
+  "settings.companionHint": "揀隻動物。明明即係「清楚」。",
 
   // --- S10 Fallbacks -------------------------------------------------------
   "fallback.noVoice": "睇字",
@@ -164,10 +166,15 @@ const hant = {
   "tab.track": "跟進",
   "tab.navLabel": "主要頁面",
   "tab.chatPending": "明明有嘢想問你",
+  "a11y.skip": "跳去內容",
 
   // --- V2 明明 -------------------------------------------------------------
   // He is drawn, never labelled: components/Mascot.tsx is aria-hidden and THIS is the real text.
   "mascot.name": "明明",
+  "mascot.cat": "貓仔",
+  "mascot.panda": "熊貓",
+  "mascot.puppy": "小狗",
+  "mascot.rabbit": "兔仔",
 
   // --- V2 記錄 -------------------------------------------------------------
   "home.title": "記錄",
@@ -233,6 +240,8 @@ const hant = {
   // over-state and finish early than to leave someone wondering whether it has hung.
   "reading.meta": "{n} 頁 · 大概一分鐘",
   "reading.metaLong": "{n} 頁 · 可能要幾分鐘",
+  "reading.opening": "好，我睇下張紙先。睇完我會先講最緊要嗰啲。",
+  "reading.still": "我仲睇緊，唔使急。",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "返去記錄",
@@ -332,6 +341,14 @@ const hant = {
   "track.todayMeds": "今日嘅藥",
   "track.warnings": "危險訊號 ({n})",
   "track.saySigns": "叫明明講一次",
+  "share.button": "分享俾屋企人",
+  "share.title": "明明讀咗張出院紙，重點如下：",
+  "share.warnings": "要留意嘅情況",
+  "share.medicines": "藥",
+  "share.followUp": "覆診",
+  "share.other": "其他",
+  "share.copied": "抄咗，可以貼俾屋企人",
+  "share.footer": "由明明 mingming.app 讀出，請以張紙為準。",
   "appt.directions": "睇下點去",
 
   // --- V2 Dose cards -------------------------------------------------------
@@ -476,6 +493,8 @@ const hans: Record<UiKey, string> = {
   "settings.deleteConfirm": "删除",
   "settings.cancel": "先不删",
   "settings.deleted": "全部删掉了。",
+  "settings.companion": "明明",
+  "settings.companionHint": "选一只动物。明明就是「清楚」。",
 
   "fallback.noVoice": "看文字",
   "fallback.noVoiceNote": "现在出不了声音，内容在下面看得到。",
@@ -489,9 +508,14 @@ const hans: Record<UiKey, string> = {
   "tab.track": "跟进",
   "tab.navLabel": "主要页面",
   "tab.chatPending": "明明有话想问你",
+  "a11y.skip": "跳到内容",
 
   // --- V2 明明 -------------------------------------------------------------
   "mascot.name": "明明",
+  "mascot.cat": "猫仔",
+  "mascot.panda": "熊猫",
+  "mascot.puppy": "小狗",
+  "mascot.rabbit": "兔子",
 
   // --- V2 记录 -------------------------------------------------------------
   "home.title": "记录",
@@ -546,6 +570,8 @@ const hans: Record<UiKey, string> = {
   "reading.title": "读着你的纸…",
   "reading.meta": "{n} 页 · 大概一分钟",
   "reading.metaLong": "{n} 页 · 可能要几分钟",
+  "reading.opening": "好，我先看看这张纸。看完我会先讲最要紧的。",
+  "reading.still": "我还在看，不用急。",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "回到记录",
@@ -620,6 +646,14 @@ const hans: Record<UiKey, string> = {
   "track.todayMeds": "今天的药",
   "track.warnings": "危险讯号 ({n})",
   "track.saySigns": "叫明明讲一次",
+  "share.button": "分享给家人",
+  "share.title": "明明读了这张出院纸，重点如下：",
+  "share.warnings": "要留意的情况",
+  "share.medicines": "药",
+  "share.followUp": "复诊",
+  "share.other": "其他",
+  "share.copied": "已复制，可以贴给家人",
+  "share.footer": "由明明 mingming.app 读出，请以纸上为准。",
   "appt.directions": "看看怎么去",
 
   // --- V2 Dose cards -------------------------------------------------------
@@ -757,6 +791,8 @@ const en: Record<UiKey, string> = {
   "settings.deleteConfirm": "Delete",
   "settings.cancel": "Keep it",
   "settings.deleted": "All gone.",
+  "settings.companion": "Ming Ming",
+  "settings.companionHint": "Pick an animal. Ming Ming means “clear.”",
 
   "fallback.noVoice": "Read it instead",
   "fallback.noVoiceNote": "No voice right now. The words are below.",
@@ -770,10 +806,15 @@ const en: Record<UiKey, string> = {
   "tab.track": "Follow-up",
   "tab.navLabel": "Main sections",
   "tab.chatPending": "Ming has a question waiting",
+  "a11y.skip": "Skip to content",
 
   // --- V2 明明 -------------------------------------------------------------
   // Romanised for the English interface. He is still 明明 to the parent, who hears him, not reads.
-  "mascot.name": "Ming",
+  "mascot.name": "Ming Ming",
+  "mascot.cat": "Cat",
+  "mascot.panda": "Panda",
+  "mascot.puppy": "Puppy",
+  "mascot.rabbit": "Rabbit",
 
   // --- V2 Sheets tab -------------------------------------------------------
   "home.title": "Sheets",
@@ -829,6 +870,8 @@ const en: Record<UiKey, string> = {
   "reading.title": "Reading your sheet…",
   "reading.meta": "{n} pages · about a minute",
   "reading.metaLong": "{n} pages · this may take a few minutes",
+  "reading.opening": "Right, let me read the sheet first. When I'm done I'll start with what matters most.",
+  "reading.still": "Still reading — no rush.",
 
   // --- V2 Chat shell -------------------------------------------------------
   "chat.back": "Back to sheets",
@@ -903,6 +946,14 @@ const en: Record<UiKey, string> = {
   "track.todayMeds": "Today's medicines",
   "track.warnings": "Warning signs ({n})",
   "track.saySigns": "Ask Ming to read them out",
+  "share.button": "Share with family",
+  "share.title": "Ming read this discharge sheet. The main points:",
+  "share.warnings": "Things to watch for",
+  "share.medicines": "Medicines",
+  "share.followUp": "Follow-up",
+  "share.other": "Other",
+  "share.copied": "Copied — paste it to your family",
+  "share.footer": "Read out by Ming, mingming.app. The printed sheet is what counts.",
   "appt.directions": "How to get there",
 
   // --- V2 Dose cards -------------------------------------------------------

@@ -111,7 +111,7 @@ export default function BottomSheet({
 
   return createPortal(
     <div
-      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col justify-end"
+      className="sheet-overlay fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col justify-end"
       onKeyDown={onKeyDown}
       role="presentation"
     >
@@ -132,12 +132,12 @@ export default function BottomSheet({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`animate-sheet-up relative max-h-[86%] overflow-y-auto rounded-t-[26px] bg-ground px-[22px] pt-3.5 pb-10 shadow-sheet outline-none ${className}`}
+        className={`sheet-panel animate-sheet-up relative max-h-[86%] overflow-y-auto rounded-t-[26px] bg-ground px-[22px] pt-3.5 pb-10 shadow-sheet outline-none ${className}`}
       >
         {/* The grabber. Decoration — the sheet is not draggable, so it gets no label. */}
         <span
           aria-hidden="true"
-          className="mx-auto mb-[22px] block h-[5px] w-11 rounded-full bg-[color-mix(in_srgb,var(--ink)_16%,transparent)]"
+          className="sheet-grabber mx-auto mb-[22px] block h-[5px] w-11 rounded-full bg-[color-mix(in_srgb,var(--ink)_16%,transparent)]"
         />
 
         {!titleHidden && (

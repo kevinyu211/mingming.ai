@@ -58,6 +58,8 @@ describe("the v2 three-tab flow has every string it needs", () => {
   const V2_KEYS: UiKey[] = [
     "tab.record", "tab.chat", "tab.track", "tab.navLabel", "tab.chatPending",
     "mascot.name",
+    "settings.companion", "settings.companionHint",
+    "mascot.cat", "mascot.panda", "mascot.puppy", "mascot.rabbit",
     "home.title", "home.emptySubtitle", "home.emptyMascot", "home.nowTalking", "home.pages",
     "home.medicines", "home.chatNotStarted", "home.chatPartway", "home.chatDone",
     "home.dosesLeft", "home.dosesDone", "home.older", "home.readOnly",

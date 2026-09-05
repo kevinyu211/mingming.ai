@@ -21,7 +21,7 @@ import Waveform from "@/components/chat/Waveform";
 export function TypingBubble() {
   const t = useT();
   return (
-    <div className="animate-rise mb-2.5 flex items-start gap-2 pr-8">
+    <div className="animate-rise mb-2.5 flex items-start gap-2 pr-8 lg:mb-5 lg:gap-3 lg:pr-16">
       <Mascot size={30} className="mt-0.5 shrink-0" />
       <div
         role="status"
@@ -51,7 +51,7 @@ export function SpeakingBubble({
 }) {
   const t = useT();
   return (
-    <div className="mb-2.5 flex items-start gap-2 pr-8">
+    <div className="mb-2.5 flex items-start gap-2 pr-8 lg:mb-5 lg:gap-3 lg:pr-16">
       <Mascot size={30} state="speaking" className="mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1 whitespace-pre-line">
         <div
@@ -100,8 +100,8 @@ export function ListeningBubble({ text }: { text: string }) {
   const t = useT();
   const said = text.trim();
   return (
-    <div className="mb-2.5 flex justify-end pl-10" role="status" aria-live="polite">
-      <div className="max-w-[82%] rounded-[16px_4px_16px_16px] bg-jade-bubble px-3.5 py-2.5">
+    <div className="mb-2.5 flex justify-end pl-10 lg:mb-5 lg:pl-24" role="status" aria-live="polite">
+      <div className="max-w-[82%] rounded-[16px_4px_16px_16px] bg-jade-bubble px-3.5 py-2.5 lg:max-w-[68%] lg:px-4 lg:py-3">
         {said ? (
           <p className="text-[16px] leading-[1.55] break-words text-ink">{said}</p>
         ) : (

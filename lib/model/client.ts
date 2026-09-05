@@ -40,6 +40,7 @@ import type { z } from "zod";
 
 import { AnthropicCompatProvider, isAnthropicSlug } from "@/lib/model/anthropic-compat";
 
+import { scanEarlyAnswer, type EarlyAnswer } from "@/lib/model/early";
 import {
   ASK_SYSTEM,
   PHRASE_SYSTEM,
@@ -85,6 +86,7 @@ export const MAX_TOKENS = 16000;
 export const READ_TIMEOUT_MS = 240_000;
 export const ASK_TIMEOUT_MS = 50_000;
 
+
 /** Recorded for the eval log; never contains any request or response text. */
 export interface UsageSummary {
   inputTokens: number;
@@ -127,8 +129,20 @@ export interface ModelProvider {
     onPartialText?: (delta: string) => void,
   ): Promise<{ reading: SheetReading; usage: UsageSummary }>;
   answer(input: AnswerInput): Promise<{ result: AskResult; usage: UsageSummary }>;
+  /**
+   * `answer`, streamed. `onEarly` fires at most once, the moment `kind` and the reader's own
+   * spoken form have both closed their quotes — well before the other two languages are
+   * written — with exactly the strings the validated result will carry. Optional so a test
+   * double that only answers still satisfies the interface; callers fall back to `answer`.
+   */
+  answerStream?(
+    input: AnswerInput,
+    onEarly?: (early: EarlyAnswer) => void,
+  ): Promise<{ result: AskResult; usage: UsageSummary }>;
   phrase(input: PhraseInput): Promise<{ result: PhraseResult; usage: UsageSummary }>;
 }
+
+export type { EarlyAnswer };
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                     */
@@ -291,7 +305,27 @@ export class GatewayProvider implements ModelProvider {
   }
 
   async answer(input: AnswerInput) {
-    const { value, usage } = await this.send({
+    const { value, usage } = await this.send(this.answerSpec(input));
+    return { result: value, usage };
+  }
+
+  async answerStream(input: AnswerInput, onEarly?: (early: EarlyAnswer) => void) {
+    let text = "";
+    let fired = false;
+    const { value, usage } = await this.sendStreaming(this.answerSpec(input), (delta) => {
+      if (fired || onEarly === undefined) return;
+      text += delta;
+      const early = scanEarlyAnswer(text, input.dialect);
+      // `kind` decides whether the sentence may be said at all, so both must have landed.
+      if (early.kind === null || early.text === null) return;
+      fired = true;
+      onEarly(early);
+    });
+    return { result: value, usage };
+  }
+
+  private answerSpec(input: AnswerInput): CallSpec<AskResult> {
+    return {
       route: "ask",
       model: this.modelAsk,
       system: ASK_SYSTEM,
@@ -305,8 +339,7 @@ export class GatewayProvider implements ModelProvider {
       ),
       schema: AskResultSchema,
       timeoutMs: ASK_TIMEOUT_MS,
-    });
-    return { result: value, usage };
+    };
   }
 
   async phrase(input: PhraseInput) {
@@ -452,10 +485,17 @@ function finish<T>(
     );
   }
 
-  return {
-    value: parsed.data,
-    usage: summariseUsage(completed, spec.model, startedAt),
-  };
+  const usage = summariseUsage(completed, spec.model, startedAt);
+  // One line per model call: the route, how long the provider took, which model served it and
+  // whether the frozen system prompt was a cache hit. Nothing from the request or the reply.
+  console.info({
+    model_call: spec.route,
+    ms: usage.ms,
+    model: usage.model,
+    out: usage.outputTokens,
+    cache_read: usage.cacheReadInputTokens,
+  });
+  return { value: parsed.data, usage };
 }
 
 function summariseUsage(completed: Completed, requestedModel: string, startedAt: number): UsageSummary {

@@ -3,10 +3,10 @@
 /**
  * 記錄 / 傾偈 / 跟進 — the three tabs, 96px tall, from the design canvas.
  *
- * It is told what is active and whether a check-in is waiting; it reads no storage and owns no
- * state. That is deliberate: the pending flag comes from the ONE active sheet (`checkin ===
- * "pending"`), and a tab bar that went and looked for itself could disagree with the screen it is
- * sitting under.
+ * It is told what is active and whether 明明 is waiting; it reads no storage and owns no
+ * state. That is deliberate: the pending flag comes from the caller (`homeUnread` on the
+ * active sheet), and a tab bar that went and looked for itself could disagree with the screen
+ * it is sitting under.
  *
  * `/chat` and `/capture` are full-screen and hide the bar entirely (brief section 1) — that is the
  * caller's decision, made by not rendering this.
@@ -41,14 +41,14 @@ export default function TabBar({ active, pending = false, className = "" }: TabB
   return (
     <nav
       aria-label={t("tab.navLabel")}
-      className={`fixed inset-x-0 bottom-[var(--disclaimer-height)] z-30 flex border-t border-hairline bg-ground px-1.5 pt-2.5 ${className}`}
+      className={`fixed inset-x-0 bottom-[var(--disclaimer-height)] z-30 flex border-t border-hairline bg-ground/80 px-1.5 pt-2.5 backdrop-blur-xl lg:hidden ${className}`}
       style={{ height: TAB_BAR_HEIGHT }}
     >
       {TABS.map((tab) => {
         const isActive = tab.key === active;
         // --jade-ink 5.67:1 on the ground; --muted 5.03:1. Both readable, which is the point:
         // an inactive tab is still a label someone has to be able to read.
-        const colour = isActive ? "var(--jade-ink)" : "var(--muted)";
+        const colour = isActive ? "var(--companion-ink)" : "var(--muted)";
         const showDot = tab.key === "chat" && pending;
 
         return (
@@ -56,21 +56,31 @@ export default function TabBar({ active, pending = false, className = "" }: TabB
             key={tab.key}
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
-            className="relative flex min-h-12 flex-1 flex-col items-center justify-start gap-[5px] py-2"
+            className="relative flex min-h-12 flex-1 flex-col items-center justify-start gap-1 py-1.5"
             style={{ color: colour }}
           >
-            <TabIcon tab={tab.key} />
+            <span
+              className={
+                isActive
+                  ? "companion-plate grid h-11 w-[52px] place-items-center rounded-full"
+                  : "grid h-11 w-[52px] place-items-center rounded-full"
+              }
+            >
+              <TabIcon tab={tab.key} />
+            </span>
             {showDot && (
               <>
                 <span
                   aria-hidden="true"
-                  className="absolute top-1 h-[11px] w-[11px] rounded-full border-2 border-ground bg-warn-dot"
-                  style={{ left: "calc(50% + 9px)" }}
+                  className="absolute top-1.5 h-[12px] w-[12px] rounded-full border-2 border-ground bg-warn-dot"
+                  style={{ left: "calc(50% + 14px)" }}
                 />
                 <span className="sr-only">{t("tab.chatPending")}</span>
               </>
             )}
-            <span className="text-[14px] font-medium">{t(tab.labelKey)}</span>
+            <span className={`text-[14px] ${isActive ? "font-semibold" : "font-medium"}`}>
+              {t(tab.labelKey)}
+            </span>
           </Link>
         );
       })}

@@ -6,9 +6,12 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredReading } from "@/lib/domain/schemas";
 import type { Sheet } from "@/lib/sheets/types";
 import {
+  DEFAULT_MASCOT,
   KEY,
   deleteEverything,
   loadState,
+  readMascotAnimal,
+  saveMascotAnimal,
   savePlan,
   saveProfile,
   saveReading,
@@ -320,5 +323,42 @@ describe("subscribe", () => {
     expect(listener).toHaveBeenCalledTimes(1);
 
     unsubscribe();
+  });
+});
+
+describe("the companion animal", () => {
+  it("round-trips under the same single key as everything else", () => {
+    const state = saveMascotAnimal("puppy");
+    expect(state.mascotAnimal).toBe("puppy");
+    expect(loadState().mascotAnimal).toBe("puppy");
+    expect(readMascotAnimal(loadState())).toBe("puppy");
+    expect(memory.length).toBe(1);
+    expect(memory.key(0)).toBe(KEY);
+  });
+
+  it("treats an unknown stored animal as missing rather than throwing", () => {
+    memory.setItem(KEY, JSON.stringify({ version: 1, consentedAt: null, mascotAnimal: "dragon" }));
+    expect(() => loadState()).not.toThrow();
+    const state = loadState();
+    expect(state.mascotAnimal).toBeUndefined();
+    expect(readMascotAnimal(state)).toBe(DEFAULT_MASCOT);
+    expect(readMascotAnimal(state)).toBe("panda");
+  });
+
+  it("is taken by deleteEverything along with the rest", () => {
+    saveMascotAnimal("cat");
+    expect(loadState().mascotAnimal).toBe("cat");
+
+    deleteEverything();
+
+    expect(memory.getItem(KEY)).toBeNull();
+    expect(loadState().mascotAnimal).toBeUndefined();
+    expect(readMascotAnimal(loadState())).toBe(DEFAULT_MASCOT);
+  });
+
+  it("is absent on a fresh phone, so an empty state stays exactly two fields", () => {
+    expect(loadState()).toEqual({ version: 1, consentedAt: null });
+    expect(Object.keys(loadState()).sort()).toEqual(["consentedAt", "version"]);
+    expect(readMascotAnimal(loadState())).toBe("panda");
   });
 });

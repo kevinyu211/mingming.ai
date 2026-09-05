@@ -57,6 +57,8 @@ import DeclineState, { type DeclineVariant } from "@/components/DeclineState";
 import { useLocale } from "@/components/LocaleProvider";
 import SampleBanner from "@/components/SampleBanner";
 import SourceSheet from "@/components/SourceSheet";
+import DesktopComposer from "@/components/desktop/DesktopComposer";
+import Mascot from "@/components/Mascot";
 import { PENDING_IMAGES_KEY } from "@/components/Capture";
 import ChatBar from "@/components/chat/ChatBar";
 import ChatHeader from "@/components/chat/ChatHeader";
@@ -123,6 +125,9 @@ const LOCAL: Record<"askUnavailable", Record<UiLocale, string>> = {
 /** Long edge for the one retry after a 413 (contracts/api-read.md). 1200 px keeps 9 pt print legible. */
 const RETRY_LONG_EDGE = 1200;
 
+/** How long into a read 明明 says he is still at it. A single page reads in about 25 s. */
+const STILL_READING_MS = 18_000;
+
 /**
  * Drops the turns that were never allowed off this phone, and the questions that provoked them.
  *
@@ -184,6 +189,9 @@ function ChatScreen() {
   const [interim, setInterim] = useState("");
   /** One transient line after a hold that produced nothing. Cleared the moment anything happens. */
   const [nothingHeard, setNothingHeard] = useState(false);
+  /** What 明明 says while the sheet is being read: fixed lines, never a claim about the page. */
+  const [readingLine, setReadingLine] = useState<string | null>(null);
+  const stillReading = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const voice = useVoice(dialect, speakerOn);
   const { say, resay, warm, cancel } = voice;
@@ -649,6 +657,22 @@ function ChatScreen() {
           text: message.text.slice(0, 600),
         }));
 
+      /**
+       * The reader's own sentence arrives before the rest of the answer — the server sends it
+       * the moment it has closed its quote, already through every gate — and it is said at once.
+       * Its bubble is committed when it has finished being said; the citations, which land a few
+       * seconds later with the full answer, are attached to that bubble when they arrive. So the
+       * answer is heard about as soon as the model has written it, not after it has written the
+       * same thing twice more in the other two languages.
+       */
+      const early: { text: string | null; outcome: "answered" | "explained" | null; committed: boolean } = {
+        text: null,
+        outcome: null,
+        committed: false,
+      };
+      /** What the full answer added, when it landed before the sentence had finished being said. */
+      let settled: Pick<ThreadMessage, "sources" | "outcome" | "unverified"> | null = null;
+
       const result = await ask(
         {
           reading,
@@ -657,11 +681,65 @@ function ChatScreen() {
           memory: memoryBrief(),
           ...(context.length > 0 ? { context } : {}),
         },
-        { signal: controller.signal },
+        {
+          signal: controller.signal,
+          onEarly: ({ text: sentence, outcome }) => {
+            const shown = display(sentence);
+            early.text = shown;
+            early.outcome = outcome;
+            setThinking(false);
+            setSpeakingId("answer");
+            say(shown, () => {
+              appendMessage({
+                role: "agent",
+                text: shown,
+                origin: "model",
+                ...(settled ?? { sources: [], outcome }),
+              });
+              early.committed = true;
+              setSpeakingId(null);
+              driving.current = false;
+            });
+          },
+        },
       );
       request.current = null;
       setAsking(false);
       setThinking(false);
+
+      if (early.text !== null) {
+        const earlyText = early.text;
+        const settledOutcome =
+          result.outcome === "bad_request" || result.outcome === "model_unavailable"
+            ? early.outcome
+            : (result.outcome as ThreadMessage["outcome"]);
+        const citedCards = (result.citedCardIds ?? [])
+          .map((id) => cards.find((c) => c.id === id) ?? null)
+          .filter((card): card is Card => card !== null);
+        const sources = (result.sources?.length
+          ? result.sources
+          : citedCards.map((card) => card.source)
+        ).filter((source): source is SourceReference => !!source);
+        const unverified = citedCards[0]?.unverified === true;
+        settled = { sources, outcome: settledOutcome, unverified };
+        // The bubble may already be in the thread (said before the rest arrived) or still being
+        // said; either way the citations are attached to the sentence they belong to.
+        if (early.committed) {
+          updateActive((s) => ({
+            thread: s.thread.map((message, i) =>
+              i === s.thread.length - 1 && message.role === "agent" && message.text === earlyText
+                ? { ...message, sources, outcome: settledOutcome, unverified }
+                : message,
+            ),
+          }));
+        }
+        rememberExchange({
+          question: text,
+          outcome: settledOutcome as "answered" | "not_on_sheet" | "refused_medicine_change",
+          citedCardId: result.citedCardIds?.[0] ?? null,
+        });
+        return;
+      }
 
       const failed = result.outcome === "bad_request" || result.outcome === "model_unavailable";
       const answerText = failed
@@ -728,6 +806,7 @@ function ChatScreen() {
 
   const land = useCallback(
     (next: StoredReading, pages: number) => {
+      if (stillReading.current !== null) clearTimeout(stillReading.current);
       // See `seedSample`: writing the legacy `reading` field here forged a sheet to archive.
       rememberReading(next, dialect);
       startSheet(next, pages);
@@ -737,10 +816,15 @@ function ChatScreen() {
     [dialect],
   );
 
-  const decline = useCallback((next: DeclineVariant) => {
-    setVariant(next);
-    setStatus("declined");
-  }, []);
+  const decline = useCallback(
+    (next: DeclineVariant) => {
+      if (stillReading.current !== null) clearTimeout(stillReading.current);
+      cancel();
+      setVariant(next);
+      setStatus("declined");
+    },
+    [cancel],
+  );
 
   const begin = useCallback(async () => {
     const requested = searchParams.get("sample");
@@ -755,6 +839,17 @@ function ChatScreen() {
     if (images) {
       setPageCount(images.length);
       setStatus("reading");
+      // The read takes twenty seconds or more, and a phone that goes silent for that long looks
+      // broken. 明明 says he is reading — a fixed line, spoken and shown — and once more a while
+      // later if the page is still not back. Neither line says anything about the sheet.
+      const opening = t("reading.opening");
+      setReadingLine(opening);
+      say(opening);
+      stillReading.current = setTimeout(() => {
+        const still = t("reading.still");
+        setReadingLine(still);
+        say(still);
+      }, STILL_READING_MS);
       let outcome = await readSheet(images, {});
 
       // contracts/api-read.md: on 413 the client re-downscales and retries ONCE. The pages are
@@ -789,7 +884,7 @@ function ChatScreen() {
       return;
     }
     router.replace("/");
-  }, [decline, land, router, searchParams, seedSample]);
+  }, [decline, land, router, say, searchParams, seedSample, t]);
 
   useEffect(() => {
     if (started.current) return;
@@ -934,21 +1029,21 @@ function ChatScreen() {
 
   if (status === "reading") {
     return (
-      <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col">
-        <ReadingProgress pageCount={pageCount} />
+      <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col lg:h-full lg:max-w-none">
+        <ReadingProgress pageCount={pageCount} line={readingLine} />
       </main>
     );
   }
 
   if (status === "declined") {
     return (
-      <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col overflow-y-auto px-5 pt-6 pb-6">
+      <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col overflow-y-auto px-5 pt-6 pb-6 lg:h-full lg:max-w-lg lg:justify-center">
         <DeclineState
           variant={variant}
           onRetake={() => router.push("/")}
           onSample={() => void seedSample(DEFAULT_SAMPLE)}
         />
-        <AgentLimits className="mt-6" />
+        <AgentLimits className="mt-3" />
       </main>
     );
   }
@@ -956,7 +1051,7 @@ function ChatScreen() {
   if (status === "boot" || !sheet) return <Booting />;
 
   return (
-    <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col overflow-hidden">
+    <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col overflow-hidden lg:h-full lg:max-w-none">
       <ChatHeader
         title={title}
         capturedAt={sheet.capturedAt}
@@ -966,10 +1061,24 @@ function ChatScreen() {
         langOpen={langOpen}
         onOpenLang={() => setLangOpen(true)}
         onCloseLang={() => setLangOpen(false)}
+        mascotState={listening ? "listening" : speakingId && voice.speaking ? "speaking" : "idle"}
       />
 
-      <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-2">
-        <p className="mb-3 text-center text-fine text-faint">{t("chat.today")}</p>
+      <div ref={threadRef} className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-2 lg:px-6 lg:pt-6">
+        <div className="desktop-chat-col">
+        {thread.length === 0 && voice.typing === null && !thinking ? (
+          <div className="mb-8 hidden flex-col items-center pt-10 pb-4 text-center lg:flex">
+            <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full">
+              <Mascot size={92} state="greeting" />
+            </span>
+            <p className="mt-5 text-[22px] font-semibold text-ink">{t("mascot.name")}</p>
+            <p className="mt-2 max-w-md text-[16px] leading-relaxed text-muted">{title}</p>
+          </div>
+        ) : null}
+
+        <p className="mx-auto mb-3 w-fit rounded-full bg-neutral px-3 py-1 text-center text-fine font-medium text-muted">
+          {t("chat.today")}
+        </p>
 
         {reading?.sample === true ? (
           <div className="mb-3 flex justify-center">
@@ -1026,9 +1135,10 @@ function ChatScreen() {
         {voice.voiceUnavailable ? (
           <p className="mb-2.5 px-1 text-fine text-muted">{t("fallback.noVoiceNote")}</p>
         ) : null}
+        </div>
       </div>
 
-      <ChatBar
+      <DesktopComposer
         language={dialect}
         locale={locale}
         busy={asking}
@@ -1037,6 +1147,17 @@ function ChatScreen() {
         onInterim={setInterim}
         onNothingHeard={() => setNothingHeard(true)}
       />
+      <div className="lg:hidden">
+        <ChatBar
+          language={dialect}
+          locale={locale}
+          busy={asking}
+          onSend={(text) => void submit(text)}
+          onListening={onListeningChange}
+          onInterim={setInterim}
+          onNothingHeard={() => setNothingHeard(true)}
+        />
+      </div>
 
       {sourceFor ? (
         <SourceSheet

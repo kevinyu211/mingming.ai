@@ -66,7 +66,7 @@ export default function Disclaimer() {
       ref={footerRef}
       role="note"
       aria-label={t("disclaimer")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-ground/95 px-3.5 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-sm"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-ground/95 px-3.5 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] backdrop-blur-sm lg:px-8"
     >
       <p className="text-[12px] leading-[1.3] font-normal text-muted">{t("disclaimer")}</p>
     </footer>

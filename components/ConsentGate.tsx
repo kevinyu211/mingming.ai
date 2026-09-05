@@ -12,12 +12,13 @@
  * Consent is read with `useSyncExternalStore`, so there is no state-setting effect and no
  * chance of rendering a health screen behind the notice on the first paint.
  *
- * S1 on the design canvas: the app mark, the title, one muted line, and the three promises as a
+ * S1 on the design canvas: 明明 waving, the title, one muted line, and the three promises as a
  * grouped card — the same promises the settings screen spells out in full, small enough to read
  * in a taxi before agreeing to anything.
  */
 import { useCallback, useSyncExternalStore, type ReactNode, type SVGProps } from "react";
 import { useLocale } from "@/components/LocaleProvider";
+import Mascot from "@/components/Mascot";
 import type { UiLocale } from "@/lib/i18n/ui";
 import { unlockAudio } from "@/lib/speech/tts";
 import { loadState, setConsented, subscribe } from "@/lib/storage/local";
@@ -101,39 +102,43 @@ export default function ConsentGate({ children }: { children: ReactNode }) {
       aria-labelledby="consent-title"
       // `--disclaimer-height` is measured and published by the footer itself, so this stops
       // exactly where the disclaimer starts in every locale (rules.md 16).
-      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col bg-ground"
+      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col bg-ground lg:items-center lg:justify-center lg:bg-[color-mix(in_srgb,var(--ink)_28%,transparent)] lg:px-6 lg:py-8"
     >
       {/* `m-auto` rather than `justify-center`: a centred flex child in a scroll container hides
           its own overflow above the top edge, and this column grows in English. */}
-      <div className="flex flex-1 flex-col overflow-y-auto px-8">
-        <div className="m-auto flex w-full max-w-md flex-col items-center gap-6 py-4">
-          <AppMark />
+      <div className="flex min-h-0 flex-1 flex-col lg:m-0 lg:max-h-full lg:w-full lg:max-w-md lg:flex-none lg:overflow-hidden lg:rounded-[28px] lg:bg-ground lg:shadow-[0_24px_80px_rgb(42_39_35/0.22)]">
+        <div className="flex flex-1 flex-col overflow-y-auto px-8 lg:px-12">
+          <div className="m-auto flex w-full max-w-md flex-col items-center gap-6 py-4 lg:m-0 lg:max-w-none lg:py-10">
+            <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full">
+              <Mascot size={92} state="greeting" />
+            </span>
 
-          <div className="flex flex-col gap-3 text-center">
-            <h1 id="consent-title" className="text-display font-bold text-ink">
-              {t("consent.title")}
-            </h1>
-            <p className="text-body text-muted">{t("consent.body1")}</p>
-          </div>
+            <div className="flex flex-col gap-3 text-center">
+              <h1 id="consent-title" className="text-display font-bold text-ink">
+                {t("consent.title")}
+              </h1>
+              <p className="text-body text-muted">{t("consent.body1")}</p>
+            </div>
 
-          <div className="surface w-full px-[18px] py-1">
-            <PromiseRow glyph={<PhoneGlyph />} text={t("consent.body2")} />
-            <Hairline />
-            <PromiseRow glyph={<BubbleGlyph />} text={LOCAL.onlyQuestion[locale]} />
-            <Hairline />
-            <PromiseRow glyph={<NoCameraGlyph />} text={LOCAL.photoGone[locale]} />
+            <div className="surface w-full px-[18px] py-1">
+              <PromiseRow glyph={<PhoneGlyph />} text={t("consent.body2")} />
+              <Hairline />
+              <PromiseRow glyph={<BubbleGlyph />} text={LOCAL.onlyQuestion[locale]} />
+              <Hairline />
+              <PromiseRow glyph={<NoCameraGlyph />} text={LOCAL.photoGone[locale]} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="shrink-0 px-5 pb-[18px]">
-        <button
-          type="button"
-          onClick={accept}
-          className="tap h-[54px] w-full rounded-full bg-accent text-body font-semibold text-accent-ink shadow-raised"
-        >
-          {t("consent.button")}
-        </button>
+        <div className="shrink-0 px-5 pb-[18px] lg:px-12 lg:pb-10">
+          <button
+            type="button"
+            onClick={accept}
+            className="tap h-[54px] w-full rounded-full bg-accent text-body font-semibold text-accent-ink shadow-raised"
+          >
+            {t("consent.button")}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -150,30 +155,6 @@ function PromiseRow({ glyph, text }: { glyph: ReactNode; text: string }) {
 
 function Hairline() {
   return <div aria-hidden="true" className="h-px bg-hairline" />;
-}
-
-/**
- * The app mark: a speech bubble wrapping a folded page (design.md section 8, artboard 16).
- * Painted from the palette variables rather than literal hex so it follows the tokens.
- */
-function AppMark() {
-  return (
-    <svg viewBox="0 0 120 120" width="104" height="104" fill="none" aria-hidden="true">
-      <rect x="4" y="4" width="112" height="112" rx="27" fill="var(--accent)" />
-      <path
-        d="M28 40c0-5 4-9 9-9h46c5 0 9 4 9 9v33c0 5-4 9-9 9H57l-16 13V82h-4c-5 0-9-4-9-9V40z"
-        fill="var(--ground)"
-      />
-      <path
-        d="M50 42h18l8 8v22c0 1.7-1.3 3-3 3H50c-1.7 0-3-1.3-3-3V45c0-1.7 1.3-3 3-3z"
-        fill="var(--accent)"
-      />
-      <path d="M68 42v8h8" fill="var(--warning-fg)" />
-      <rect x="53" y="56" width="16" height="3" rx="1.5" fill="var(--ground)" />
-      <rect x="53" y="62" width="12" height="3" rx="1.5" fill="var(--ground)" />
-      <rect x="53" y="68" width="17" height="3" rx="1.5" fill="var(--warning-fg)" />
-    </svg>
-  );
 }
 
 /** design.md section 3: rounded, 2 px stroke, no medical symbols. */

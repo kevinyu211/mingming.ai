@@ -14,7 +14,14 @@
 import { useT } from "@/components/LocaleProvider";
 import Mascot from "@/components/Mascot";
 
-export default function ReadingProgress({ pageCount }: { pageCount: number }) {
+export default function ReadingProgress({
+  pageCount,
+  line = null,
+}: {
+  pageCount: number;
+  /** What 明明 is saying while he reads — a fixed line from `lib/i18n/ui.ts`, never a claim about the sheet. */
+  line?: string | null;
+}) {
   const t = useT();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
@@ -26,6 +33,14 @@ export default function ReadingProgress({ pageCount }: { pageCount: number }) {
         </p>
       ) : null}
       <p className="text-meta text-muted">{t("progress.note")}</p>
+      {line ? (
+        <p
+          role="status"
+          className="surface mt-2 max-w-xs rounded-[18px] px-5 py-4 text-[17px] leading-[1.5] text-ink"
+        >
+          {line}
+        </p>
+      ) : null}
     </div>
   );
 }
