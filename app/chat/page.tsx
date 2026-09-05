@@ -126,8 +126,8 @@ const LOCAL: Record<"askUnavailable", Record<UiLocale, string>> = {
   },
 };
 
-/** Long edge for the one retry after a 413 (contracts/api-read.md). 1200 px keeps 9 pt print legible. */
-const RETRY_LONG_EDGE = 1200;
+/** Long edge for the one retry after a 413 (contracts/api-read.md): the pre-5-September default, proven legible. */
+const RETRY_LONG_EDGE = 1600;
 
 /** How long into a read 明明 says he is still at it. A single page reads in about 25 s. */
 const STILL_READING_MS = 18_000;

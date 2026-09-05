@@ -6,8 +6,8 @@
  * Two reasons this happens here and not on the server:
  *
  *   1. Bandwidth. A modern phone camera writes an 8–12 MB JPEG; the read route's body limit is
- *      8 MB for two pages. 1600 px on the long edge at quality 0.85 lands at roughly 200–400 KB
- *      and is still comfortably readable for the model (research: 1600 px keeps 9 pt print legible).
+ *      8 MB for two pages. 2400 px on the long edge at quality 0.85 lands at roughly 400–900 KB;
+ *      1600 px kept 9 pt print legible, 2400 px keeps small Chinese print exact (see MAX_LONG_EDGE).
  *   2. Privacy. Re-encoding through a canvas keeps ONLY the pixels: EXIF, GPS coordinates, the
  *      camera serial, the capture timestamp and every other maker note are dropped, because a
  *      canvas has no metadata to carry them (constitution principle V). The orientation flag is
@@ -27,7 +27,14 @@ export interface DownscaledImage {
 }
 
 /** Long-edge cap, from the read contract. */
-export const MAX_LONG_EDGE = 1600;
+/**
+ * 2400 rather than the original 1600: on 5 September a dense bilingual sheet read at 1240 px
+ * turned 「早晨服」 (morning) into 「早餐前服」 (before breakfast) on three runs out of three, and
+ * the same sheet at 2480 px read it right three times out of three. Claude accepts up to 2576 px
+ * on the long edge, so 2400 is inside the tier where every pixel still counts. A page lands at
+ * roughly 400–900 KB; the 413 retry below the route's body cap drops back to 1600.
+ */
+export const MAX_LONG_EDGE = 2400;
 
 /** JPEG quality, from the read contract. */
 export const JPEG_QUALITY = 0.85;

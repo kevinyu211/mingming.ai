@@ -16,8 +16,8 @@ describe("targetSize", () => {
 
   it("caps the long edge and keeps the aspect ratio, landscape or portrait", () => {
     // A 12 MP phone photo, both ways up.
-    expect(targetSize(4032, 3024)).toEqual({ width: 1600, height: 1200 });
-    expect(targetSize(3024, 4032)).toEqual({ width: 1200, height: 1600 });
+    expect(targetSize(4032, 3024)).toEqual({ width: 2400, height: 1800 });
+    expect(targetSize(3024, 4032)).toEqual({ width: 1800, height: 2400 });
   });
 
   it("never upscales", () => {
@@ -31,7 +31,7 @@ describe("targetSize", () => {
 
   it("never returns a zero dimension for a sliver of a page", () => {
     const sliver = targetSize(4000, 3);
-    expect(sliver.width).toBe(1600);
+    expect(sliver.width).toBe(2400);
     expect(sliver.height).toBeGreaterThanOrEqual(1);
   });
 
@@ -65,7 +65,7 @@ describe("approximateBytes", () => {
 
 describe("contract constants", () => {
   it("matches contracts/api-read.md", () => {
-    expect(MAX_LONG_EDGE).toBe(1600);
+    expect(MAX_LONG_EDGE).toBe(2400);
     expect(JPEG_QUALITY).toBe(0.85);
   });
 });
