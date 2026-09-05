@@ -21,7 +21,7 @@ times (never clock times), the printed appointment, the warning signs, and what 
 
 ```bash
 npm install
-cp .env.example .env.local   # then `vercel env pull .env.local` for the Gateway token; voice keys optional
+cp .env.example .env.local   # then set AI_GATEWAY_API_KEY (a `vercel env pull` token expires within a day); voice keys optional
 npm run dev
 ```
 
@@ -35,7 +35,7 @@ bundled sample sheets (`/chat?sample=hk_en`), which exercise the whole UI.
 | `npm test` | Unit tests (Vitest) |
 | `npm run e2e` | Playwright live path and fallbacks on phone viewports (Chrome channel; model routes mocked) |
 | `npm run typecheck` / `npm run lint` | TypeScript and ESLint (includes the rules-must-not-import-model boundary) |
-| `npm run eval -- --sheets all --runs 34` | Reading eval against a running server and a real key (SC-002, SC-003) |
+| `npm run eval -- --sheets all --runs 3` | Reading eval against a running server and a real key (SC-002, SC-003) |
 | `./node_modules/.bin/tsx tests/eval/questions.ts` | Question eval (SC-006) |
 | `./node_modules/.bin/tsx tests/eval/voices.ts` | Renders the listening-test sentences through every configured voice provider |
 
@@ -50,8 +50,10 @@ is spelled out in `docs/submission/data-statement.md`.
 
 ## Keeping it warm
 
-The first question after the app has sat idle was measured at 75–80 s on the deployed build, and
-every one after it under 10 s. `POST /api/warm` makes one fixed model call (a constant card and
+The first request after the app has sat idle was measured at 75–82 s *from a development Mac* —
+the server's own log showed the handler at 4 s each time, so the wait was the caller's first
+connection, not the app; every request after it is under 10 s. The warm-up still earns its keep:
+it keeps the model path and the prompt cache hot. `POST /api/warm` makes one fixed model call (a constant card and
 the greeting 你好 — nothing from any reader) on the same code path a question takes. It is hit by
 a Vercel cron every four minutes (`vercel.json`) and by the phone itself when the app opens and
 whenever it comes back into view (`components/Warmer.tsx`, production builds only). Warm-ups
@@ -66,7 +68,8 @@ starts talking, while the other two languages are still being written.
 ## Venue fallback
 
 1. Hosted link (Vercel) with a QR code: `https://mingming.app` — `docs/qr.png`.
-2. Laptop: `npm run build && npm start`, phone on the laptop's hotspot, QR to the LAN address.
+2. Laptop: `npm run build && npm start`, phone on the laptop's hotspot, LAN address. The microphone needs a
+   secure origin, so on a plain `http://` LAN address questions are typed, not spoken; everything else works.
 3. Sample sheets inside the app if the model route is unreachable.
 
 ## Known environment quirks (macOS)
@@ -89,6 +92,13 @@ env -u NODE_OPTIONS ./node_modules/.bin/tsx --env-file=.env.local tests/eval/voi
 The eval runners call `process.exit(0)`, so they do not hang without the flag.
 Playwright uses the installed Google Chrome (`channel: "chrome"`); run
 `npx playwright install chromium` if you prefer the bundled browser.
+
+## How it is checked
+
+1,300+ unit tests (`npm test`), 116 Playwright end-to-end tests on phone viewports (`npm run e2e`),
+reading and question evals against the live model (`tests/eval/`), and a stress set of deliberately
+bad photographs (`tests/eval/stress.md`). Every sheet in `fixtures/` is synthetic — no real
+discharge summary has been read by this app — and the submission pack says so.
 
 ## Layout
 
