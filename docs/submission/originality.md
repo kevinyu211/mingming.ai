@@ -33,10 +33,13 @@ demo.
   four hard fixtures, but dropped a warning sign on both of its completed `messy` runs and produced
   the only hard failure. On 4 September the Anthropic organisation's spend cap was reached and
   every model call moved to the Vercel AI Gateway, where the deployed build runs Sonnet 5 for
-  reading and answering. The deployed build reads the `hk_en` fixture correctly through the Gateway
-  (3/3 medicines verbatim, 23 s, measured 4 September); the three demo fixtures in `fixtures/demo/`
-  were validated the same day on Opus 5 directly, and their re-read on the deployed build, like
-  the `messy` warning-sign risk, is carried here as an open item, not a closed one. Effort was dropped from `high` to `medium` on
+  reading and answering. Re-measured on that build the same evening (Sonnet 5 through the Gateway):
+  the `hk_en` fixture 3/3 medicines verbatim, warning coverage 100%; and all three demo fixtures in
+  `fixtures/demo/` clean — `hk_stopped` 8/8 medicines exact with all three withdrawn drugs marked
+  stopped, the two-page `hk_stack` 5/5 with both appointments, `cn_zh_clinic` 5/5 with the
+  uncountable dose clause left uncounted; warning signs 3/3 on each. The `messy` fixture's
+  warning-sign risk from the original comparison has not been re-run through the Gateway and is
+  the one item still open. Effort was dropped from `high` to `medium` on
   the original evidence: identical readings,
 - **Voice**: MiniMax `speech-2.8-hd` through its international endpoint, behind a provider adapter.
   ElevenLabs and Azure Speech adapters are written and switchable by one environment variable; the
