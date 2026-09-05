@@ -403,3 +403,21 @@ planned. The three sheets in the table above did complete on the final prompt.
    and marked `unverified`.
 4. `READ_SYSTEM` says `frequency` carries the complete printed instruction, meal timing and route
    included, as one verbatim string.
+
+## Production, 5 September (build `69450f2`, dpl_8dBHSKVytaZAMZ8cru95ss6Af6Qq)
+
+Measured from this Mac against `discharge-sheet-agent.vercel.app` after the Anthropic-compatible
+provider landed (`lib/model/anthropic-compat.ts`), by aix-orgin-hack-80 and aix-orgin-hack-19.
+
+| Sheet | Run | Result |
+| --- | --- | --- |
+| `cn_zh_photo` | concurrent with two other reads | 200 in 46.3 s; 7 cards; medicines 3/3 (苯磺酸氨氯地平片, 盐酸二甲双胍片, 阿托伐他汀钙片); warnings 1; unreadable 1; filter regenerated 0, templated 0 — matches the answer key |
+| `cn_zh_photo` | alone on the key | 200 in 48.0 s, 3/3, first byte at 2.9 s (the compat path streams) |
+| `hk_en` | concurrent | 200 in 30 s, 3/3 |
+| `messy` | concurrent | stream opened, `{"event":"error","error":"model_unavailable"}` at 295.8 s: the 240 s per-call timeout plus one retry, cut at the route's 300 s ceiling |
+| `messy` | alone on the key | 422 `invalid_reading` after 288.0 s, no NDJSON event: the reading failed the strict schema on both attempts |
+
+Server side (`vercel logs`, same window): three read completions at 43.6 s / 38.0 s / 27.6 s, all
+200, none with an `invalid_reading` code. So the photographed-sheet failure of the evening's earlier
+build is fixed for the realistic photo; the deliberately degraded `messy` scan is still open on this
+build and is being looked at in the compat provider. The demo does not photograph that sheet.
