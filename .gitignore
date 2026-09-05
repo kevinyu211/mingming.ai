@@ -67,3 +67,7 @@ playwright-report/
 
 # backup video and its run log: a deliverable for the organisers, not for the repo
 docs/backup-video/
+
+# Venue-only copies and live-review evidence: kept beside the repo, never in it
+docs/mingming-pitch-deck.html
+docs/review-2026-09-05/
