@@ -23,7 +23,7 @@ Two consequences worth stating before the table:
 
 | Output | Source | Where |
 | --- | --- | --- |
-| Structured reading of the page — warning signs, medicines (with `status`), follow-up, diet line, activity line, hospital contact, unreadable regions | **Model** (Claude Opus 5, structured output validated by a Zod schema; a schema failure is not retried, it becomes a decline) | `lib/model/client.ts`, `lib/model/prompts.ts`, `lib/domain/schemas.ts` |
+| Structured reading of the page — warning signs, medicines (with `status`), follow-up, diet line, activity line, hospital contact, unreadable regions | **Model** (Claude Sonnet 5 through the Vercel AI Gateway, structured output validated by a Zod schema; one retry on a schema failure if the 240 s read deadline allows, otherwise a decline) | `lib/model/client.ts`, `lib/model/prompts.ts`, `lib/domain/schemas.ts` |
 | The spoken body of each card, in Cantonese, Mandarin and English | **Model**, then the banned-term filter; on a hit, one model rephrase given only the card's typed facts and its source line; if that fails or fails again, a **fixed template** | `lib/server/reading-pipeline.ts`, `lib/rules/banned-terms.ts`, `lib/rules/template-fallback.ts` |
 | Card order — warning signs first, always | **Rules**, a fixed array | `lib/rules/card-order.ts` (`CARD_ORDER`) |
 | "This sheet prints no warning signs" card, in the warning slot | **Rules**, fixed text | `lib/rules/card-order.ts` |
@@ -71,7 +71,7 @@ Two consequences worth stating before the table:
 | What memory keeps and for how long | **Rules** — last 5 readings, last 50 questions, oldest evicted; crisis questions never recorded | `lib/memory/record.ts`, `lib/memory/types.ts` |
 | Disclaimer, AI label, agent limits, consent notice, every fixed interface string | **Human-written**, three locales, tested against the banned-term filter in CI. The disclaimer is the single filter-exempt string because the rulebook mandates its wording | `lib/i18n/ui.ts`, `tests/unit/ui-copy.test.ts` |
 | Speech audio | **Voice provider** (MiniMax on the demo build, or the phone's own voice) reading the already-filtered text. It never receives the label, a date or an identifier | `lib/speech/tts.ts`, `lib/speech/providers/*` |
-| Transcript of a spoken question | **Transcription provider** (OpenAI `gpt-4o-mini-transcribe` on the demo build, `STT_PROVIDER=openai`) of a clip recorded on the phone, with the browser's own recognition drawing the words live. Shown to the user before it is submitted | `lib/speech/stt.ts`, `lib/speech/providers/openai.ts` |
+| Transcript of a spoken question | **Transcription provider** (OpenAI `gpt-4o-mini-transcribe` on the demo build, `STT_PROVIDER=openai`) of a clip recorded on the phone; the browser's own recognition is used only when recording is unavailable. The transcript is shown before it is submitted | `lib/speech/stt.ts`, `lib/speech/providers/openai.ts` |
 
 ## Where a model can still be wrong, and what catches it
 

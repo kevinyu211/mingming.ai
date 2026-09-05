@@ -45,9 +45,10 @@ demo.
   has not been run** — `tests/eval/voices.md` still ends "PICK: not decided". MiniMax is verified to
   render Cantonese, Mandarin and English at about 2 s a sentence. MiniMax intermittently refuses a Mandarin request in-band (an HTTP 200 carrying a non-zero `base_resp.status_code` and no audio: 5 of 11 Mandarin calls on the evening of 4 September, Cantonese and English clean); since `a79a6d8` the adapter retries once on such a refusal and logs the numeric code, and the on-screen text is the fallback either way. **MiniMax is prepaid**: an empty balance silences the voice (every request answers `base_resp 1008`, the route answers 502, the phone shows the line as text and says so) and a top-up restores it without a redeploy — this happened on 5 September at about 01:20 and is on the pre-stage checklist; `TTS_PROVIDER=browser` in the deployment's environment is the switch to the phone's own voice if the balance cannot be restored; whether the Cantonese voice sounds
   like a daughter rather than a newsreader has not been judged.
-- **Speech input**: a hybrid. The browser's own `SpeechRecognition` puts the words on screen while
-  the same audio is recorded and transcribed by OpenAI (`gpt-4o-mini-transcribe`) behind the same
-  adapter pattern, with a typed fallback. `STT_PROVIDER=browser` keeps the audio on the phone.
+- **Speech input**: one engine per hold. The question is recorded while the bar is held and
+  transcribed by OpenAI (`gpt-4o-mini-transcribe`) behind the same adapter pattern; the browser's
+  own `SpeechRecognition` is the fallback when recording is unavailable, and typing is always
+  there. `STT_PROVIDER=browser` keeps the audio on the phone.
 
 ## What was built for this entry
 
