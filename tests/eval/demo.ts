@@ -64,6 +64,8 @@ interface DemoSheet {
    * entry names the medicine and the clause exactly as the answer key prints it.
    */
   uncountable: Array<{ name: string; frequency: string }>;
+  /** deviceScaleFactor the pages were rendered at (`fixtures/demo/render.ts`). 1 when absent. */
+  scale?: number;
 }
 
 const SHEETS: DemoSheet[] = [
@@ -92,6 +94,24 @@ const SHEETS: DemoSheet[] = [
     uncountable: [
       { name: "对乙酰氨基酚片", frequency: "疼痛时口服，每4小时一次，每日不超过4次" },
     ],
+  },
+  {
+    id: "demo_en",
+    pages: ["demo_en.png"],
+    html: ["demo_en.html"],
+    expected: "demo_en.expected.json",
+    shows: "the live-demo English sheet: 4 medicines, 1 stopped, 3 warning signs, a clinic date and a fasting blood test",
+    uncountable: [],
+    scale: 2,
+  },
+  {
+    id: "demo_zh_hant",
+    pages: ["demo_zh_hant.png"],
+    html: ["demo_zh_hant.html"],
+    expected: "demo_zh_hant.expected.json",
+    shows: "a Hong Kong Traditional Chinese 出院摘要 with English drug names — the same skeleton, a different patient",
+    uncountable: [],
+    scale: 2,
   },
 ];
 
@@ -176,7 +196,10 @@ interface OfflineResult {
 function checkOffline(sheet: DemoSheet, expected: SheetReading): OfflineResult {
   const problems: string[] = [];
 
-  // 1. every image exists at A4 150dpi and carries enough ink to be a rendered sheet
+  // 1. every image exists at A4 150dpi (times the sheet's render scale) and carries enough ink
+  //    to be a rendered sheet
+  const scale = sheet.scale ?? 1;
+  const want: [number, number] = [1240 * scale, 1754 * scale];
   for (const page of sheet.pages) {
     const file = join(DEMO_DIR, page);
     if (!existsSync(file)) {
@@ -185,8 +208,8 @@ function checkOffline(sheet: DemoSheet, expected: SheetReading): OfflineResult {
     }
     const dims = pngDims(file);
     const bytes = statSync(file).size;
-    if (!dims || dims[0] !== 1240 || dims[1] !== 1754) {
-      problems.push(`${page} is ${dims ? dims.join("x") : "not a PNG"}, want 1240x1754`);
+    if (!dims || dims[0] !== want[0] || dims[1] !== want[1]) {
+      problems.push(`${page} is ${dims ? dims.join("x") : "not a PNG"}, want ${want.join("x")}`);
     }
     if (bytes < 40_000) problems.push(`${page} is only ${(bytes / 1024).toFixed(0)} KB — is it blank?`);
   }

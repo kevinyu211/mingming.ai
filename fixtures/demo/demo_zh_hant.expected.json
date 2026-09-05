@@ -1,0 +1,220 @@
+{
+  "sheetType": "cn_zh",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果瞓平嗰陣覺得氣促，或者夜晚喘到醒。",
+        "cmn": "这张纸上写着，如果躺平的时候气促，或者晚上喘到醒过来。",
+        "en": "The sheet says: if he gets short of breath lying flat, or wakes up at night gasping for breath."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "警告徵狀 — 須立即求診",
+        "lineIndex": 1,
+        "quote": "1. 平臥時氣促或夜間喘醒。"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "如果雙腳水腫腫得明顯犀利咗。",
+        "cmn": "如果双脚水肿明显加重。",
+        "en": "If the swelling in both legs gets clearly worse."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "警告徵狀 — 須立即求診",
+        "lineIndex": 2,
+        "quote": "2. 雙腳水腫明顯加劇。"
+      }
+    },
+    {
+      "symptom": {
+        "yue": "如果胸口痛一直唔散。",
+        "cmn": "如果胸口痛一直不缓解。",
+        "en": "If his chest pain will not go away."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "警告徵狀 — 須立即求診",
+        "lineIndex": 3,
+        "quote": "3. 胸口痛持續不退。"
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "Frusemide",
+      "strength": "40mg",
+      "amount": "1粒",
+      "frequency": "每朝一次",
+      "duration": "28日",
+      "status": "current",
+      "spoken": {
+        "yue": "Frusemide 40mg，一粒，每朝一次，食 28 日。",
+        "cmn": "Frusemide 40mg，一片，每天早上一次，吃 28 天。",
+        "en": "Frusemide 40mg, 1 tablet, once every morning, for 28 days."
+      },
+      "source": {
+        "section": "出院藥物",
+        "lineIndex": 0,
+        "quote": "1 Frusemide 40mg 1粒 每朝一次 28日"
+      }
+    },
+    {
+      "name": "Bisoprolol",
+      "strength": "2.5mg",
+      "amount": "1粒",
+      "frequency": "每日一次",
+      "duration": "28日",
+      "status": "current",
+      "spoken": {
+        "yue": "Bisoprolol 2.5mg，一粒，每日一次，食 28 日。",
+        "cmn": "Bisoprolol 2.5mg，一片，每天一次，吃 28 天。",
+        "en": "Bisoprolol 2.5mg, 1 tablet, once a day, for 28 days."
+      },
+      "source": {
+        "section": "出院藥物",
+        "lineIndex": 1,
+        "quote": "2 Bisoprolol 2.5mg 1粒 每日一次 28日"
+      }
+    },
+    {
+      "name": "Spironolactone",
+      "strength": "25mg",
+      "amount": "1粒",
+      "frequency": "每日一次，早餐後服",
+      "duration": "28日",
+      "status": "current",
+      "spoken": {
+        "yue": "Spironolactone 25mg，一粒，每日一次，食完早餐先食，食 28 日。",
+        "cmn": "Spironolactone 25mg，一片，每天一次，早餐后服用，吃 28 天。",
+        "en": "Spironolactone 25mg, 1 tablet, once a day after breakfast, for 28 days."
+      },
+      "source": {
+        "section": "出院藥物",
+        "lineIndex": 2,
+        "quote": "3 Spironolactone 25mg 1粒 每日一次，早餐後服 28日"
+      }
+    },
+    {
+      "name": "Apixaban",
+      "strength": "5mg",
+      "amount": "1粒",
+      "frequency": "每日兩次",
+      "duration": "28日",
+      "status": "current",
+      "spoken": {
+        "yue": "Apixaban 5mg，一粒，每日兩次，食 28 日。",
+        "cmn": "Apixaban 5mg，一片，每天两次，吃 28 天。",
+        "en": "Apixaban 5mg, 1 tablet, twice a day, for 28 days."
+      },
+      "source": {
+        "section": "出院藥物",
+        "lineIndex": 3,
+        "quote": "4 Apixaban 5mg 1粒 每日兩次 28日"
+      }
+    },
+    {
+      "name": "Indapamide",
+      "strength": "2.5mg",
+      "amount": "1粒",
+      "frequency": "每朝一次",
+      "duration": null,
+      "status": "stopped",
+      "spoken": {
+        "yue": "Indapamide 2.5mg：張紙將呢隻擺咗喺「已停用藥物」嗰欄，寫住出院之後唔使再食。",
+        "cmn": "Indapamide 2.5mg：这张纸把它列在「已停用药物」那一栏，写着出院后不用再吃。",
+        "en": "Indapamide 2.5mg: the sheet lists this one under medicines stopped, and says it is not to be taken after going home."
+      },
+      "source": {
+        "section": "已停用藥物（出院後毋須服用）",
+        "lineIndex": 0,
+        "quote": "1 Indapamide 2.5mg 1粒 每朝一次"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "內科專科門診",
+      "when": "2026年10月14日（星期三）上午9時30分",
+      "tests": null,
+      "spoken": {
+        "yue": "張紙寫住，10 月 14 號星期三早上 9 點半，返內科專科門診覆診，記得帶埋呢張紙同所有藥袋。",
+        "cmn": "这张纸上写着，10 月 14 日星期三上午 9 点半，回内科专科门诊复诊，记得带上这张纸和所有药袋。",
+        "en": "The sheet says: come back to the 內科專科門診 clinic on 14 October 2026, a Wednesday, at 9:30 in the morning, and bring this sheet and all the drug bags."
+      },
+      "source": {
+        "section": "覆診安排",
+        "lineIndex": 0,
+        "quote": "1. 覆診：內科專科門診，2026年10月14日（星期三）上午9時30分。請帶同此紙及所有藥袋。"
+      }
+    },
+    {
+      "clinic": "抽血室（地下）",
+      "when": "2026年10月7日（星期三）上午8時至9時",
+      "tests": "空腹抽血",
+      "spoken": {
+        "yue": "10 月 7 號星期三早上 8 點到 9 點，去地下嘅抽血室空肚抽血。",
+        "cmn": "10 月 7 日星期三上午 8 点到 9 点，去地下的抽血室空腹抽血。",
+        "en": "On 7 October 2026, a Wednesday, between 8 and 9 in the morning, go to the blood-taking room on the ground floor for a fasting blood test."
+      },
+      "source": {
+        "section": "覆診安排",
+        "lineIndex": 1,
+        "quote": "2. 抽血：空腹抽血，抽血室（地下），2026年10月7日（星期三）上午8時至9時。"
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "飲食：低鹽飲食，少食醃製食物及罐頭。",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低鹽飲食，少食醃製嘢同罐頭。",
+      "cmn": "这张纸饮食那一行写着：低盐饮食，少吃腌制食物和罐头。",
+      "en": "The food line on the sheet says: a low salt diet, with fewer pickled or salted foods and less tinned food."
+    },
+    "source": {
+      "section": "出院須知",
+      "lineIndex": 0,
+      "quote": "1. 飲食：低鹽飲食，少食醃製食物及罐頭。"
+    }
+  },
+  "activityLine": {
+    "text": "活動：室內慢行，兩星期內避免搬重物及劇烈運動。",
+    "spoken": {
+      "yue": "張紙寫住：喺室內慢慢行下就得，兩個星期內唔好搬重嘢，亦唔好做劇烈運動。",
+      "cmn": "这张纸上写着：在室内慢慢走走就好，两周内不要提重物，也不要做剧烈运动。",
+      "en": "The sheet says: slow walks indoors, and for two weeks no heavy lifting and no hard exercise."
+    },
+    "source": {
+      "section": "出院須知",
+      "lineIndex": 1,
+      "quote": "2. 活動：室內慢行，兩星期內避免搬重物及劇烈運動。"
+    }
+  },
+  "hospitalContact": {
+    "text": "6B病房查詢電話：2xxx xxxx（24小時）",
+    "spoken": {
+      "yue": "6B 病房查詢電話：2xxx xxxx，廿四小時都打得。",
+      "cmn": "6B 病房咨询电话：2xxx xxxx，24 小时都可以打。",
+      "en": "Ward 6B enquiries: 2xxx xxxx, 24 hours."
+    },
+    "source": {
+      "section": "病房查詢電話",
+      "lineIndex": 0,
+      "quote": "6B病房查詢電話：2xxx xxxx（24小時）"
+    }
+  },
+  "unreadable": []
+}

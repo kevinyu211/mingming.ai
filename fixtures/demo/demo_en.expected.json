@@ -1,0 +1,220 @@
+{
+  "sheetType": "hk_en",
+  "warningSigns": [
+    {
+      "symptom": {
+        "yue": "張紙上面寫，如果坐住唔郁或者瞓平嗰陣都覺得氣促。",
+        "cmn": "这张纸上写着，如果不动的时候或者躺平的时候也觉得气促。",
+        "en": "The sheet says: if she is short of breath while resting or lying flat."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "WARNING SIGNS",
+        "lineIndex": 1,
+        "quote": "1. Shortness of breath at rest or when lying flat."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "如果咳出血嚟。",
+        "cmn": "如果咳出血来。",
+        "en": "If she coughs up blood."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "WARNING SIGNS",
+        "lineIndex": 2,
+        "quote": "2. Coughing up blood."
+      }
+    },
+    {
+      "symptom": {
+        "yue": "如果胸口痛，唞完都唔散。",
+        "cmn": "如果胸口痛，休息了也不缓解。",
+        "en": "If she has chest pain that doesn't go away after resting."
+      },
+      "action": {
+        "yue": "就即刻去急症室，或者打 999，唔好等。",
+        "cmn": "就马上去急诊室，或者打 999，不要等。",
+        "en": "go straight to A&E or call 999 — don't wait."
+      },
+      "source": {
+        "section": "WARNING SIGNS",
+        "lineIndex": 3,
+        "quote": "3. Chest pain that does not go away after resting."
+      }
+    }
+  ],
+  "medicines": [
+    {
+      "name": "Amoxicillin-Clavulanate",
+      "strength": "1g",
+      "amount": "1 tab",
+      "frequency": "BD after food",
+      "duration": "5 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Amoxicillin-Clavulanate 1g，一粒，一日兩次，食完飯先食，食 5 日。",
+        "cmn": "Amoxicillin-Clavulanate 1g，一片，一天两次，饭后服用，吃 5 天。",
+        "en": "Amoxicillin-Clavulanate 1g, 1 tab, twice a day after food, for 5 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 0,
+        "quote": "1 Amoxicillin-Clavulanate 1g 1 tab BD after food 5 days"
+      }
+    },
+    {
+      "name": "Paracetamol",
+      "strength": "500mg",
+      "amount": "2 tabs",
+      "frequency": "QID PRN for fever",
+      "duration": "5 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Paracetamol 500mg，發燒嗰陣先食，一次兩粒，一日四次，食 5 日。",
+        "cmn": "Paracetamol 500mg，发烧的时候才吃，一次两片，一天四次，吃 5 天。",
+        "en": "Paracetamol 500mg, 2 tabs, four times a day only when she has a fever, for 5 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 1,
+        "quote": "2 Paracetamol 500mg 2 tabs QID PRN for fever 5 days"
+      }
+    },
+    {
+      "name": "Amlodipine",
+      "strength": "5mg",
+      "amount": "1 tab",
+      "frequency": "Daily",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Amlodipine 5mg，一粒，每日一次，食 28 日。",
+        "cmn": "Amlodipine 5mg，一片，每天一次，吃 28 天。",
+        "en": "Amlodipine 5mg, 1 tab, once a day, for 28 days."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 2,
+        "quote": "3 Amlodipine 5mg 1 tab Daily 28 days"
+      }
+    },
+    {
+      "name": "Simvastatin",
+      "strength": "20mg",
+      "amount": "1 tab",
+      "frequency": "Nocte",
+      "duration": "28 days",
+      "status": "current",
+      "spoken": {
+        "yue": "Simvastatin 20mg，一粒，每晚一次，食 28 日。Nocte 喺張紙上面即係夜晚食。",
+        "cmn": "Simvastatin 20mg，一片，每晚一次，吃 28 天。纸上的 Nocte 就是晚上吃。",
+        "en": "Simvastatin 20mg, 1 tab, once at night, for 28 days. Nocte on the sheet means at night."
+      },
+      "source": {
+        "section": "DISCHARGE MEDICATIONS",
+        "lineIndex": 3,
+        "quote": "4 Simvastatin 20mg 1 tab Nocte 28 days"
+      }
+    },
+    {
+      "name": "Diclofenac",
+      "strength": "50mg",
+      "amount": "1 tab",
+      "frequency": "TDS after food",
+      "duration": null,
+      "status": "stopped",
+      "spoken": {
+        "yue": "Diclofenac 50mg：張紙將呢隻擺咗喺「今次住院已停用藥物」嗰欄，寫住出院之後唔使再食。",
+        "cmn": "Diclofenac 50mg：这张纸把它列在「这次住院已停用药物」那一栏，写着出院后不用再吃。",
+        "en": "Diclofenac 50mg: the sheet lists this one under medicines stopped this admission, and says it is not to be taken after going home."
+      },
+      "source": {
+        "section": "MEDICATIONS STOPPED THIS ADMISSION — NOT TO BE TAKEN AFTER DISCHARGE",
+        "lineIndex": 0,
+        "quote": "1 Diclofenac 50mg 1 tab TDS after food"
+      }
+    }
+  ],
+  "followUp": [
+    {
+      "clinic": "MED SOPD",
+      "when": "07-10-2026 (Wed) 10:15",
+      "tests": null,
+      "spoken": {
+        "yue": "張紙寫住，10 月 7 號星期三早上 10 點 15 分，返 MED SOPD 內科專科門診覆診，記得帶埋呢張紙同所有藥袋。",
+        "cmn": "这张纸上写着，10 月 7 日星期三上午 10 点 15 分，回 MED SOPD 内科专科门诊复诊，记得带上这张纸和所有药袋。",
+        "en": "The sheet says: come back to MED SOPD on 07-10-2026, a Wednesday, at 10:15 in the morning, and bring this sheet and all the drug bags."
+      },
+      "source": {
+        "section": "FOLLOW-UP",
+        "lineIndex": 0,
+        "quote": "1. Clinic: MED SOPD, 07-10-2026 (Wed) 10:15. Bring this sheet and all drug bags."
+      }
+    },
+    {
+      "clinic": "Specimen Collection Room G/F",
+      "when": "30-09-2026 (Wed) 08:00 - 09:00",
+      "tests": "fasting bloods",
+      "spoken": {
+        "yue": "9 月 30 號星期三早上 8 點到 9 點，去地下嘅抽血室空肚抽血。",
+        "cmn": "9 月 30 日星期三上午 8 点到 9 点，去地下的抽血室空腹抽血。",
+        "en": "On 30-09-2026, a Wednesday, between 8 and 9 in the morning, go to the Specimen Collection Room on G/F for a fasting blood test."
+      },
+      "source": {
+        "section": "FOLLOW-UP",
+        "lineIndex": 1,
+        "quote": "2. Blood test: fasting bloods, Specimen Collection Room G/F, 30-09-2026 (Wed) 08:00 - 09:00."
+      }
+    }
+  ],
+  "dietLine": {
+    "raw": "Diet: low salt diet. No added salt or soy sauce at the table.",
+    "spoken": {
+      "yue": "張紙飲食嗰行寫住：低鹽飲食，食飯嗰陣唔好再加鹽同豉油。",
+      "cmn": "这张纸饮食那一行写着：低盐饮食，吃饭的时候不要再加盐和酱油。",
+      "en": "The food line on the sheet says: a low salt diet, with no extra salt or soy sauce added at the table."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 0,
+      "quote": "1. Diet: low salt diet. No added salt or soy sauce at the table."
+    }
+  },
+  "activityLine": {
+    "text": "Activity: light activity at home. No heavy lifting and no strenuous exercise for 2 weeks.",
+    "spoken": {
+      "yue": "張紙寫住：喺屋企做啲輕鬆活動就得，兩個星期內唔好搬重嘢，亦唔好做劇烈運動。",
+      "cmn": "这张纸上写着：在家做些轻松的活动就好，两周内不要提重物，也不要做剧烈运动。",
+      "en": "The sheet says: light activity at home, and for two weeks no heavy lifting and no hard exercise."
+    },
+    "source": {
+      "section": "ADVICE ON DISCHARGE",
+      "lineIndex": 1,
+      "quote": "2. Activity: light activity at home. No heavy lifting and no strenuous exercise for 2 weeks."
+    }
+  },
+  "hospitalContact": {
+    "text": "Ward 5B enquiries 病房查詢: 2xxx xxxx (24 hours)",
+    "spoken": {
+      "yue": "5B 病房查詢電話：2xxx xxxx，廿四小時都打得。",
+      "cmn": "5B 病房咨询电话：2xxx xxxx，24 小时都可以打。",
+      "en": "Ward 5B enquiries: 2xxx xxxx, 24 hours."
+    },
+    "source": {
+      "section": "HOSPITAL CONTACT",
+      "lineIndex": 0,
+      "quote": "Ward 5B enquiries 病房查詢: 2xxx xxxx (24 hours)"
+    }
+  },
+  "unreadable": []
+}

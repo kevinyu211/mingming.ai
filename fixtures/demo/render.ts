@@ -16,6 +16,9 @@
  *   hk_stack_page2.png  the 覆診紙 and the 抽血紙 — both appointment dates, no drugs
  *   hk_stopped.png      a "not to be taken after discharge" block styled like any other
  *   cn_zh_clinic.png    a mainland 出院指导单 whose row 5 the dose counter must refuse
+ *   demo_en.png         the live-demo English sheet: 4 medicines, 1 stopped, 3 warning
+ *                       signs with one action, a clinic date and a fasting blood test (2x)
+ *   demo_zh_hant.png    the same skeleton as a Hong Kong Traditional Chinese 出院摘要 (2x)
  *
  * Every sheet is synthetic: fictional hospital, fictional patient, placeholder
  * identifiers, and a visible "SYNTHETIC — NOT A REAL MEDICAL RECORD /
@@ -32,12 +35,21 @@ const ROOT = path.resolve(HERE, "..", "..");
 const A4 = { width: 1240, height: 1754 };
 const CHROME_MAC = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
-/** The four page images, in the order they are printed and photographed. */
+/**
+ * The page images, in the order they are printed and photographed.
+ *
+ * `scale` is the deviceScaleFactor: 1 keeps the original four at 1240x1754, exactly as they were
+ * first rendered, so their answer keys and any photograph taken of them stay valid. The two
+ * live-demo sheets render at 2 (2480x3508) so a projected page and a phone upload both start
+ * from the sharpest text we can make — `tests/eval/demo.ts` checks the size per sheet.
+ */
 export const DEMO_PAGES = [
-  "hk_stack_page1",
-  "hk_stack_page2",
-  "hk_stopped",
-  "cn_zh_clinic",
+  { name: "hk_stack_page1", scale: 1 },
+  { name: "hk_stack_page2", scale: 1 },
+  { name: "hk_stopped", scale: 1 },
+  { name: "cn_zh_clinic", scale: 1 },
+  { name: "demo_en", scale: 2 },
+  { name: "demo_zh_hant", scale: 2 },
 ] as const;
 
 /** `channel: "chrome"` first, then the same binary by path; the bundled chromium last. */
@@ -84,8 +96,8 @@ async function main(): Promise<void> {
   const { browser, how } = await launch();
   console.log(`browser: ${how}\n`);
 
-  for (const name of DEMO_PAGES) {
-    const page = await browser.newPage({ viewport: A4, deviceScaleFactor: 1 });
+  for (const { name, scale } of DEMO_PAGES) {
+    const page = await browser.newPage({ viewport: A4, deviceScaleFactor: scale });
     await page.goto(pathToFileURL(path.join(HERE, `${name}.html`)).href, {
       waitUntil: "networkidle",
     });

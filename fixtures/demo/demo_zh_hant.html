@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-Hant-HK">
+<head>
+<meta charset="utf-8">
+<title>出院摘要 — 港灣醫院（合成樣張，繁體中文，live demo）</title>
+<style>
+  /* LIVE-DEMO SHEET B — "demo_zh_hant".
+     The same skeleton as demo_en, printed the way a Hong Kong hospital prints a
+     Traditional Chinese 出院摘要: Chinese headings, drug names in English, HA-style
+     frequency wording in Chinese. A different fictional patient from demo_en
+     (heart failure, not pneumonia) so the two sheets tell two stories on stage.
+
+     No patient name, no HKID: the label box prints placeholders only.
+     Fictional hospital, fictional doctors, placeholder identifiers throughout. */
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    width: 1240px; height: 1754px;
+    background: #ffffff; color: #111111;
+    font-family: "PingFang HK", "Hiragino Sans CNS", "Heiti TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif;
+    font-size: 18px; line-height: 1.42;
+    padding: 46px 58px 34px 58px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .en { font-family: Arial, Helvetica, "Liberation Sans", sans-serif; }
+
+  .hdr { display: flex; justify-content: space-between; align-items: flex-start; }
+  .hosp { font-size: 26px; font-weight: bold; letter-spacing: 4px; }
+  .hosp .en { font-size: 20px; letter-spacing: .4px; font-weight: bold; }
+  .hosp small { display: block; font-size: 13px; font-weight: normal; letter-spacing: 1px; margin-top: 4px; color: #222; }
+  .stamp {
+    border: 1.5px solid #555; color: #555; text-align: center;
+    padding: 5px 10px; font-size: 11px; letter-spacing: .8px; line-height: 1.3; max-width: 268px;
+  }
+  .stamp b { display: block; font-size: 12px; letter-spacing: 1.6px; font-family: Arial, Helvetica, sans-serif; }
+  .doctype { margin-top: 12px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 8px; }
+  .doctype span { font-size: 18px; letter-spacing: 2px; }
+  .rule { border-top: 2px solid #111; margin-top: 7px; }
+
+  .toprow { display: flex; gap: 20px; margin-top: 14px; }
+  .label-box { width: 430px; border: 1px dashed #111; padding: 8px 11px; }
+  .label-box .cap { font-size: 11px; letter-spacing: 1.2px; color: #444; margin-bottom: 5px; }
+  .label-box .line { font-size: 17px; }
+  .label-box .line b { display: inline-block; min-width: 120px; font-weight: bold; }
+  .topfields { flex: 1; }
+  .topfields .fld { display: flex; margin-bottom: 3px; }
+  .topfields .fld .k { width: 200px; font-weight: bold; }
+  .topfields .fld .v { flex: 1; }
+  .box { display: inline-block; width: 12px; height: 12px; border: 1px solid #111; margin-right: 4px; position: relative; top: 1px; text-align: center; line-height: 10px; font-size: 11px; }
+
+  .sec { margin-top: 13px; }
+  .sec > .h {
+    font-size: 16px; font-weight: bold; letter-spacing: 2px;
+    background: #ebebeb; border: 1px solid #111; border-left-width: 5px;
+    padding: 4px 9px; margin-bottom: 6px;
+  }
+  .sec > .h .en { font-weight: normal; font-size: 13px; letter-spacing: .8px; margin-left: 7px; }
+  .sec .ln { display: block; }
+  .sec .body { padding: 0 3px; }
+
+  table.dx { width: 100%; border-collapse: collapse; }
+  table.dx td { vertical-align: top; border: 1px solid #111; padding: 7px 9px; }
+  table.dx td.k { width: 160px; font-weight: bold; background: #f4f4f4; font-size: 16px; letter-spacing: 1px; }
+
+  table.rx { width: 100%; border-collapse: collapse; font-size: 17px; }
+  table.rx th, table.rx td { border: 1px solid #111; padding: 6px 8px; text-align: left; vertical-align: top; }
+  table.rx th { font-size: 14px; letter-spacing: 1px; background: #ebebeb; font-weight: bold; }
+  table.rx th .en { display: block; font-weight: normal; font-size: 11px; letter-spacing: .4px; }
+  table.rx td.n { width: 44px; text-align: center; }
+  table.rx td.st { width: 96px; }
+  table.rx td.ds { width: 108px; }
+  table.rx td.fq { width: 300px; }
+  table.rx td.du { width: 110px; }
+  table.rx td.drug { font-family: Arial, Helvetica, "Liberation Sans", sans-serif; }
+  .rxnote { font-size: 13px; margin-top: 4px; color: #222; }
+
+  .adv .ln { margin-bottom: 3px; }
+
+  .warn { border: 3px solid #111; padding: 9px 14px 10px 14px; margin-top: 6px; }
+  .warn .lead { font-weight: bold; margin-bottom: 4px; }
+  .warn .ln { margin-bottom: 2px; }
+
+  .sig { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; }
+  .sigblk { width: 560px; }
+  .sigline { border-bottom: 1px solid #111; height: 34px; position: relative; }
+  .sigline i { position: absolute; left: 12px; bottom: 1px; font-family: "Snell Roundhand", "Brush Script MT", cursive; font-size: 29px; font-style: normal; }
+  .small { font-size: 13px; }
+  .foot { margin-top: 14px; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #555; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hosp">港灣醫院 &nbsp;<span class="en">HARBOUR VIEW HOSPITAL</span>
+    <small>內科 &nbsp;<span class="en">Department of Medicine</span> &nbsp;|&nbsp; 香港港灣道12號</small>
+  </div>
+  <div class="stamp"><b>SYNTHETIC — NOT A REAL MEDICAL RECORD</b>合成樣張，非真實病歷</div>
+</div>
+<div class="doctype">出院摘要 &nbsp;<span class="en">DISCHARGE SUMMARY</span></div>
+<div class="rule"></div>
+
+<div class="toprow">
+  <div class="label-box">
+    <div class="cap">病人標籤 <span class="en">PATIENT LABEL</span></div>
+    <div class="line"><b>姓名：</b>[病人標籤]</div>
+    <div class="line"><b>身份證號碼：</b>[ ]</div>
+    <div class="line"><b>病歷編號：</b>HVH-XXXXXXXX</div>
+    <div class="line"><b>性別／年齡：</b>男 / 76</div>
+    <div class="line"><b>病房／床號：</b>6B / 08</div>
+  </div>
+  <div class="topfields">
+    <div class="fld"><div class="k">主診醫生：</div><div class="v">陳醫生 (Dr K. M. CHAN)</div></div>
+    <div class="fld"><div class="k">入院日期：</div><div class="v">2026年9月8日</div></div>
+    <div class="fld"><div class="k">出院日期：</div><div class="v">2026年9月16日</div></div>
+    <div class="fld"><div class="k">住院日數：</div><div class="v">8日</div></div>
+    <div class="fld"><div class="k">出院去向：</div><div class="v"><span class="box">X</span>回家 &nbsp; <span class="box"></span>轉院 &nbsp; <span class="box"></span>安老院</div></div>
+    <div class="fld"><div class="k">藥物過敏：</div><div class="v">無</div></div>
+    <div class="fld"><div class="k">已派發文件：</div><div class="v"><span class="box">X</span>出院摘要 &nbsp;<span class="box">X</span>藥袋 &nbsp;<span class="box">X</span>覆診紙</div></div>
+  </div>
+</div>
+
+<table class="dx" style="margin-top:14px;">
+  <tr>
+    <td class="k">出院診斷</td>
+    <td><span class="ln">充血性心臟衰竭急性發作</span></td>
+  </tr>
+  <tr>
+    <td class="k">其他診斷</td>
+    <td><span class="ln">1. 高血壓 &nbsp;&nbsp; 2. 心房顫動</span></td>
+  </tr>
+  <tr>
+    <td class="k">住院經過</td>
+    <td>
+      <span class="ln">76歲男病人，因一星期氣促加劇、雙腳水腫及夜間不能平臥入院。入院時血氧偏低，胸部X光顯示肺部積水。</span>
+      <span class="ln">住院期間以靜脈利尿劑排水，體重下降3.5公斤，氣促及水腫明顯改善。出院前已可平臥，室內步行無氣促。</span>
+    </td>
+  </tr>
+</table>
+
+<div class="sec">
+  <div class="h">出院藥物 <span class="en">DISCHARGE MEDICATIONS</span></div>
+  <table class="rx">
+    <tr>
+      <th>序號</th>
+      <th>藥物名稱 <span class="en">Drug</span></th>
+      <th>劑量 <span class="en">Strength</span></th>
+      <th>每次服量 <span class="en">Dose</span></th>
+      <th>服法 <span class="en">Frequency</span></th>
+      <th>日數 <span class="en">Duration</span></th>
+    </tr>
+    <tr><td class="n">1</td><td class="drug">Frusemide</td><td class="st">40mg</td><td class="ds">1粒</td><td class="fq">每朝一次</td><td class="du">28日</td></tr>
+    <tr><td class="n">2</td><td class="drug">Bisoprolol</td><td class="st">2.5mg</td><td class="ds">1粒</td><td class="fq">每日一次</td><td class="du">28日</td></tr>
+    <tr><td class="n">3</td><td class="drug">Spironolactone</td><td class="st">25mg</td><td class="ds">1粒</td><td class="fq">每日一次，早餐後服</td><td class="du">28日</td></tr>
+    <tr><td class="n">4</td><td class="drug">Apixaban</td><td class="st">5mg</td><td class="ds">1粒</td><td class="fq">每日兩次</td><td class="du">28日</td></tr>
+  </table>
+</div>
+
+<div class="sec">
+  <div class="h">已停用藥物（出院後毋須服用） <span class="en">MEDICATIONS STOPPED THIS ADMISSION</span></div>
+  <table class="rx">
+    <tr>
+      <th>序號</th>
+      <th>藥物名稱 <span class="en">Drug</span></th>
+      <th>劑量 <span class="en">Strength</span></th>
+      <th>每次服量 <span class="en">Dose</span></th>
+      <th>服法 <span class="en">Frequency</span></th>
+      <th>日數 <span class="en">Duration</span></th>
+    </tr>
+    <tr><td class="n">1</td><td class="drug">Indapamide</td><td class="st">2.5mg</td><td class="ds">1粒</td><td class="fq">每朝一次</td><td class="du"></td></tr>
+  </table>
+  <div class="rxnote">上列藥物已於今次住院期間停用，出院後毋須再服用，舊藥請交回藥房。</div>
+</div>
+
+<div class="sec">
+  <div class="h">出院須知 <span class="en">ADVICE ON DISCHARGE</span></div>
+  <div class="body adv">
+    <span class="ln">1. 飲食：低鹽飲食，少食醃製食物及罐頭。</span>
+    <span class="ln">2. 活動：室內慢行，兩星期內避免搬重物及劇烈運動。</span>
+    <span class="ln">3. 每朝起床後磅重並記錄，覆診時帶同記錄。</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">警告徵狀 — 須立即求診 <span class="en">WARNING SIGNS</span></div>
+  <div class="warn">
+    <span class="ln lead">如出現以下任何一種情況，請立即到急症室求診或致電999：</span>
+    <span class="ln">1. 平臥時氣促或夜間喘醒。</span>
+    <span class="ln">2. 雙腳水腫明顯加劇。</span>
+    <span class="ln">3. 胸口痛持續不退。</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">覆診安排 <span class="en">FOLLOW-UP</span></div>
+  <div class="body adv">
+    <span class="ln">1. 覆診：內科專科門診，2026年10月14日（星期三）上午9時30分。請帶同此紙及所有藥袋。</span>
+    <span class="ln">2. 抽血：空腹抽血，抽血室（地下），2026年10月7日（星期三）上午8時至9時。</span>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="h">病房查詢電話 <span class="en">HOSPITAL CONTACT</span></div>
+  <div class="body">
+    <span class="ln">6B病房查詢電話：2xxx xxxx（24小時）</span>
+  </div>
+</div>
+
+<div class="sig">
+  <div class="sigblk">
+    <div class="small" style="font-weight:bold;margin-bottom:3px;">醫生簽署 <span class="en">Doctor's Signature</span></div>
+    <div class="sigline"><i>K.M. Chan</i></div>
+    <div class="small" style="margin-top:3px;">陳醫生 Dr K. M. CHAN, MBBS (HK) &nbsp; 註冊編號 M0XXXXX &nbsp; 2026年9月16日</div>
+  </div>
+  <div class="small" style="text-align:right;">
+    列印日期 2026年9月16日 10:25<br><b>第 1 頁，共 1 頁</b> &nbsp;<span class="en">Page 1 of 1</span>
+  </div>
+</div>
+
+<div class="foot">
+  <span>合成樣張，非真實病歷。病人及醫院均屬虛構。 <span class="en">SYNTHETIC — NOT A REAL MEDICAL RECORD.</span></span>
+  <span>HVH-DS-DEMO-05</span>
+</div>
+
+</body>
+</html>
