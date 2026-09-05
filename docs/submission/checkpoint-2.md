@@ -1,7 +1,7 @@
 # AIx Origin Summit · 香港场 · Checkpoint 2 进度说明
 
 **赛道：** Vital（活域）软医疗 · **队伍：** Fit or Not（产品：Ming Ming · 明明） · **提交人：** Kevin Yue · **提交日期：** 2026 年 9 月 6 日
-**仓库：** https://github.com/kevinyu211/discharge-sheet-agent · **线上版本：** https://mingming.app（手机打开） · **Checkpoint 1：** `docs/submission/checkpoint-1.md`
+**仓库：** https://github.com/kevinyu211/mingming.ai · **线上版本：** https://mingming.app（手机打开） · **Checkpoint 1：** `docs/submission/checkpoint-1.md`
 
 ## 一、项目一句话
 
@@ -39,7 +39,7 @@
 
 # English summary
 
-**Track:** Vital (soft healthcare) · **Team:** Fit or Not (product: Ming Ming · 明明) · **Repo:** https://github.com/kevinyu211/discharge-sheet-agent · **Live:** https://mingming.app
+**Track:** Vital (soft healthcare) · **Team:** Fit or Not (product: Ming Ming · 明明) · **Repo:** https://github.com/kevinyu211/mingming.ai · **Live:** https://mingming.app
 
 **Since Checkpoint 1 (all deployed and verified):** bounded, cancel-safe sheet reading (immediate acknowledgement with honest stages, one 240 s server deadline, one schema retry only with time left, browser-to-provider abort on cancel, only a complete validated card set is stored); interface language selectable before the consent notice; the follow-up screen joined to the conversation (明明 speaks the day's one line composed by code from the counters, and a teach-back recap card records how far the briefing got, how many 明白, how many repeats, what was asked); the phone microphone rewritten as one engine per hold with bounded waits; the data statement and submission pack corrected to the deployed build (Claude Sonnet 5 through the Vercel AI Gateway's Anthropic-compatible endpoint; cloud transcription with the browser engine only as fallback).
 

@@ -10,7 +10,8 @@ printed line, general terms are explained with a label, and anything that would 
 with a medicine is refused before a model is called. Then 跟進 keeps the day: doses counted in
 times (never clock times), the printed appointment, the warning signs, and what you went through.
 
-"聽得明" was the working title; the repository slug `discharge-sheet-agent` is historical.
+"聽得明" was the working title. The repository is https://github.com/kevinyu211/mingming.ai (renamed from
+`discharge-sheet-agent`, which still redirects); the Vercel project keeps the old name.
 
 - Spec, plan, research and tasks: `specs/001-discharge-sheet-agent/`
 - Constitution (the non-negotiable rules): `.specify/memory/constitution.md`
