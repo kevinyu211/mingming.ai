@@ -175,7 +175,7 @@ Each is one sentence of problem, one of fix.
 6. **"Twice a day" became "8am"** in the design mock-up. Now counters count times a day, quote the
    printed clause, and a test sweeps every screen for anything shaped like a clock time.
 
-Say the numbers once, at the end: 1,370 unit tests, 122 browser tests, 20 of 20 on the live
+Say the numbers once, at the end: 1,396 unit tests, 122 browser tests, 20 of 20 on the live
 question set in both dialects, zero banned terms. Built alone in the 72 plus 48 hours.
 
 ---
