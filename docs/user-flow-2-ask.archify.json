@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Ming Ming · 明明 — 2 · Ask, then 跟進",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1400,
+      680
+    ],
+    "views": [
+      {
+        "id": "gates",
+        "label": "Gates before the model",
+        "focus": [
+          "family",
+          "phone",
+          "rules"
+        ],
+        "note": "Crisis and medicine-change questions are refused on the phone with no network call."
+      },
+      {
+        "id": "grounded",
+        "label": "Grounded answer",
+        "focus": [
+          "fn",
+          "claude",
+          "rules",
+          "phone"
+        ],
+        "note": "Answer only from the cards; citations must be server-built ids; first sentence spoken early."
+      },
+      {
+        "id": "track",
+        "label": "跟進",
+        "focus": [
+          "family",
+          "phone",
+          "store"
+        ],
+        "note": "Counters, appointment and recap come from the store. No server."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "family",
+      "type": "external",
+      "label": "Family"
+    },
+    {
+      "id": "phone",
+      "type": "frontend",
+      "label": "Phone web app"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "On-device store"
+    },
+    {
+      "id": "fn",
+      "type": "backend",
+      "label": "Vercel Functions"
+    },
+    {
+      "id": "rules",
+      "type": "security",
+      "label": "Rules"
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude Sonnet 5"
+    },
+    {
+      "id": "openai",
+      "type": "external",
+      "label": "OpenAI"
+    }
+  ],
+  "segments": [
+    {
+      "from": 155,
+      "to": 474,
+      "label": "Ask: hold to talk → grounded answer"
+    },
+    {
+      "from": 488,
+      "to": 585,
+      "label": "跟進: computed on the phone"
+    }
+  ],
+  "messages": [
+    {
+      "id": "hold",
+      "from": "family",
+      "to": "phone",
+      "y": 178,
+      "label": "hold the bar and ask, in Cantonese",
+      "variant": "emphasis"
+    },
+    {
+      "id": "stt-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 212,
+      "label": "POST /api/stt · recorded clip"
+    },
+    {
+      "id": "stt-text",
+      "from": "fn",
+      "to": "openai",
+      "y": 246,
+      "label": "gpt-4o-mini-transcribe → text, shown before sending"
+    },
+    {
+      "id": "phone-gates",
+      "from": "phone",
+      "to": "rules",
+      "y": 280,
+      "label": "crisis + medicine-change gates on the phone · refusal needs no network",
+      "variant": "security"
+    },
+    {
+      "id": "ask-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 314,
+      "label": "POST /api/ask · cards + question + last turns",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ask-model",
+      "from": "fn",
+      "to": "claude",
+      "y": 348,
+      "label": "via the Gateway: answer only from the cards · kind + citations"
+    },
+    {
+      "id": "ask-rules",
+      "from": "fn",
+      "to": "rules",
+      "y": 382,
+      "label": "citations must be server-built card ids · banned filter",
+      "variant": "security"
+    },
+    {
+      "id": "ask-early",
+      "from": "fn",
+      "to": "phone",
+      "y": 416,
+      "label": "first spoken sentence early, then the full answer",
+      "variant": "return"
+    },
+    {
+      "id": "answer",
+      "from": "phone",
+      "to": "family",
+      "y": 450,
+      "label": "spoken by MiniMax · 睇張紙點寫 opens the printed line",
+      "variant": "return"
+    },
+    {
+      "id": "open-track",
+      "from": "family",
+      "to": "phone",
+      "y": 484,
+      "label": "open 跟進"
+    },
+    {
+      "id": "track-read",
+      "from": "phone",
+      "to": "store",
+      "y": 518,
+      "label": "doses left today · appointment · recap of 明白 and questions"
+    },
+    {
+      "id": "track-say",
+      "from": "phone",
+      "to": "family",
+      "y": 552,
+      "label": "明明's one line, composed by code · share text built here",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "phone",
+      "from": 205,
+      "to": 560,
+      "type": "frontend"
+    },
+    {
+      "participant": "fn",
+      "from": 212,
+      "to": 532,
+      "type": "backend"
+    }
+  ]
+}

@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Ming Ming · 明明 — 1 · Scan the sheet",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1400,
+      640
+    ],
+    "views": [
+      {
+        "id": "model",
+        "label": "The model's part",
+        "focus": [
+          "fn",
+          "gateway",
+          "claude"
+        ],
+        "note": "One structured read through the Gateway; the schema is enforced server-side."
+      },
+      {
+        "id": "gates",
+        "label": "The code's part",
+        "focus": [
+          "fn",
+          "rules",
+          "phone",
+          "store"
+        ],
+        "note": "Order, filter, quote check, save, then speak the red flags first."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "family",
+      "type": "external",
+      "label": "Family"
+    },
+    {
+      "id": "phone",
+      "type": "frontend",
+      "label": "Phone web app"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "On-device store"
+    },
+    {
+      "id": "fn",
+      "type": "backend",
+      "label": "Vercel Functions"
+    },
+    {
+      "id": "rules",
+      "type": "security",
+      "label": "Rules"
+    },
+    {
+      "id": "gateway",
+      "type": "cloud",
+      "label": "AI Gateway"
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude Sonnet 5"
+    },
+    {
+      "id": "minimax",
+      "type": "external",
+      "label": "MiniMax"
+    }
+  ],
+  "segments": [
+    {
+      "from": 155,
+      "to": 545,
+      "label": "Scan: photo → cards → spoken red flags"
+    }
+  ],
+  "messages": [
+    {
+      "id": "shoot",
+      "from": "family",
+      "to": "phone",
+      "y": 178,
+      "label": "拍張紙 · photograph up to 6 pages",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 212,
+      "label": "POST /api/read · 2400 px JPEG pages, EXIF dropped",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-gw",
+      "from": "fn",
+      "to": "gateway",
+      "y": 246,
+      "label": "read request · JSON schema enforced"
+    },
+    {
+      "id": "read-model",
+      "from": "gateway",
+      "to": "claude",
+      "y": 280,
+      "label": "anthropic/claude-sonnet-5 · 64k tokens · 240 s deadline"
+    },
+    {
+      "id": "read-stream",
+      "from": "claude",
+      "to": "fn",
+      "y": 314,
+      "label": "streamed JSON: warning signs, medicines, follow-up, diet",
+      "variant": "return"
+    },
+    {
+      "id": "read-rules",
+      "from": "fn",
+      "to": "rules",
+      "y": 348,
+      "label": "order · banned terms · quote check · unverified mark",
+      "variant": "security"
+    },
+    {
+      "id": "read-ndjson",
+      "from": "fn",
+      "to": "phone",
+      "y": 382,
+      "label": "NDJSON: early warning cards ~13 s → all cards → done",
+      "variant": "return"
+    },
+    {
+      "id": "save",
+      "from": "phone",
+      "to": "store",
+      "y": 416,
+      "label": "save reading · archive the last sheet",
+      "variant": "dashed"
+    },
+    {
+      "id": "tts-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 450,
+      "label": "POST /api/tts · filtered card text"
+    },
+    {
+      "id": "tts-voice",
+      "from": "fn",
+      "to": "minimax",
+      "y": 484,
+      "label": "speech-2.8-hd → Cantonese audio"
+    },
+    {
+      "id": "briefing",
+      "from": "phone",
+      "to": "family",
+      "y": 518,
+      "label": "red flags first, then one medicine per turn; waits for 明白",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "phone",
+      "from": 205,
+      "to": 526,
+      "type": "frontend"
+    },
+    {
+      "participant": "fn",
+      "from": 212,
+      "to": 498,
+      "type": "backend"
+    }
+  ]
+}

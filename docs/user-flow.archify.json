@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Ming Ming · 明明 — one sheet, start to finish",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1400,
+      1080
+    ],
+    "views": [
+      {
+        "id": "scan",
+        "label": "1 · Scan the sheet",
+        "focus": [
+          "family",
+          "phone",
+          "fn",
+          "gateway",
+          "claude",
+          "rules",
+          "store"
+        ],
+        "note": "Photo to cards: the model reads through the Gateway, the rules check every card, the phone saves and speaks the red flags first."
+      },
+      {
+        "id": "ask",
+        "label": "2 · Ask a question",
+        "focus": [
+          "family",
+          "phone",
+          "fn",
+          "openai",
+          "rules",
+          "claude"
+        ],
+        "note": "Hold to talk, transcribe, gate on the phone, ask the model only from the cards, check citations, speak the first sentence early."
+      },
+      {
+        "id": "track",
+        "label": "3 · 跟進",
+        "focus": [
+          "family",
+          "phone",
+          "store"
+        ],
+        "note": "Counters, appointment and recap are computed on the phone from what is stored. No server is involved."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "family",
+      "type": "external",
+      "label": "Family"
+    },
+    {
+      "id": "phone",
+      "type": "frontend",
+      "label": "Phone web app"
+    },
+    {
+      "id": "store",
+      "type": "database",
+      "label": "On-device store"
+    },
+    {
+      "id": "fn",
+      "type": "backend",
+      "label": "Vercel Functions"
+    },
+    {
+      "id": "rules",
+      "type": "security",
+      "label": "Rules"
+    },
+    {
+      "id": "gateway",
+      "type": "cloud",
+      "label": "AI Gateway"
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude Sonnet 5"
+    },
+    {
+      "id": "minimax",
+      "type": "external",
+      "label": "MiniMax"
+    },
+    {
+      "id": "openai",
+      "type": "external",
+      "label": "OpenAI"
+    }
+  ],
+  "segments": [
+    {
+      "from": 155,
+      "to": 542,
+      "label": "1 · Scan: photo → cards → spoken red flags"
+    },
+    {
+      "from": 560,
+      "to": 868,
+      "label": "2 · Ask: hold to talk → grounded answer"
+    },
+    {
+      "from": 882,
+      "to": 986,
+      "label": "3 · 跟進: computed on the phone"
+    }
+  ],
+  "messages": [
+    {
+      "id": "shoot",
+      "from": "family",
+      "to": "phone",
+      "y": 178,
+      "label": "拍張紙 · photograph up to 6 pages",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 212,
+      "label": "POST /api/read · 2400 px JPEG pages, EXIF dropped",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-gw",
+      "from": "fn",
+      "to": "gateway",
+      "y": 246,
+      "label": "read request · JSON schema enforced"
+    },
+    {
+      "id": "read-model",
+      "from": "gateway",
+      "to": "claude",
+      "y": 280,
+      "label": "anthropic/claude-sonnet-5 · 64k tokens · 240 s deadline"
+    },
+    {
+      "id": "read-stream",
+      "from": "claude",
+      "to": "fn",
+      "y": 314,
+      "label": "streamed JSON: warning signs, medicines, follow-up, diet",
+      "variant": "return"
+    },
+    {
+      "id": "read-rules",
+      "from": "fn",
+      "to": "rules",
+      "y": 348,
+      "label": "order · banned terms · quote check · unverified mark",
+      "variant": "security"
+    },
+    {
+      "id": "read-ndjson",
+      "from": "fn",
+      "to": "phone",
+      "y": 382,
+      "label": "NDJSON: early warning cards ~13 s → all cards → done",
+      "variant": "return"
+    },
+    {
+      "id": "save",
+      "from": "phone",
+      "to": "store",
+      "y": 416,
+      "label": "save reading · archive the last sheet",
+      "variant": "dashed"
+    },
+    {
+      "id": "tts-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 450,
+      "label": "POST /api/tts · filtered card text"
+    },
+    {
+      "id": "tts-voice",
+      "from": "fn",
+      "to": "minimax",
+      "y": 484,
+      "label": "speech-2.8-hd → Cantonese audio"
+    },
+    {
+      "id": "briefing",
+      "from": "phone",
+      "to": "family",
+      "y": 518,
+      "label": "red flags first, then one medicine per turn; waits for 明白",
+      "variant": "return"
+    },
+    {
+      "id": "hold",
+      "from": "family",
+      "to": "phone",
+      "y": 578,
+      "label": "hold the bar and ask, in Cantonese",
+      "variant": "emphasis"
+    },
+    {
+      "id": "stt-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 612,
+      "label": "POST /api/stt · recorded clip"
+    },
+    {
+      "id": "stt-text",
+      "from": "fn",
+      "to": "openai",
+      "y": 646,
+      "label": "gpt-4o-mini-transcribe → text, shown before sending"
+    },
+    {
+      "id": "phone-gates",
+      "from": "phone",
+      "to": "rules",
+      "y": 680,
+      "label": "crisis + medicine-change gates on the phone · refusal needs no network",
+      "variant": "security"
+    },
+    {
+      "id": "ask-post",
+      "from": "phone",
+      "to": "fn",
+      "y": 714,
+      "label": "POST /api/ask · cards + question + last turns",
+      "variant": "emphasis"
+    },
+    {
+      "id": "ask-model",
+      "from": "fn",
+      "to": "claude",
+      "y": 748,
+      "label": "via the Gateway: answer only from the cards · kind + citations"
+    },
+    {
+      "id": "ask-rules",
+      "from": "fn",
+      "to": "rules",
+      "y": 782,
+      "label": "citations must be server-built card ids · banned filter",
+      "variant": "security"
+    },
+    {
+      "id": "ask-early",
+      "from": "fn",
+      "to": "phone",
+      "y": 816,
+      "label": "first spoken sentence early, then the full answer",
+      "variant": "return"
+    },
+    {
+      "id": "answer",
+      "from": "phone",
+      "to": "family",
+      "y": 850,
+      "label": "spoken by MiniMax · 睇張紙點寫 opens the printed line",
+      "variant": "return"
+    },
+    {
+      "id": "open-track",
+      "from": "family",
+      "to": "phone",
+      "y": 896,
+      "label": "open 跟進"
+    },
+    {
+      "id": "track-read",
+      "from": "phone",
+      "to": "store",
+      "y": 930,
+      "label": "doses left today · appointment · recap of 明白 and questions"
+    },
+    {
+      "id": "track-say",
+      "from": "phone",
+      "to": "family",
+      "y": 964,
+      "label": "明明's one line, composed by code · share text built here",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "phone",
+      "from": 205,
+      "to": 526,
+      "type": "frontend"
+    },
+    {
+      "participant": "fn",
+      "from": 212,
+      "to": 490,
+      "type": "backend"
+    },
+    {
+      "participant": "gateway",
+      "from": 240,
+      "to": 320,
+      "type": "cloud"
+    },
+    {
+      "participant": "claude",
+      "from": 275,
+      "to": 320,
+      "type": "external"
+    },
+    {
+      "participant": "phone",
+      "from": 573,
+      "to": 858,
+      "type": "frontend"
+    },
+    {
+      "participant": "fn",
+      "from": 615,
+      "to": 822,
+      "type": "backend"
+    },
+    {
+      "participant": "phone",
+      "from": 891,
+      "to": 970,
+      "type": "frontend"
+    }
+  ]
+}
