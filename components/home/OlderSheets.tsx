@@ -33,7 +33,7 @@ export default function OlderSheets({ sheets }: { sheets: Sheet[] }) {
         aria-expanded={open}
         className="flex min-h-12 w-full items-center justify-between px-0.5 py-5 text-left"
       >
-        <span className="text-[18px] text-muted">{fill(t("home.older"), { n: sheets.length })}</span>
+        <span className="text-[15px] text-muted">{fill(t("home.older"), { n: sheets.length })}</span>
         <span aria-hidden="true" className="text-[20px] leading-none text-faint">
           {open ? "⌃" : "⌄"}
         </span>
@@ -48,8 +48,8 @@ export default function OlderSheets({ sheets }: { sheets: Sheet[] }) {
             >
               <PageThumb size="sm" />
               <div className="min-w-0 flex-1">
-                <p className="text-[19px] leading-[1.3] font-medium text-ink">{sheet.title}</p>
-                <p className="mt-[3px] text-[16px] text-muted">
+                <p className="text-[16px] leading-[1.3] font-semibold text-ink">{sheet.title}</p>
+                <p className="mt-[3px] text-[13px] text-muted">
                   {[formatMonthDay(sheet.capturedAt, locale), t("home.readOnly")]
                     .filter((part) => part.length > 0)
                     .join(" · ")}

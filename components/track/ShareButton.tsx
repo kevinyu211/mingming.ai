@@ -64,7 +64,7 @@ export default function ShareButton({ reading }: { reading: StoredReading }) {
       type="button"
       onClick={() => void share()}
       aria-live="polite"
-      className="tap surface flex w-full items-center justify-center gap-2.5 rounded-[16px] px-5 py-[18px] text-[18px] font-medium text-jade-ink"
+      className="tap chunky inline-flex min-h-12 w-full max-w-[280px] items-center justify-center gap-2 rounded-full border border-hairline bg-card px-5 text-[15px] font-semibold text-ink"
     >
       <ShareMark />
       {copied ? t("share.copied") : t("share.button")}
@@ -85,8 +85,8 @@ function ShareMark() {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="M10 12.5V3M6.5 6.5 10 3l3.5 3.5" />
-      <path d="M4 10.5v5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-5" />
+      <path d="M11.5 4l5 4.2-5 4.2V4Z" />
+      <path d="M16.5 8.2c-6.7 0-10.8 1.7-13.3 7.5" />
     </svg>
   );
 }

@@ -1,14 +1,15 @@
 "use client";
 
 /**
- * 記錄 — the first tab, in its two states (brief §7).
+ * 記錄 — the first tab, in the "Three Things" cut (Companion D).
  *
- * **Empty**, before anything has been photographed: the two big buttons, then 明明 at full
- * strength in greeting with 「仲未有紙。拍完我就即刻講俾你聽。」
+ * **Empty**, before anything has been photographed, it is the start screen: the wordmark and the
+ * language pill, 明明 with the one thing he has to say before there is a sheet, 「您好。畀我睇睇您嘅
+ * 出院紙。」, and two big rows — take a photo, or upload a photo someone sent you.
  *
- * **With a sheet**: the same two buttons at the smaller size, the conversation row (and the
- * quiet doses line it keeps underneath once the check-in is answered), the active sheet, and
- * 以前嘅 behind a disclosure.
+ * **With a sheet**: the conversation row (and the quiet doses line under it once the check-in is
+ * answered), the active sheet, the two capture pills at the smaller size, and 以前嘅 behind a
+ * disclosure.
  *
  * ONE ACTIVE SHEET (brief §1) is the rule the whole screen is shaped around. There is no list of
  * sheets to choose between: there is the sheet being talked about, and behind it, history that can
@@ -16,9 +17,6 @@
  *
  * `today` is created once per mount rather than per render so the counter cannot change under a
  * re-render, and so the pure rules underneath keep taking their clock as an argument.
- *
- * Desktop (`lg:` and up) is a two-column workspace around the same facts. The phone column,
- * the tab bar, and the 92 px greeting stay as they were.
  */
 import Link from "next/link";
 import { useState } from "react";
@@ -27,10 +25,12 @@ import Mascot from "@/components/Mascot";
 import TabBar, { TAB_BAR_HEIGHT } from "@/components/TabBar";
 import CaptureButtons from "@/components/home/CaptureButtons";
 import CheckinNotice from "@/components/home/CheckinNotice";
+import LanguagePill from "@/components/home/LanguagePill";
 import { homeUnread } from "@/components/home/conversation";
 import OlderSheets from "@/components/home/OlderSheets";
 import SheetCard from "@/components/home/SheetCard";
 import { useSheets } from "@/components/home/useSheets";
+import Wordmark from "@/components/Wordmark";
 
 /** Clear of the 96px tab bar plus a little air, so the last row is never half under it. */
 const BOTTOM_GAP = TAB_BAR_HEIGHT + 24;
@@ -43,25 +43,32 @@ export default function HomeScreen() {
   return (
     <>
       <main
-        className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-3.5 pb-[var(--tab-pad)] lg:max-w-none lg:px-10 lg:pt-8 lg:pb-10"
+        className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-3.5 pb-[var(--tab-pad)] lg:max-w-none lg:px-10 lg:pt-8 lg:pb-10"
         style={{ ["--tab-pad" as string]: `${BOTTOM_GAP}px` }}
       >
-        <header className="flex items-start justify-between gap-3">
-          <h1 className="text-[30px] leading-[1.3] font-bold text-ink lg:text-[28px]">{t("home.title")}</h1>
-          {/*
-            The canvas has no control here. This one stays because `/settings` is the only route to
-            刪除所有資料, and the constitution requires that control to exist and be reachable
-            (principle V). It is a 48px target and it says what it is to a screen reader.
-            On a desktop the rail already has Settings, so the gear hides at `lg`.
-          */}
-          <Link
-            href="/settings"
-            aria-label={t("settings.title")}
-            className="tap shrink-0 rounded-full text-muted lg:hidden"
-          >
-            <GearGlyph />
-          </Link>
+        <header className="flex min-h-12 items-center justify-between gap-3">
+          <Wordmark />
+          <div className="flex items-center gap-2">
+            <LanguagePill />
+            {/*
+              The gear stays because `/settings` is the only route to 刪除所有資料, and the
+              constitution requires that control to exist and be reachable (principle V). On a
+              desktop the rail already has Settings, so it hides at `lg`.
+            */}
+            <Link
+              href="/settings"
+              aria-label={t("settings.title")}
+              className="pill h-9 w-9 shrink-0 !px-0 text-muted lg:hidden"
+            >
+              <GearGlyph />
+            </Link>
+          </div>
         </header>
+
+        {/* The tab's own name, small, above whichever state follows. It is the page heading. */}
+        <h1 className="mt-2 text-[13px] leading-[18px] font-semibold tracking-normal text-muted">
+          {t("home.title")}
+        </h1>
 
         {/*
           Before the stored sheets have been read, hold the shape. Flashing 「仲未有紙」 at someone
@@ -72,27 +79,25 @@ export default function HomeScreen() {
         ) : active === null ? (
           <EmptyState />
         ) : (
-          <div className="lg:mt-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-8">
-            {/*
-              明明 first. Once a sheet exists, the job is to hear it — not to photograph another
-              one. The camera pair drops below the paper so the conversation is the thing a
-              bystander sees from across the table.
-            */}
-            <CheckinNotice sheet={active} today={today} />
+          <>
+            <div className="lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-8">
+              {/* 明明 first. Once a sheet exists, the job is to hear it, not to photograph another. */}
+              <CheckinNotice sheet={active} today={today} />
 
-            <div>
-              <h2 className="mt-[30px] mb-3 px-0.5 text-[15px] font-medium tracking-[0.06em] text-muted lg:mt-0">
-                {t("home.nowTalking")}
-              </h2>
-              <SheetCard sheet={active} />
+              <div>
+                <h2 className="mt-7 mb-2.5 px-0.5 text-[13px] font-semibold text-muted lg:mt-0">
+                  {t("home.nowTalking")}
+                </h2>
+                <SheetCard sheet={active} />
 
-              <div className="mt-5">
-                <CaptureButtons size="sm" />
+                <div className="mt-4">
+                  <CaptureButtons size="sm" />
+                </div>
+
+                <OlderSheets sheets={archive} />
               </div>
-
-              <OlderSheets sheets={archive} />
             </div>
-          </div>
+          </>
         )}
       </main>
 
@@ -105,22 +110,34 @@ function EmptyState() {
   const { t } = useLocale();
 
   return (
-    <>
-      <p className="mt-1.5 text-[18px] leading-[1.55] text-muted lg:mx-auto lg:mt-4 lg:max-w-xl lg:text-center">
-        {t("home.emptySubtitle")}
-      </p>
-      <div className="mt-8 mb-5 flex flex-col items-center gap-4 lg:mt-16 lg:mb-10 lg:gap-6">
-        <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full lg:h-[168px] lg:w-[168px]">
+    <div className="flex flex-1 flex-col lg:mx-auto lg:w-full lg:max-w-xl">
+      <div className="flex-1" />
+
+      {/* 明明, with the one thing he has to say before there is a sheet. */}
+      <div className="flex items-center gap-4">
+        <span className="companion-plate grid h-[112px] w-[112px] shrink-0 place-items-center rounded-full">
           <Mascot size={92} state="greeting" />
         </span>
-        <p className="max-w-[280px] text-center text-[20px] leading-[1.55] font-medium text-ink lg:max-w-md lg:text-[22px]">
-          {t("home.emptyMascot")}
-        </p>
+        <p className="max-w-[220px] text-[15px] leading-[1.5] text-muted">{t("home.emptyMascot")}</p>
       </div>
-      <div className="lg:mx-auto lg:w-full lg:max-w-xl">
+
+      <p className="mt-7 text-[34px] leading-[40px] font-bold tracking-[-0.5px] whitespace-pre-line text-ink lg:text-[40px] lg:leading-[46px]">
+        {t("companion.homeTitle")}
+      </p>
+      <p className="mt-3.5 max-w-[320px] text-[17px] leading-[26px] text-muted">
+        {t("companion.homeSub")}
+      </p>
+
+      <div className="mt-9">
         <CaptureButtons size="lg" />
       </div>
-    </>
+
+      <div className="flex-1" />
+
+      <p className="px-3 pt-6 pb-2 text-center text-[13px] leading-[18px] text-muted">
+        {t("review.onDevice")}
+      </p>
+    </div>
   );
 }
 
@@ -130,10 +147,10 @@ function GearGlyph() {
       viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="h-5 w-5"
+      className="h-[18px] w-[18px]"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="1.8"
       strokeLinecap="round"
       strokeLinejoin="round"
     >

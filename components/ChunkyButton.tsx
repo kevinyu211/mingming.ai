@@ -30,36 +30,43 @@ export interface ChunkyButtonProps extends ButtonHTMLAttributes<HTMLButtonElemen
   fullWidth?: boolean;
 }
 
-const VARIANT: Record<ChunkyVariant, { fill: string; ink: string; edge: string; weight: number }> = {
+/*
+ * Atoms buttons are pills: charcoal for the one primary action, white with a stroke for the
+ * second choice, paper-muted for the quiet option. No hard shadow, no border radius under 999.
+ * Text on charcoal is white (15.4:1); on the two light fills it is charcoal.
+ */
+const VARIANT: Record<
+  ChunkyVariant,
+  { fill: string; ink: string; edge: string; weight: number; border: string }
+> = {
   jade: {
-    fill: "var(--jade)",
-    ink: "#ffffff", // 5.05:1 on --jade, so it passes AA at any text size
+    fill: "var(--ink)",
+    ink: "#ffffff",
+    // `.chunky` no longer draws the edge in the Atoms language; the custom property is still
+    // published so anything that reads it keeps working.
     edge: "var(--jade-shadow)",
-    weight: 700,
+    weight: 600,
+    border: "1px solid var(--ink)",
   },
   tinted: {
-    fill: "var(--jade-tint)",
-    ink: "var(--jade-ink)", // 5.34:1 on --jade-tint
+    fill: "var(--card)",
+    ink: "var(--ink)",
     edge: "var(--jade-edge)",
-    weight: 700,
+    weight: 600,
+    border: "1px solid var(--hairline)",
   },
   neutral: {
     fill: "var(--neutral)",
-    /*
-     * The canvas uses #5C594F here (6.00:1). That grey did not survive the palette collapse, and
-     * --muted, the token that replaced it, is only 4.56:1 on this fill — the floor, not a
-     * comfortable reading, for a 19px action label. --ink at 12.72:1 is the honest choice; this
-     * button recedes through its fill, which is what makes it the quiet one, not through weak text.
-     */
     ink: "var(--ink)",
     edge: "var(--neutral-edge)",
     weight: 500,
+    border: "1px solid var(--neutral)",
   },
 };
 
-const SIZE: Record<ChunkySize, { padding: string; font: number; radius: number }> = {
-  lg: { padding: "24px 20px", font: 22, radius: 20 },
-  md: { padding: "18px 16px", font: 19, radius: 16 },
+const SIZE: Record<ChunkySize, { padding: string; font: number; radius: number; height: number }> = {
+  lg: { padding: "0 24px", font: 19, radius: 999, height: 56 },
+  md: { padding: "0 20px", font: 17, radius: 999, height: 48 },
 };
 
 export default function ChunkyButton({
@@ -91,6 +98,7 @@ export default function ChunkyButton({
            * text on a saturated green — the disabled state was the least legible thing on screen.
            */
           background: disabled ? "var(--neutral)" : v.fill,
+          border: disabled ? "1px solid var(--neutral)" : v.border,
           /*
            * Its label still has a job — 「揀最少一張」 is telling you what to do next — so it stays
            * at --muted (4.56:1 on that fill), not the canvas's --faint (1.85:1). Disabled controls
@@ -102,8 +110,12 @@ export default function ChunkyButton({
           lineHeight: 1.25,
           padding: s.padding,
           borderRadius: s.radius,
-          border: 0,
           minHeight: 48,
+          height: s.height,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
           cursor: disabled ? "default" : "pointer",
           ...style,
         } as CSSProperties

@@ -25,4 +25,5 @@ export type {
   Sheet,
   SheetsState,
   ThreadMessage,
+  ThreadWidget,
 } from "@/lib/sheets/types";

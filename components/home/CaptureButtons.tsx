@@ -1,144 +1,123 @@
 "use client";
 
 /**
- * 拍張紙 / 上載相片 — the pair at the top of 記錄, in the canvas's two sizes.
+ * 拍張紙 / 上載相片 — the two ways in (Companion D, "Three Things").
  *
- * Split in two equal halves on purpose (canvas note 5): the adult child photographing the sheet at
- * the ward window is at least as likely as the parent shooting it herself, so the photo library is
- * an equal way in rather than a fallback hidden behind an overflow menu.
+ * `lg` is the start screen: two big rows, the charcoal one to take a photo and the white one to
+ * upload a photo someone sent you, each with a line saying what it is for. `sm` is the same pair
+ * as two pills, for a 記錄 that already has a sheet on it.
  *
- * Both are links into `/capture`, which owns the camera, the picker and the six-page ceiling.
- * `?pick=1` is the only difference: it opens the photo picker on arrival. Nothing here knows
- * whether this device has a camera — `/capture` detects that and says so honestly one tap in,
- * which is the same answer the v1 screen gave and the only place the truth is knowable.
- *
- * They are `<Link>`s wearing `.chunky` rather than `ChunkyButton`s, because a navigation must be a
- * real anchor: long-press, middle-click and "open in new tab" all have to keep working, and a
- * button that calls `router.push` breaks every one of them.
+ * Both are `<Link>`s to `/capture`, because a navigation must be a real anchor: long-press,
+ * middle-click and "open in new tab" all keep working, and `?pick=1` is the only thing that tells
+ * the capture screen to open the photo picker on arrival. Nothing here knows whether this device
+ * has a camera — `/capture` detects that and says so honestly one tap in.
  */
 import Link from "next/link";
 import { useT } from "@/components/LocaleProvider";
 
 export type CaptureButtonsSize = "lg" | "sm";
 
-const SIZE = {
-  lg: { padding: "28px 16px", radius: 22, gap: 14, icon: 46, label: 23, sub: true },
-  sm: { padding: "20px 14px", radius: 20, gap: 10, icon: 34, label: 21, sub: false },
-} as const;
-
 export default function CaptureButtons({ size = "lg" }: { size?: CaptureButtonsSize }) {
   const t = useT();
-  const s = SIZE[size];
+
+  if (size === "lg") {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <Link
+          href="/capture"
+          className="chunky flex min-h-12 items-center gap-4 rounded-[20px] bg-ink p-5 text-white no-underline"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-charcoal-elevated">
+            <CameraGlyph stroke="#ffffff" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[19px] leading-[1.25] font-bold">{t("capture.photo")}</span>
+            <span className="mt-0.5 block text-[14px] leading-[1.35] text-on-dark-muted">
+              {t("companion.takePhotoSub")}
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-[20px] leading-none text-on-dark-muted">
+            ›
+          </span>
+        </Link>
+
+        <Link
+          href="/capture?pick=1"
+          className="chunky flex min-h-12 items-center gap-4 rounded-[20px] border border-hairline bg-card p-5 text-ink no-underline"
+        >
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ground">
+            <UploadGlyph />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[19px] leading-[1.25] font-bold">{t("capture.upload")}</span>
+            <span className="mt-0.5 block text-[14px] leading-[1.35] text-muted">
+              {t("companion.uploadSub")}
+            </span>
+          </span>
+          <span aria-hidden="true" className="text-[20px] leading-none text-faint">
+            ›
+          </span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex gap-3 lg:gap-4">
-      <Tile
+    <div className="flex gap-2.5">
+      <Link
         href="/capture"
-        variant="jade"
-        size={size}
-        label={t("capture.photo")}
-        sub={s.sub ? t("capture.photoSub") : null}
-        icon={<CameraGlyph width={s.icon} />}
-      />
-      <Tile
+        className="chunky flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 text-[15px] font-semibold text-white no-underline"
+      >
+        <CameraGlyph stroke="#ffffff" size={18} />
+        {t("capture.photo")}
+      </Link>
+      <Link
         href="/capture?pick=1"
-        variant="tinted"
-        size={size}
-        label={t("capture.upload")}
-        sub={s.sub ? t("capture.uploadSub") : null}
-        icon={<PhotosGlyph width={s.icon} />}
-      />
+        className="chunky flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full border border-hairline bg-card px-4 text-[15px] font-semibold text-ink no-underline"
+      >
+        <UploadGlyph />
+        {t("capture.upload")}
+      </Link>
     </div>
   );
 }
 
-function Tile({
-  href,
-  variant,
-  size,
-  label,
-  sub,
-  icon,
-}: {
-  href: string;
-  variant: "jade" | "tinted";
-  size: CaptureButtonsSize;
-  label: string;
-  sub: string | null;
-  icon: React.ReactNode;
-}) {
-  const s = SIZE[size];
-  const jade = variant === "jade";
-
-  return (
-    <Link
-      href={href}
-      className="chunky flex min-h-12 flex-1 flex-col items-center no-underline"
-      style={{
-        // `.chunky` reads this for the 4px hard edge it sinks into on press.
-        ["--chunky-edge" as string]: jade ? "var(--jade-shadow)" : "var(--jade-edge)",
-        background: jade ? "var(--jade)" : "var(--jade-tint)",
-        color: jade ? "#ffffff" : "var(--jade-ink)",
-        borderRadius: s.radius,
-        padding: s.padding,
-        gap: s.gap,
-      }}
-    >
-      {icon}
-      <span className="text-center">
-        <span className="block font-bold" style={{ fontSize: s.label, lineHeight: 1.25 }}>
-          {label}
-        </span>
-        {sub ? (
-          /*
-           * The canvas prints this gloss at rgba(255,255,255,.74) on jade and rgba(20,112,90,.68)
-           * on the tint — 3.2:1 and 2.9:1, both under AA for a 13.5px line that is real text a
-           * bystander is expected to read. It is solid here instead: white is 5.05:1 on --jade and
-           * --jade-ink is 5.34:1 on --jade-tint. Weight, not opacity, keeps it secondary.
-           */
-          <span className="mt-[3px] block font-normal opacity-100" style={{ fontSize: 13.5, lineHeight: 1.35 }}>
-            {sub}
-          </span>
-        ) : null}
-      </span>
-    </Link>
-  );
-}
-
-function CameraGlyph({ width }: { width: number }) {
+function CameraGlyph({ stroke, size = 24 }: { stroke: string; size?: number }) {
   return (
     <svg
-      width={width}
-      height={Math.round((width * 41) / 46)}
-      viewBox="0 0 27 24"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
-      strokeWidth="2.1"
+      stroke={stroke}
+      strokeWidth="1.6"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
     >
-      <rect x="1.4" y="5.4" width="24.2" height="17.2" rx="4" />
-      <path d="M9 5.2 10.5 1.4h5.9L18 5.2" strokeLinejoin="round" />
-      <circle cx="13.5" cy="13.8" r="4.7" />
+      <rect x="3" y="6" width="18" height="14" rx="3" />
+      <circle cx="12" cy="13" r="3.5" />
+      <path d="M9 6l1.4-2h3.2L15 6" />
     </svg>
   );
 }
 
-function PhotosGlyph({ width }: { width: number }) {
+function UploadGlyph() {
   return (
     <svg
-      width={width}
-      height={Math.round((width * 41) / 46)}
-      viewBox="0 0 27 24"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.1"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
     >
-      <rect x="1.4" y="3.4" width="24.2" height="19.2" rx="4" />
-      <path d="M1.6 17.4l6.6-5.6 5.4 4.6 3.6-3 8.2 6.8" strokeLinejoin="round" />
-      <circle cx="8.4" cy="8.6" r="2.3" />
+      <path d="M12 16V5M8 9l4-4 4 4" />
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
     </svg>
   );
 }

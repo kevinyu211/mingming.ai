@@ -11,7 +11,7 @@
  * 明明 last said something in the thread, read back off the thread, never a time we scheduled.
  *
  * Unread (pending check-in, or a briefing that has not ended) keeps the jade-tint card, the
- * greeting pop, and the amber dot. Once the briefing is over and the check-in is not pending, the
+ * greeting pop, and the unread dot. Once the briefing is over and the check-in is not pending, the
  * same row goes quiet: white surface, idle, no dot. A finished check-in still collapses into the
  * doses line underneath, linking to 跟進.
  *
@@ -51,7 +51,7 @@ export default function CheckinNotice({ sheet, today }: { sheet: Sheet; today: D
         href={href}
         className={
           unread
-            ? "companion-card mt-5 flex min-h-12 w-full items-center gap-4 rounded-[24px] p-4 no-underline shadow-raised lg:mt-0 lg:min-h-[11rem] lg:p-6"
+            ? "companion-card mt-5 flex min-h-12 w-full items-center gap-4 rounded-[24px] p-4 no-underline lg:mt-0 lg:min-h-[11rem] lg:p-6"
             : "surface mt-5 flex min-h-12 w-full items-center gap-4 rounded-[24px] p-4 no-underline lg:mt-0 lg:min-h-[11rem] lg:p-6"
         }
       >
@@ -72,16 +72,16 @@ export default function CheckinNotice({ sheet, today }: { sheet: Sheet; today: D
 
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
-            <span className={`text-[20px] font-bold ${unread ? "companion-ink" : "text-ink"}`}>
+            <span className={`text-[18px] font-bold ${unread ? "companion-ink" : "text-ink"}`}>
               {t("mascot.name")}
             </span>
             {at ? <span className="shrink-0 text-[15px] text-muted">{at}</span> : null}
           </span>
-          <span className="mt-1 block text-[19px] leading-[1.45] font-medium text-ink">
+          <span className="mt-1 block text-[16px] leading-[1.5] text-ink">
             {homePreview(sheet, t)}
           </span>
           <span
-            className={`mt-2 block text-[16px] font-semibold ${unread ? "companion-ink" : "text-muted"}`}
+            className={`mt-2 block text-[13px] font-semibold ${unread ? "companion-ink" : "text-muted"}`}
           >
             {t("tab.chat")} ›
           </span>
@@ -102,7 +102,7 @@ function DoneLine({ sheet, today }: { sheet: Sheet; today: Date }) {
       className="flex min-h-12 w-full items-center gap-3 rounded-[18px] px-1 py-[18px] no-underline"
     >
       <CheckGlyph />
-      <span className="flex-1 text-[18px] text-muted">
+      <span className="flex-1 text-[15px] text-muted">
         {left > 0 ? fill(t("home.dosesLeft"), { n: left }) : t("home.dosesDone")}
       </span>
       <Chevron />
@@ -126,7 +126,7 @@ function CheckGlyph() {
       height="20"
       viewBox="0 0 17 17"
       fill="none"
-      stroke="var(--jade)"
+      stroke="var(--ink)"
       strokeWidth="2.4"
       strokeLinecap="round"
       strokeLinejoin="round"

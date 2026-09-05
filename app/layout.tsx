@@ -49,8 +49,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // --jade, the v2 filled-button colour.
-  themeColor: "#1A7D63",
+  // The ground. The status bar sits on the same light grey as the page.
+  themeColor: "#F3F3F5",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

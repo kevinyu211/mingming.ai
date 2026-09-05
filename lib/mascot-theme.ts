@@ -17,11 +17,12 @@ export const ANIMAL_THEME: Record<
     ink: "#8B3A1F",
     wash: "#D47648",
   },
+  // The default companion wears the assistant's lilac (Companion D): the ✦ gradient's mid-point.
   panda: {
-    plate: "#E9F4F0",
-    card: "#E9F4F0",
-    ink: "#14705A",
-    wash: "#1A7D63",
+    plate: "#A08AAF",
+    card: "#F0ECF3",
+    ink: "#5A4B72",
+    wash: "#A08AAF",
   },
   puppy: {
     plate: "#F3E4B5",

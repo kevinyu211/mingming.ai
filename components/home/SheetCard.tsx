@@ -41,13 +41,13 @@ export default function SheetCard({ sheet }: { sheet: Sheet }) {
   return (
     <Link
       href="/chat"
-      className="surface flex min-h-12 w-full items-center gap-4 rounded-[20px] p-5 no-underline transition-shadow duration-200 lg:hover:shadow-[0_8px_24px_rgb(42_39_35/0.08)]"
+      className="surface flex min-h-12 w-full items-center gap-4 rounded-[20px] p-4 no-underline transition-shadow duration-200 lg:hover:shadow-[0_8px_24px_rgb(36_36_36/0.08)]"
     >
       <PageThumb size="lg" />
       <span className="min-w-0 flex-1">
-        <span className="block text-[22px] leading-[1.35] font-bold text-ink">{sheet.title}</span>
-        <span className="mt-1 block text-[18px] leading-[1.5] text-muted">{meta}</span>
-        <span className="mt-2 block text-[16px] leading-[1.5] text-muted">{preview}</span>
+        <span className="block text-[18px] leading-[1.3] font-bold text-ink">{sheet.title}</span>
+        <span className="mt-1 block text-[13px] leading-[1.45] text-muted">{meta}</span>
+        <span className="mt-1.5 block text-[14px] leading-[1.45] text-muted">{preview}</span>
       </span>
       <span aria-hidden="true" className="shrink-0 text-[22px] leading-none text-faint">
         ›

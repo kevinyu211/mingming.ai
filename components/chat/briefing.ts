@@ -15,6 +15,7 @@ import type { Card, CardType, Dialect, SourceReference, StoredReading } from "@/
 import type { UiKey } from "@/lib/i18n/ui";
 import { doseTargets, type DoseTarget } from "@/lib/rules/doses";
 import { CAUTION_SUFFIX } from "@/lib/rules/template-fallback";
+import type { ThreadWidget } from "@/lib/sheets/types";
 
 /**
  * Where one clause ends. Taken from the design canvas's own `chunks()`: these are the marks a
@@ -185,6 +186,13 @@ export interface Beat {
    * section rather than the single bubble the reader happened to stop on.
    */
   section: string;
+  /**
+   * The Atoms widget that hangs under this bubble: the summary card under the greeting, the
+   * numbered warning signs under the amber bubble, the medicine checklist under the last
+   * medicine, the visit rows under the follow-up. Decided here, by position in the script —
+   * a model turn cannot place one — and drawn from the live sheet, never from the message.
+   */
+  widget?: ThreadWidget | null;
 }
 
 /** The connective that introduces each kind of card. `warning` has its own longer lead-in. */
@@ -229,7 +237,13 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
   const { t, display, dialect } = ctx;
   const beats: Beat[] = [];
 
-  const rule = (key: string, text: string, section: string, awaits = false): Beat => ({
+  const rule = (
+    key: string,
+    text: string,
+    section: string,
+    awaits = false,
+    widget: ThreadWidget | null = null,
+  ): Beat => ({
     key,
     lead: null,
     text: display(text),
@@ -241,6 +255,7 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
     unverified: false,
     awaits,
     section,
+    widget,
   });
 
   /**
@@ -270,6 +285,7 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       "opening",
       // Only worth asking where to start when there is more than one place to start.
       counts.length > 1,
+      "summary",
     ),
   );
 
@@ -300,6 +316,8 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       // Nothing to hold the floor for if the page had nothing else on it.
       awaits: pieces.length > 0,
       section: "warn",
+      // The numbered list under the amber bubble, only when there are signs to number.
+      widget: empty ? null : "flags",
     });
   }
 
@@ -347,6 +365,10 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
       unverified: card.unverified === true,
       awaits: !last,
       section: isMedicine ? `medicine-${medicineNumber}` : `piece-${card.type}`,
+      // The checklist goes with the 睇「跟進」 offer, under the last medicine; the visit rows go
+      // under the first follow-up bubble. Everything else has nothing to draw.
+      widget:
+        i === trackAt ? "pills" : card.type === "followUp" && isNewRun ? "visits" : null,
     });
   });
 

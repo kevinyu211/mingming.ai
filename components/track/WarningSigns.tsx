@@ -33,60 +33,63 @@ export default function WarningSigns({ reading }: { reading: StoredReading }) {
   if (signs.length === 0) {
     const contact = reading.hospitalContact?.text?.trim() ?? "";
     return (
-      <section className="mt-5 rounded-[20px] bg-warn-bg p-5 lg:mt-0">
-        <h2 className="flex items-center gap-3 text-[20px] leading-[1.35] font-bold text-warn-ink">
+      <section className="mt-3 rounded-[20px] bg-warn-bg p-4 lg:mt-0">
+        <h2 className="flex items-center gap-3 text-[17px] leading-[1.35] font-bold text-warn-ink">
           <AlertGlyph />
           {t("card.noWarnings")}
         </h2>
-        <p className="mt-3 text-[18px] leading-[1.55] text-warn-ink">{t("card.noWarningsBody")}</p>
+        <p className="mt-2 text-[15px] leading-[1.55] text-warn-ink">{t("card.noWarningsBody")}</p>
         {contact ? (
-          <p className="mt-3 text-[19px] leading-[1.5] font-medium text-warn-ink">{contact}</p>
+          <p className="mt-2 text-[16px] leading-[1.5] font-medium text-warn-ink">{contact}</p>
         ) : null}
       </section>
     );
   }
 
   return (
-    <section className="mt-5 lg:mt-0">
+    <section className="surface mt-3 p-4 lg:mt-0">
+      {/* The design's one 「call if」 line: an outlined !, the count, a chevron. Tapping opens the list. */}
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        className="flex min-h-12 w-full items-center gap-3.5 rounded-[20px] bg-warn-bg p-5 text-left"
+        className="flex min-h-12 w-full items-center gap-3 text-left"
       >
-        <AlertGlyph />
-        <span className="flex-1 text-[20px] font-bold text-warn-ink">
+        <span
+          aria-hidden="true"
+          className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-[1.5px] border-ink text-[12px] font-bold text-ink"
+        >
+          !
+        </span>
+        <span className="flex-1 text-[15px] leading-[21px] font-semibold text-ink">
           {fill(t("track.warnings"), { n: signs.length })}
         </span>
-        {/* Decoration: --warn-stroke is 4.98:1 on --warn-bg, and this glyph carries no word. */}
-        <span aria-hidden="true" className="text-[20px] leading-none text-warn-stroke">
-          {open ? "⌃" : "⌄"}
+        <span aria-hidden="true" className="text-[20px] leading-none text-faint">
+          {open ? "⌃" : "›"}
         </span>
       </button>
 
       {open ? (
-        <div className="animate-rise -mt-2 rounded-[20px] bg-warn-bg px-5 pt-4 pb-[22px]">
-          <ul className="flex list-none flex-col gap-3.5 p-0">
+        <div className="animate-rise mt-1">
+          <ol className="flex list-none flex-col p-0">
             {signs.map((sign, index) => (
-              <li key={index} className="flex items-start gap-3">
+              <li key={index} className="flex items-start gap-3 border-t border-hairline py-2.5">
                 <span
                   aria-hidden="true"
-                  className="mt-[9px] h-2 w-2 shrink-0 rounded-full bg-warn-dot"
-                />
-                <span className="text-[22px] leading-[1.45] font-medium text-warn-ink">
+                  className="mt-px grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-[1.5px] border-ink text-[11px] font-bold text-ink"
+                >
+                  {index + 1}
+                </span>
+                <span className="text-[15px] leading-[22px] text-ink">
                   {show(sign.symptom[dialect])}
                 </span>
               </li>
             ))}
-          </ul>
+          </ol>
 
           <Link
             href="/chat?say=warnings"
-            /*
-             * --warn-stroke on --warn-btn is 4.42:1 and this is a label somebody reads. --warn-ink
-             * is 6.37:1 on the same fill (globals.css).
-             */
-            className="mt-[18px] flex min-h-12 w-full items-center justify-center rounded-2xl bg-warn-btn p-4 text-[17px] font-medium text-warn-ink no-underline"
+            className="mt-3 flex min-h-12 w-full items-center justify-center rounded-full bg-ink px-4 text-[15px] font-semibold text-white no-underline"
           >
             {t("track.saySigns")}
           </Link>

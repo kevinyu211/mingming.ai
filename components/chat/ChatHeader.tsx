@@ -1,28 +1,25 @@
 "use client";
 
 /**
- * The 傾偈 header: back to 記錄, the sheet being talked about, the speaker toggle, the language chip.
+ * The 傾偈 header (Companion D): a pill back to 記錄, 明明 and his name in the middle, the speaker
+ * and the language pill on the right.
  *
  * `/chat` is full-screen and has no tab bar (v2 build brief §1) — it is a conversation, so it gets
- * a back arrow the way a WeChat thread does. The title is derived by `sheetTitle()` from the
- * reading, never invented: when the page named no hospital and no clinic it says 出院紙, which is
- * the honest answer (`lib/sheets/title.ts`).
+ * a way back the way a WeChat thread does. The sheet's title sits under the name, derived by
+ * `sheetTitle()` from the reading and never invented: when the page named no hospital and no
+ * clinic it says 出院紙, which is the honest answer (`lib/sheets/title.ts`).
  *
  * The speaker toggle is **the only voice control on this screen**. Silencing it stops the audio
  * and the text keeps typing; there is no play button and the 讀住 waveform is not one.
  */
-import { useMemo } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useLocale } from "@/components/LocaleProvider";
 import Mascot, { type MascotState } from "@/components/Mascot";
+import Wordmark from "@/components/Wordmark";
 import type { Dialect } from "@/lib/domain/schemas";
 import type { UiLocale } from "@/lib/i18n/ui";
 
-/**
- * The 48 px chip's glyph. Copy with no key in `lib/i18n/ui.ts` — the file has the full names
- * (`language.yue` etc.) but not the one-or-two character forms the canvas puts in the chip.
- * Reported upward rather than added here; same rules as everything in that file.
- */
+/** The pill's glyph: the one-or-two character forms the design puts in the language chip. */
 const CHIP: Record<Dialect, string> = { yue: "粵", cmn: "普", en: "EN" };
 
 /** Which interface language each spoken language belongs with. */
@@ -36,7 +33,7 @@ const CHOICES: { dialect: Dialect; key: "language.yue" | "language.cmn" | "langu
 
 export interface ChatHeaderProps {
   title: string;
-  /** ISO timestamp the sheet was photographed. Rendered as 「9月1日出院紙」. */
+  /** ISO timestamp the sheet was photographed. Kept for callers; the design shows the title alone. */
   capturedAt: string;
   speakerOn: boolean;
   onToggleSpeaker: () => void;
@@ -48,24 +45,8 @@ export interface ChatHeaderProps {
   mascotState?: MascotState;
 }
 
-/**
- * 「9月1日」 in Chinese, 「1 Sep」 in English, from the device's own formatter. An unparseable
- * timestamp yields "" and the line is dropped rather than showing "Invalid Date".
- */
-function formatDay(iso: string, locale: UiLocale): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const tag = locale === "en" ? "en-GB" : locale === "hans" ? "zh-CN" : "zh-HK";
-  try {
-    return new Intl.DateTimeFormat(tag, { month: "long", day: "numeric" }).format(date);
-  } catch {
-    return "";
-  }
-}
-
 export default function ChatHeader({
   title,
-  capturedAt,
   speakerOn,
   onToggleSpeaker,
   onBack,
@@ -74,8 +55,7 @@ export default function ChatHeader({
   onCloseLang,
   mascotState = "idle",
 }: ChatHeaderProps) {
-  const { t, locale, dialect, setDialect, setLocale } = useLocale();
-  const day = useMemo(() => formatDay(capturedAt, locale), [capturedAt, locale]);
+  const { t, dialect, setDialect, setLocale } = useLocale();
 
   const choose = (next: Dialect) => {
     // Dialect first, then locale: `setDialect` moves the card script to the dialect's own written
@@ -86,46 +66,58 @@ export default function ChatHeader({
   };
 
   return (
-    <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-hairline bg-ground/80 px-3.5 pt-2 pb-3 backdrop-blur-xl lg:gap-3 lg:px-6 lg:py-3.5">
+    <header className="relative z-10 flex shrink-0 items-center justify-between gap-2 border-b border-hairline bg-ground/80 px-3 pt-2 pb-2.5 backdrop-blur-xl lg:px-6 lg:py-3.5">
       <button
         type="button"
         onClick={onBack}
         aria-label={t("chat.back")}
-        className="tap shrink-0 text-[26px] leading-none text-muted lg:hidden"
+        className="pill min-h-10 shrink-0 pl-2.5 lg:hidden"
       >
-        <span aria-hidden="true">‹</span>
+        <span aria-hidden="true" className="-mr-1 text-[18px] leading-none text-muted">
+          ‹
+        </span>
+        <HomeGlyph />
+        {t("tab.record")}
       </button>
+      {/* On a desktop the rail is the way back, so the middle block starts the row. */}
+      <span className="hidden lg:block" />
 
-      <span className="companion-plate grid h-12 w-12 shrink-0 place-items-center rounded-full">
-        <Mascot size={44} state={mascotState} />
-      </span>
-
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate text-[19px] leading-[1.3] font-bold text-ink">{title}</h1>
-        {day ? (
-          <p className="mt-px text-meta text-muted">{t("chat.sheetLine").replace("{date}", day)}</p>
-        ) : null}
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="companion-plate grid h-11 w-11 shrink-0 place-items-center rounded-full">
+          <Mascot size={44} state={mascotState} />
+        </span>
+        <div className="min-w-0">
+          <Wordmark />
+          <h1 className="truncate text-[12px] leading-[1.3] font-normal tracking-normal text-muted">
+            {title}
+          </h1>
+        </div>
       </div>
 
-      <button
-        type="button"
-        onClick={onToggleSpeaker}
-        // The label names the ACTION and changes with the state, so no `aria-pressed`: a toggle
-        // announced as 「熄咗把聲, pressed」 makes a screen reader say the opposite of what it means.
-        aria-label={speakerOn ? t("chat.muteSpeaker") : t("chat.unmuteSpeaker")}
-        className={`tap shrink-0 rounded-full ${speakerOn ? "bg-jade-tint-2 text-jade-ink" : "bg-neutral text-muted"}`}
-      >
-        <SpeakerMark on={speakerOn} />
-      </button>
+      <div className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          onClick={onToggleSpeaker}
+          // The label names the ACTION and changes with the state, so no `aria-pressed`: a toggle
+          // announced as 「熄咗把聲, pressed」 makes a screen reader say the opposite of what it means.
+          aria-label={speakerOn ? t("chat.muteSpeaker") : t("chat.unmuteSpeaker")}
+          className={`tap shrink-0 rounded-full ${speakerOn ? "text-ink" : "bg-neutral text-muted"}`}
+        >
+          <SpeakerMark on={speakerOn} />
+        </button>
 
-      <button
-        type="button"
-        onClick={onOpenLang}
-        aria-label={t("chat.language")}
-        className="tap shrink-0 rounded-full bg-neutral text-[16px] font-medium text-ink"
-      >
-        {CHIP[dialect]}
-      </button>
+        <button
+          type="button"
+          onClick={onOpenLang}
+          aria-label={t("chat.language")}
+          className="pill min-h-9 shrink-0 px-3 text-[13px]"
+        >
+          {CHIP[dialect]}
+          <span aria-hidden="true" className="text-[10px] text-faint">
+            ⌄
+          </span>
+        </button>
+      </div>
 
       <BottomSheet open={langOpen} onClose={onCloseLang} title={t("chat.language")}>
         <ul className="flex flex-col gap-2.5">
@@ -138,7 +130,7 @@ export default function ChatHeader({
                   onClick={() => choose(choice.dialect)}
                   aria-pressed={on}
                   className={`flex w-full items-center gap-3 rounded-[16px] px-5 py-5 text-[19px] font-medium ${
-                    on ? "bg-jade-tint-2 text-jade-ink" : "surface text-ink"
+                    on ? "bg-ink text-white" : "surface border border-hairline text-ink"
                   }`}
                 >
                   <span aria-hidden="true" className="w-6 text-center">
@@ -155,22 +147,40 @@ export default function ChatHeader({
   );
 }
 
+function HomeGlyph() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M4 10.5 12 4l8 6.5V20H4v-9.5Z" />
+    </svg>
+  );
+}
+
 function SpeakerMark({ on }: { on: boolean }) {
   return (
     <svg
-      viewBox="0 0 18 16"
+      viewBox="0 0 24 24"
       aria-hidden="true"
       focusable="false"
-      className="h-5 w-[22px]"
+      className="h-6 w-6"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.9"
+      strokeWidth="1.5"
       strokeLinejoin="round"
       strokeLinecap="round"
     >
-      <path d="M8.4 2.2 5.1 5.2H2.4v5.6h2.7l3.3 3V2.2Z" />
-      {on ? <path d="M11.6 5.4a3.7 3.7 0 0 1 0 5.2M14.2 3.2a7 7 0 0 1 0 9.6" /> : null}
-      {on ? null : <path d="M12 6l4 4M16 6l-4 4" />}
+      <path d="M4 9.5v5h3l4 3.5V6L7 9.5H4Z" />
+      {on ? <path d="M15 9a4 4 0 0 1 0 6M17.5 6.5a7.5 7.5 0 0 1 0 11" /> : null}
+      {on ? null : <path d="M15 9l5 6M20 9l-5 6" />}
     </svg>
   );
 }

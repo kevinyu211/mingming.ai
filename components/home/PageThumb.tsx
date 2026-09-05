@@ -12,7 +12,7 @@
 export type ThumbSize = "lg" | "sm" | "xs";
 
 const GEOMETRY: Record<ThumbSize, { w: number; h: number; pad: number; gap: number; rule: number; lines: number[] }> = {
-  // The canvas's 52x66 card thumbnail: six rules, the first one jade.
+  // The canvas's 52x66 card thumbnail: six rules, the first one ink.
   lg: { w: 52, h: 66, pad: 8, gap: 4, rule: 3, lines: [100, 80, 100, 62, 100, 74] },
   // 跟進's 30x38 strip thumbnail: four rules.
   xs: { w: 30, h: 38, pad: 4, gap: 3, rule: 2, lines: [100, 72, 100, 56] },
@@ -47,7 +47,7 @@ export default function PageThumb({ size = "lg" }: { size?: ThumbSize }) {
             // The top rule is the heading of the page, in jade; the rest are body text. Both are
             // decoration and carry no words, which is the only reason a low-contrast fill is right.
             background:
-              index === 0 ? "var(--jade)" : "color-mix(in srgb, var(--ink) 22%, var(--paper))",
+              index === 0 ? "var(--ink)" : "color-mix(in srgb, var(--ink) 22%, var(--paper))",
           }}
         />
       ))}

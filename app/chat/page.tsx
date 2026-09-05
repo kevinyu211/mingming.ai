@@ -64,6 +64,7 @@ import ChatBar from "@/components/chat/ChatBar";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ReadingProgress from "@/components/chat/ReadingProgress";
+import { ThreadWidgetView } from "@/components/chat/Widgets";
 import {
   ListeningBubble,
   SpeakingBubble,
@@ -192,6 +193,9 @@ function ChatScreen() {
   /** What 明明 says while the sheet is being read: fixed lines, never a claim about the page. */
   const [readingLine, setReadingLine] = useState<string | null>(null);
   const stillReading = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** One clock per mount for the widgets' counters, exactly as 跟進 does it. */
+  const [today] = useState(() => new Date());
 
   const voice = useVoice(dialect, speakerOn);
   const { say, resay, warm, cancel } = voice;
@@ -341,6 +345,7 @@ function ChatScreen() {
           outcome: null,
           stopped: beat.stopped,
           unverified: beat.unverified,
+          widget: beat.widget ?? null,
         });
         setSpeakingId(null);
         setBeatOnAir(null);
@@ -1016,6 +1021,15 @@ function ChatScreen() {
     [cardForSource, script, t],
   );
 
+  /**
+   * A slot ticked in the checklist widget. `new Date()` rather than the mounted `today`: the write
+   * must land on the calendar day the tap actually happened on. The store re-renders the thread
+   * from the persisted value, so the widget shows the rules' own count, not an optimistic one.
+   */
+  const onTakeFromWidget = useCallback((key: string) => {
+    takeDose(key, new Date());
+  }, []);
+
   const onListeningChange = useCallback(
     (open: boolean) => {
       setListening(open);
@@ -1071,12 +1085,12 @@ function ChatScreen() {
             <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full">
               <Mascot size={92} state="greeting" />
             </span>
-            <p className="mt-5 text-[22px] font-semibold text-ink">{t("mascot.name")}</p>
+            <p className="mt-5 text-[22px] font-bold text-ink">{t("mascot.name")}</p>
             <p className="mt-2 max-w-md text-[16px] leading-relaxed text-muted">{title}</p>
           </div>
         ) : null}
 
-        <p className="mx-auto mb-3 w-fit rounded-full bg-neutral px-3 py-1 text-center text-fine font-medium text-muted">
+        <p className="mb-3 text-center text-[11px] font-medium tracking-[1.3px] text-muted uppercase">
           {t("chat.today")}
         </p>
 
@@ -1108,6 +1122,14 @@ function ChatScreen() {
             }}
             onOpenTrack={() => router.push("/track")}
             onSpeak={speakAgain}
+            widget={
+              message.widget ? (
+                <ThreadWidgetView
+                  widget={message.widget}
+                  ctx={{ sheet, today, display, onTake: onTakeFromWidget }}
+                />
+              ) : null
+            }
           />
         ))}
 

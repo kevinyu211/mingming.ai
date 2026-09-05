@@ -30,10 +30,11 @@
  *                       already in the text; here the source link is emphasised, because that
  *                       line is the one to go and check on the paper.
  */
+import type { ReactNode } from "react";
 import AiLabel from "@/components/AiLabel";
 import { useT } from "@/components/LocaleProvider";
-import Mascot from "@/components/Mascot";
 import ReferralCard from "@/components/ReferralCard";
+import Spark from "@/components/chat/Spark";
 import Waveform from "@/components/chat/Waveform";
 import type { Dialect } from "@/lib/domain/schemas";
 import type { ThreadMessage } from "@/lib/sheets/types";
@@ -55,6 +56,12 @@ export interface ChatMessageProps {
    * that has long scrolled away.
    */
   onSpeak: (message: ThreadMessage) => void;
+  /**
+   * The widget 明明 handed over with this message — the summary card, the checklist, the visit
+   * rows, the numbered warning signs. Built by the page from the LIVE sheet (`message.widget`
+   * only says which one), so a dose ticked on 今日 is already ticked here.
+   */
+  widget?: ReactNode;
 }
 
 export default function ChatMessage({
@@ -65,13 +72,14 @@ export default function ChatMessage({
   onOpenSource,
   onOpenTrack,
   onSpeak,
+  widget = null,
 }: ChatMessageProps) {
   const t = useT();
 
   if (message.role === "user") {
     return (
-      <div className="animate-rise mb-2.5 flex justify-end pl-10 lg:mb-5 lg:pl-24">
-        <p className="max-w-[82%] rounded-[16px_4px_16px_16px] bg-jade-bubble px-3.5 py-2.5 text-[16px] leading-[1.55] break-words text-ink lg:max-w-[68%] lg:px-4 lg:py-3">
+      <div className="animate-rise mb-3 flex justify-end pl-10 lg:mb-5 lg:pl-24">
+        <p className="max-w-[82%] rounded-[18px_18px_4px_18px] bg-jade-bubble px-4 py-3 text-[17px] leading-[25px] break-words text-white lg:max-w-[68%]">
           {message.text}
         </p>
       </div>
@@ -82,8 +90,8 @@ export default function ChatMessage({
   // numbers, nothing model-written and nothing spoken (rules.md §12).
   if (message.outcome === "crisis_referral") {
     return (
-    <div className="animate-rise mb-2.5 flex items-start gap-2 lg:mb-5 lg:gap-3">
-        <Mascot size={30} className="mt-0.5 shrink-0" />
+    <div className="animate-rise mb-3 flex items-start gap-2.5 lg:mb-5 lg:gap-3">
+        <Spark className="mt-0.5" />
         <div className="min-w-0 flex-1">
           <ReferralCard inputLanguage={dialect} text={message.text} />
         </div>
@@ -116,14 +124,14 @@ export default function ChatMessage({
     ? "bg-warn-bg text-warn-ink"
     : refusal
       ? "bg-neutral text-ink"
-      : "bg-card text-ink shadow-card";
+      : "bg-card text-ink";
 
   return (
-    <div className="animate-rise mb-2.5 flex items-start gap-2 pr-8 lg:mb-5 lg:gap-3 lg:pr-16">
-      <Mascot size={30} state={reading ? "speaking" : "idle"} className="mt-0.5 shrink-0" />
+    <div className="animate-rise mb-3 flex items-end gap-2.5 pr-8 lg:mb-5 lg:gap-3 lg:pr-16">
+      <Spark className="mb-1" />
 
       <div className="min-w-0 flex-1">
-        <div className={`rounded-[4px_16px_16px_16px] px-3.5 py-2.5 ${bubble}`}>
+        <div className={`rounded-[18px_18px_18px_4px] px-4 py-3.5 ${bubble}`}>
           {/*
             The connective. 13 px and muted so it reads as the app's own signposting rather than as
             the first sentence of the body — which matters, because the body underneath may be
@@ -148,12 +156,12 @@ export default function ChatMessage({
                newlines — one line per red flag, and a blank line before the question it ends with.
                Without this CSS collapses them and four warning signs run together into a wall of
                prose, which is the shape this change exists to get away from. */
-            <p className="flex items-start gap-2 text-[16.5px] leading-[1.55] font-medium break-words whitespace-pre-line">
+            <p className="flex items-start gap-2 text-[17px] leading-[26px] font-medium break-words whitespace-pre-line">
               <WarningMark />
               <span className="min-w-0 flex-1">{message.text}</span>
             </p>
           ) : (
-            <p className="text-[16.5px] leading-[1.6] break-words whitespace-pre-line">
+            <p className="text-[17px] leading-[26px] break-words whitespace-pre-line">
               {message.text}
             </p>
           )}
@@ -175,10 +183,10 @@ export default function ChatMessage({
               onClick={() => onSpeak(message)}
               aria-label={t("chat.speakAgain")}
               className={`flex min-h-9 items-center gap-1.5 text-fine font-semibold ${
-                warn ? "text-warn-ink" : "text-jade-ink"
+                warn ? "text-warn-ink" : reading ? "text-speaking" : "text-jade-ink"
               }`}
             >
-              {reading ? <Waveform tone={warn ? "warn" : "jade"} /> : <SpeakerMark />}
+              {reading ? <Waveform tone={warn ? "warn" : "speaking"} /> : <SpeakerMark />}
               {reading ? t("chat.reading") : t("chat.speakAgain")}
             </button>
 
@@ -205,11 +213,13 @@ export default function ChatMessage({
           </div>
         </div>
 
+        {widget ? <div className="animate-fade-up mt-2.5">{widget}</div> : null}
+
         {message.link === "track" ? (
           <button
             type="button"
             onClick={onOpenTrack}
-            className="mt-1.5 min-h-10 rounded-[12px] bg-jade-tint-2 px-3.5 py-2 text-fine font-medium text-jade-ink"
+            className="pill mt-2 min-h-10 text-[13px]"
           >
             {t("brief.trackLink")} ›
           </button>

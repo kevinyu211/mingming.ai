@@ -10,7 +10,7 @@
  * globals.css and is killed by `prefers-reduced-motion`, which leaves four static bars — still a
  * visible marker, just not a moving one.
  */
-export type WaveformTone = "jade" | "warn";
+export type WaveformTone = "jade" | "warn" | "speaking";
 
 /** Canvas geometry: uneven heights, so it reads as a voice rather than as a loading spinner. */
 const BARS = [45, 100, 65, 88];
@@ -22,7 +22,8 @@ export default function Waveform({
   tone?: WaveformTone;
   className?: string;
 }) {
-  const colour = tone === "warn" ? "var(--warn-stroke)" : "var(--jade-ink)";
+  const colour =
+    tone === "warn" ? "var(--warn-stroke)" : tone === "speaking" ? "var(--speaking)" : "var(--jade-ink)";
   return (
     <span
       aria-hidden="true"

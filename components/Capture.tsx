@@ -300,6 +300,7 @@ export default function Capture() {
           busy={busy}
           onClose={leave}
           onShutter={shoot}
+          onPick={() => libraryRef.current?.click()}
           onDone={() => setView("review")}
         />
       ) : (
@@ -344,26 +345,28 @@ export default function Capture() {
 /* ------------------------------------------------------------------ the camera */
 
 /**
- * The dark chrome from the canvas's `isCamera` block, with two of its claims removed.
+ * The scan screen from the design: a light page with a dark rounded card in the middle where the
+ * photograph goes, a close pill and the page count above it, the shutter and an upload pill below.
  *
- * The canvas draws an 「對正咗 · 揸穩部機」 chip and a 「講住指示」 pill with a live blinking dot.
+ * The design draws a 「對正咗 · 揸穩部機」 chip and a 「講住指示」 pill with a live blinking dot.
  * Both assert something that is not happening: this build hands the shutter to the phone's own
  * camera app rather than running a live viewfinder, so nothing here is detecting an edge and
- * nobody is narrating. Claiming either would be the same class of mistake as inventing a dose.
- * What survives is what is true — a frame to line the page up inside, a count of what has been
- * taken, and the promise that the photograph stays on this phone.
+ * nobody is narrating. What survives is what is true — a frame to line the page up inside, a count
+ * of what has been taken, and the promise that the photograph stays on this phone.
  */
 function CameraChrome({
   pages,
   busy,
   onClose,
   onShutter,
+  onPick,
   onDone,
 }: {
   pages: number;
   busy: boolean;
   onClose: () => void;
   onShutter: () => void;
+  onPick: () => void;
   onDone: () => void;
 }) {
   const { t } = useLocale();
@@ -383,134 +386,139 @@ function CameraChrome({
   return (
     // Stops above the fixed disclaimer rather than running to the bottom edge: the disclaimer has
     // to stay visible on every screen (rules.md §16), the camera included.
-    <div
-      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-30 overflow-hidden lg:left-[var(--sidebar-width)]"
-      style={{ background: "var(--cam-ground)" }}
-    >
-      <div
-        aria-hidden="true"
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(160deg, var(--cam-grad-top), var(--cam-grad-mid) 48%, var(--cam-grad-bottom))",
-        }}
-      />
-
-      {/* The guide frame. Decoration — it carries no words and detects nothing; it is where to put
-          the page. */}
-      <div
-        aria-hidden="true"
-        className="animate-edge absolute rounded-lg"
-        style={{
-          left: 26,
-          right: 26,
-          top: 172,
-          bottom: 236,
-          border: "2.5px solid var(--cam-frame)",
-          boxShadow: "0 0 40px color-mix(in srgb, var(--jade) 50%, transparent)",
-        }}
-      />
-
-      <div className="absolute top-[18px] right-0 left-0 flex items-center justify-between px-5">
+    <div className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-30 flex flex-col overflow-hidden bg-ground lg:left-[var(--sidebar-width)]">
+      <div className="flex items-center justify-between px-4 pt-3">
         <button
           type="button"
           onClick={onClose}
           aria-label={t("camera.close")}
-          className="tap rounded-full text-[22px] leading-none font-light text-white"
-          style={{ background: "rgba(255,255,255,.15)" }}
+          className="pill h-11 w-11 !px-0"
         >
-          <span aria-hidden="true">×</span>
+          <span aria-hidden="true">
+            <svg width="10" height="16" viewBox="0 0 12 20" fill="none">
+              <path d="M10 2L2 10l8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
         </button>
-        <span
-          className="rounded-full px-3.5 py-1.5 text-[15px] font-medium text-white"
-          style={{ background: "rgba(255,255,255,.15)" }}
-        >
+        <span className="pill min-h-9 px-3.5 text-[13px]">
           {pages}/{MAX_PAGES}
         </span>
       </div>
 
+      <div className="px-6 pt-5 text-center">
+        <h1 className="text-[28px] leading-[34px] text-ink">{t("companion.scanTitle")}</h1>
+        <p className="mt-2 text-[15px] leading-[22px] text-muted">{t("companion.scanSub")}</p>
+      </div>
+
+      {/* The dark card: the frame to line the page up inside, and the scan line that says "ready". */}
+      <div className="flex min-h-0 flex-1 items-center justify-center px-8 pt-4">
+        <div
+          aria-hidden="true"
+          className="relative w-full max-w-[320px] overflow-hidden rounded-[24px] bg-ink"
+          style={{ aspectRatio: "0.8", maxHeight: "100%" }}
+        >
+          <div className="absolute inset-[18px] rounded-[14px] border-[1.5px] border-white/35" />
+          <div
+            className="animate-scanline absolute right-[18px] left-[18px] h-[2px]"
+            style={{ background: "linear-gradient(90deg, transparent, #ffffff, transparent)" }}
+          />
+          {/* The pages taken so far, stacked in the corner of the card. */}
+          {pages > 0 ? (
+            <div className="absolute bottom-6 left-6 flex items-center">
+              {Array.from({ length: Math.min(pages, MAX_PAGES) }, (_, i) => (
+                <span
+                  key={i}
+                  className="grid h-[44px] w-[34px] place-items-center rounded-md bg-paper text-[13px] font-semibold text-ink"
+                  style={{ border: "2px solid rgba(255,255,255,.75)", marginLeft: i === 0 ? 0 : -12 }}
+                >
+                  {i + 1}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {/* The hint. At the ceiling it stops being advice and becomes a refusal, so it moves onto the
           warning palette and announces itself. */}
-      <div className="absolute top-[86px] right-7 left-7 text-center" role="status">
+      <div className="px-7 pt-4 text-center" role="status">
         {full ? (
           <p
-            className="mx-auto inline-block rounded-2xl px-4 py-2.5 text-[21px] leading-[1.4] font-bold"
+            className="mx-auto inline-block rounded-2xl px-4 py-2.5 text-[17px] leading-[1.4] font-bold"
             style={{ background: "var(--warn-bg)", color: "var(--warn-ink)" }}
           >
             {hint}
           </p>
         ) : (
-          <p
-            className="text-[23px] leading-[1.4] font-medium text-white"
-            style={{ textShadow: "0 2px 12px rgba(0,0,0,.55)" }}
-          >
-            {hint}
-          </p>
+          <p className="text-[17px] leading-[1.4] font-semibold text-ink">{hint}</p>
         )}
-        <p className="mt-1.5 text-[15px] leading-[1.4]" style={{ color: full ? "var(--cam-chip)" : "rgba(255,255,255,.92)" }}>
-          {hintSub}
-        </p>
+        <p className="mt-1 text-[13px] leading-[1.4] text-muted">{hintSub}</p>
       </div>
 
-      {/* The one promise worth making at the moment a camera is pointed at a medical document. */}
-      <div className="absolute right-0 bottom-[150px] left-0 flex justify-center px-6">
-        <span
-          className="inline-flex items-center gap-2 rounded-[22px] px-4 py-2.5 text-center text-[14.5px] leading-[1.4] font-medium"
-          style={{
-            background: "color-mix(in srgb, var(--cam-frame) 18%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--cam-frame) 40%, transparent)",
-            color: "var(--cam-chip)",
-          }}
-        >
-          <LockGlyph />
-          {t("review.onDevice")}
-        </span>
-      </div>
-
-      <div className="absolute right-0 bottom-6 left-0 flex items-center justify-between px-6">
-        <div className="flex w-24 items-center">
-          {Array.from({ length: Math.min(pages, MAX_PAGES) }, (_, i) => (
-            <span
-              key={i}
-              aria-hidden="true"
-              className="grid h-[50px] w-[38px] place-items-center rounded-md bg-paper text-[14px] font-semibold"
-              style={{
-                // --muted on --paper is 4.37:1 and this is a number somebody counts pages by.
-                // --ink is 12.18:1 on the same fill (globals.css).
-                color: "var(--ink)",
-                border: "2px solid rgba(255,255,255,.75)",
-                marginLeft: i === 0 ? 0 : -14,
-              }}
-            >
-              {i + 1}
-            </span>
-          ))}
+      <div className="flex flex-col items-center gap-3 px-5 pt-4 pb-5">
+        <div className="flex w-full items-center justify-between">
+          <span className="w-24" />
+          <button
+            type="button"
+            onClick={onShutter}
+            disabled={full || busy}
+            aria-label={t("camera.shutter")}
+            className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full bg-ink transition-opacity"
+            style={{
+              // A spent shutter: it keeps its footprint, loses its light, and does not fire.
+              opacity: full ? 0.35 : 1,
+              boxShadow: full ? "none" : "0 8px 24px rgba(0,0,0,.12)",
+              cursor: full ? "default" : "pointer",
+            }}
+          >
+            <span aria-hidden="true" className="block h-[62px] w-[62px] rounded-full border-2 border-white" />
+          </button>
+          <div className="flex w-24 justify-end">
+            {pages > 0 ? (
+              <ChunkyButton variant="jade" size="md" onClick={onDone}>
+                {t("camera.done")}
+              </ChunkyButton>
+            ) : null}
+          </div>
         </div>
 
         <button
           type="button"
-          onClick={onShutter}
+          onClick={onPick}
           disabled={full || busy}
-          aria-label={t("camera.shutter")}
-          className="h-[78px] w-[78px] shrink-0 rounded-full transition-opacity"
-          style={{
-            border: "4px solid rgba(255,255,255,.42)",
-            // A spent shutter: it keeps its footprint, loses its light, and does not fire.
-            background: full ? "rgba(255,255,255,.32)" : "#ffffff",
-            boxShadow: full ? "none" : "0 6px 22px rgba(0,0,0,.4)",
-            cursor: full ? "default" : "pointer",
-          }}
-        />
+          className="pill min-h-11 gap-2 px-5 text-[15px]"
+        >
+          <UploadGlyph />
+          {t("capture.upload")}
+        </button>
 
-        <div className="flex w-24 justify-end">
-          {pages > 0 ? (
-            <ChunkyButton variant="jade" size="md" onClick={onDone}>
-              {t("camera.done")}
-            </ChunkyButton>
-          ) : null}
-        </div>
+        {/* The one promise worth making at the moment a camera is pointed at a medical document. */}
+        <span className="inline-flex items-center gap-2 text-center text-[13px] leading-[1.4] text-muted">
+          <LockGlyph />
+          {t("review.onDevice")}
+        </span>
       </div>
     </div>
+  );
+}
+
+function UploadGlyph() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M12 16V5M8 9l4-4 4 4" />
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+    </svg>
   );
 }
 
@@ -577,7 +585,7 @@ function ReviewGrid({
         <span aria-hidden="true">‹</span>
       </button>
 
-      <h1 className="mt-1 text-[28px] leading-[1.3] font-bold text-ink">
+      <h1 className="mt-1 text-[28px] leading-[1.3] text-ink">
         {empty ? t("capture.title") : t("review.title")}
       </h1>
       {/*
@@ -609,7 +617,7 @@ function ReviewGrid({
             />
             <span
               aria-hidden="true"
-              className="absolute bottom-2 left-2 rounded-[14px] bg-jade px-2.5 py-1 text-[13px] font-semibold text-white"
+              className="absolute bottom-2 left-2 rounded-[14px] bg-ink px-2.5 py-1 text-[13px] font-semibold text-white"
             >
               {index + 1}
             </span>
@@ -685,7 +693,7 @@ function ReviewGrid({
         </p>
       ) : null}
 
-      <div className="mt-3.5 mb-3.5 flex items-center gap-2.5 rounded-2xl bg-neutral px-4 py-3.5">
+      <div className="mt-3.5 mb-3.5 flex items-center gap-2.5 rounded-[20px] border border-hairline bg-card px-4 py-3.5">
         <span className="text-muted">
           <LockGlyph />
         </span>
@@ -760,7 +768,7 @@ function PickerBody({
                 />
                 <span
                   aria-hidden="true"
-                  className="absolute bottom-1.5 left-1.5 rounded-[12px] bg-jade px-2 py-0.5 text-[12px] font-semibold text-white"
+                  className="absolute bottom-1.5 left-1.5 rounded-[12px] bg-ink px-2 py-0.5 text-[12px] font-semibold text-white"
                 >
                   {index + 1}
                 </span>

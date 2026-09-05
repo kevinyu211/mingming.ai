@@ -399,7 +399,7 @@ export default function ChatBar({
     // No `env(safe-area-inset-bottom)` here: the fixed disclaimer footer is what sits on the home
     // indicator, and `<main>` is already 100dvh minus that footer's measured height. Padding for
     // the inset a second time is 34 px of nothing on every notched phone — see the header.
-    <div className="relative z-10 shrink-0 border-t border-hairline bg-ground px-3 pt-1.5 pb-2">
+    <div className="relative z-10 shrink-0 bg-ground px-4 pt-2 pb-2.5">
       {note}
 
       {mode === "voice" ? (
@@ -413,8 +413,8 @@ export default function ChatBar({
           // and iOS pops the magnifier over the bar mid-hold.
           onContextMenu={(event) => event.preventDefault()}
           aria-pressed={holding}
-          className={`flex min-h-[52px] w-full touch-none items-center justify-center gap-2 rounded-full px-4 py-2 select-none ${
-            holding ? "bg-jade shadow-raised" : "surface"
+          className={`flex min-h-[60px] w-full touch-none items-center justify-center gap-2 rounded-full border px-4 py-2 select-none transition-colors ${
+            holding ? "border-ink bg-ink text-white" : "border-hairline bg-card text-ink"
           } ${busy || sending ? "opacity-60" : ""}`}
         >
           {holding ? <HoldingWave /> : <MicMark />}
@@ -459,7 +459,7 @@ export default function ChatBar({
               aria-label={t("bar.backToVoice")}
               aria-pressed={holding}
               className={`grid h-12 w-16 shrink-0 touch-none place-items-center rounded-full select-none ${
-                holding ? "bg-jade shadow-raised" : "bg-neutral text-muted"
+                holding ? "bg-ink text-white" : "bg-neutral text-muted"
               } ${sending ? "opacity-60" : ""}`}
             >
               {/*
@@ -480,7 +480,7 @@ export default function ChatBar({
             placeholder={t("bar.typePlaceholder")}
             aria-label={t("bar.typePlaceholder")}
             enterKeyHint="send"
-            className="surface h-12 min-w-0 flex-1 rounded-full px-4 text-[16px] text-ink outline-none"
+            className="h-12 min-w-0 flex-1 rounded-full border border-hairline bg-card px-4 text-[16px] text-ink outline-none"
           />
           <button
             type="button"

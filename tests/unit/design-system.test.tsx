@@ -335,6 +335,7 @@ describe("each animal wears a colour of its own", () => {
     expect(new Set(plates).size).toBe(4);
     expect(ANIMAL_THEME.cat.plate).not.toBe(ANIMAL_THEME.panda.plate);
     expect(ANIMAL_THEME.rabbit.ink).not.toBe(ANIMAL_THEME.panda.ink);
-    expect(ANIMAL_THEME.panda.plate).toBe("#E9F4F0");
+    // Companion D: the default companion sits in the assistant's lilac, not the v2 jade tint.
+    expect(ANIMAL_THEME.panda.plate).toBe("#A08AAF");
   });
 });

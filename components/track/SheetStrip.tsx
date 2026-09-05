@@ -22,12 +22,12 @@ export default function SheetStrip({ sheet }: { sheet: Sheet }) {
   return (
     <Link
       href="/chat"
-      className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-neutral px-[18px] py-4 no-underline lg:px-5 lg:py-5"
+      className="flex min-h-12 w-full items-center gap-3 rounded-[20px] border border-hairline bg-card px-4 py-3 no-underline lg:px-5 lg:py-4"
     >
       <PageThumb size="xs" />
       <span className="min-w-0 flex-1">
-        <span className="block text-[14.5px] font-medium text-muted">{t("track.following")}</span>
-        <span className="mt-0.5 block text-[18px] leading-[1.4] font-medium text-ink">
+        <span className="block text-[12px] font-medium text-muted">{t("track.following")}</span>
+        <span className="mt-0.5 block text-[15px] leading-[1.4] font-semibold text-ink">
           {[sheet.title, date].filter((part) => part.length > 0).join(" · ")}
         </span>
       </span>

@@ -25,18 +25,36 @@ export default function ReadingProgress({
   const t = useT();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-5 px-8 text-center">
-      <Mascot size={92} state="speaking" />
-      <h1 className="text-display font-bold text-ink">{t("reading.title")}</h1>
-      {pageCount > 0 ? (
-        <p className="text-body text-muted">
-          {t(pageCount > 2 ? "reading.metaLong" : "reading.meta").replace("{n}", String(pageCount))}
-        </p>
-      ) : null}
-      <p className="text-meta text-muted">{t("progress.note")}</p>
+      {/* The design's dark card over the photograph: a ring that turns, and one line under it. */}
+      <div className="ceremony flex h-[200px] w-[200px] flex-col items-center justify-center gap-4 rounded-[24px]">
+        <span aria-hidden="true" className="relative grid h-[84px] w-[84px] place-items-center">
+          <svg viewBox="0 0 96 96" className="absolute inset-0 h-full w-full animate-spin [animation-duration:1.6s]">
+            <circle cx="48" cy="48" r="42" fill="none" stroke="#2F2F2F" strokeWidth="2" />
+            <circle
+              cx="48"
+              cy="48"
+              r="42"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="70 194"
+            />
+          </svg>
+          <Mascot size={44} state="speaking" />
+        </span>
+        {pageCount > 0 ? (
+          <p className="px-4 text-[13px] text-on-dark-muted">
+            {t(pageCount > 2 ? "reading.metaLong" : "reading.meta").replace("{n}", String(pageCount))}
+          </p>
+        ) : null}
+      </div>
+      <h1 className="text-[26px] leading-[32px] text-ink">{t("reading.title")}</h1>
+      <p className="text-[15px] text-muted">{t("progress.note")}</p>
       {line ? (
         <p
           role="status"
-          className="surface mt-2 max-w-xs rounded-[18px] px-5 py-4 text-[17px] leading-[1.5] text-ink"
+          className="surface mt-1 max-w-xs px-5 py-4 text-[17px] leading-[1.5] text-ink"
         >
           {line}
         </p>

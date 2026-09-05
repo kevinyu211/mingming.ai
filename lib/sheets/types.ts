@@ -52,6 +52,14 @@ export type BriefPhase =
  */
 export type CheckinState = "none" | "pending" | "open" | "done";
 
+/**
+ * Which Atoms widget renders under a message: the dark summary card, the colour-coded medicine
+ * checklist, the visit rows, or the numbered warning signs. Set by the briefing rules in
+ * `components/chat/briefing.ts`, never by a model turn, and every widget reads its facts live off
+ * the active sheet rather than off the message — a counter in a widget is always today's.
+ */
+export type ThreadWidget = "summary" | "pills" | "visits" | "flags";
+
 /** One line in the 傾偈 thread. The briefing and the answers share one conversation. */
 export interface ThreadMessage {
   id: string;
@@ -94,6 +102,8 @@ export interface ThreadMessage {
   stopped?: boolean;
   /** The card and its own quote disagree — the reader is told to check this line on the paper. */
   unverified?: boolean;
+  /** The Atoms widget under this bubble, if the briefing hung one there. */
+  widget?: ThreadWidget | null;
 }
 
 /**

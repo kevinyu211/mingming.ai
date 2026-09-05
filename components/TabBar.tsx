@@ -48,6 +48,7 @@ export default function TabBar({ active, pending = false, className = "" }: TabB
         const isActive = tab.key === active;
         // --jade-ink 5.67:1 on the ground; --muted 5.03:1. Both readable, which is the point:
         // an inactive tab is still a label someone has to be able to read.
+        // The active tab sits on the companion plate in --companion-ink; inactive is --muted (5:1).
         const colour = isActive ? "var(--companion-ink)" : "var(--muted)";
         const showDot = tab.key === "chat" && pending;
 

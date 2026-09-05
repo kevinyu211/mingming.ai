@@ -375,6 +375,32 @@ const hant = {
   // doctor" and replaced 相關專業人士 with 藥劑師. §16 says the wording must be shown, `hant` is
   // the default locale, and a judge string-matching the rulebook would not have found it here.
   // The app's own voice lives in every other string; this one is the rulebook's.
+  // --- Companion D · Three Things ------------------------------------------
+  "companion.homeTitle": "您好。\n畀我睇睇您嘅出院紙。",
+  "companion.homeSub": "我會讀出張紙、用簡單嘅話解釋，仲數住今日仲有幾多次藥——用您嘅話。",
+  "companion.takePhotoSub": "影低醫院畀您嗰張紙",
+  "companion.uploadSub": "相簿入面，或者屋企人 WhatsApp、微信傳嚟嘅相",
+  "companion.scanTitle": "影低您嘅出院紙。",
+  "companion.scanSub": "放平，四隻角都喺框入面。我會睇完再解釋畀您聽。",
+  "companion.whatSheetSays": "張紙寫住",
+  "companion.statMeds": "隻藥",
+  "companion.statWarnings": "樣要留意",
+  "companion.statVisit": "下次覆診",
+  "companion.statNone": "冇印",
+  "companion.slot": "第 {n} 次",
+  "companion.slotDone": "✓ 第 {n} 次",
+  "companion.added": "✓ 加咗",
+  "companion.contact": "醫院電話",
+  "companion.morning": "早晨。",
+  "companion.afternoon": "午安。",
+  "companion.evening": "晚上好。",
+  "companion.todaySub": "今日要跟進嘅嘢。",
+  "companion.dayPill": "睇咗張紙第 {n} 日",
+  "companion.allDone": "今日要數嘅藥全部食晒。",
+  "companion.talk": "同明明傾傾",
+  "companion.language": "揀用邊種話",
+  "companion.ai": "AI",
+
   "disclaimer":
     "本工具僅供健康信息參考與支持，不構成醫療建議，不能取代專業醫護人員的診斷或治療。如有健康疑慮，請諮詢註冊醫生或相關專業人士。AI 生成內容可能不準確。",
   "aiChip": "AI 寫嘅，可能有錯",
@@ -668,6 +694,32 @@ const hans: Record<UiKey, string> = {
   "sheet.close": "关掉",
 
   // EXEMPT: rules.md section 16 verbatim wording.
+  // --- Companion D · Three Things ------------------------------------------
+  "companion.homeTitle": "您好。\n把出院纸给我看看。",
+  "companion.homeSub": "我会读出纸上的内容、用简单的话解释，并数着今天还有几次药——用您的语言。",
+  "companion.takePhotoSub": "拍下医院给您的那张纸",
+  "companion.uploadSub": "相册里的，或家人用 WhatsApp、微信发来的照片",
+  "companion.scanTitle": "拍下您的出院纸。",
+  "companion.scanSub": "放平，四个角都在框内。我会读完再解释给您听。",
+  "companion.whatSheetSays": "纸上写着",
+  "companion.statMeds": "种药",
+  "companion.statWarnings": "项要留意",
+  "companion.statVisit": "下次复诊",
+  "companion.statNone": "没印",
+  "companion.slot": "第 {n} 次",
+  "companion.slotDone": "✓ 第 {n} 次",
+  "companion.added": "✓ 已加",
+  "companion.contact": "医院电话",
+  "companion.morning": "早上好。",
+  "companion.afternoon": "下午好。",
+  "companion.evening": "晚上好。",
+  "companion.todaySub": "今天要跟进的事。",
+  "companion.dayPill": "读了纸第 {n} 天",
+  "companion.allDone": "今天要数的药全部吃完。",
+  "companion.talk": "和明明聊聊",
+  "companion.language": "选用哪种语言",
+  "companion.ai": "AI",
+
   "disclaimer":
     "本工具仅供健康信息参考与支持，不构成医疗建议，不能取代专业医护人员的诊断或治疗。如有健康疑虑，请咨询注册医生或相关专业人士。AI 生成内容可能不准确。",
   "aiChip": "AI 写的，可能有错",
@@ -968,6 +1020,32 @@ const en: Record<UiKey, string> = {
   "sheet.close": "Close",
 
   // EXEMPT: rules.md section 16 verbatim wording.
+  // --- Companion D · Three Things ------------------------------------------
+  "companion.homeTitle": "hello.\nbring me your discharge sheet.",
+  "companion.homeSub": "I will read it, explain it in plain words, and count today's doses — in your language.",
+  "companion.takePhotoSub": "Of the paper the hospital gave you",
+  "companion.uploadSub": "From Photos, or one a relative sent on WhatsApp or WeChat",
+  "companion.scanTitle": "photograph your discharge sheet.",
+  "companion.scanSub": "Lay it flat, all four corners in the frame. I will read it and explain it to you.",
+  "companion.whatSheetSays": "WHAT THE SHEET SAYS",
+  "companion.statMeds": "MEDICINES",
+  "companion.statWarnings": "TO WATCH",
+  "companion.statVisit": "NEXT VISIT",
+  "companion.statNone": "not printed",
+  "companion.slot": "Dose {n}",
+  "companion.slotDone": "✓ Dose {n}",
+  "companion.added": "✓ Added",
+  "companion.contact": "Hospital contact",
+  "companion.morning": "good morning.",
+  "companion.afternoon": "good afternoon.",
+  "companion.evening": "good evening.",
+  "companion.todaySub": "Today's follow-up.",
+  "companion.dayPill": "day {n} since the sheet was read",
+  "companion.allDone": "That's every counted dose for today.",
+  "companion.talk": "Talk to Ming",
+  "companion.language": "Choose a language",
+  "companion.ai": "AI",
+
   "disclaimer":
     "This tool provides health information reference and support only. It is not medical advice and cannot replace diagnosis or treatment by professional medical staff. If you have health concerns, consult a registered doctor or relevant professional. AI-generated content may be inaccurate.",
   "aiChip": "Written by AI, may be wrong",

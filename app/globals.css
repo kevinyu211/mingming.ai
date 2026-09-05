@@ -2,127 +2,90 @@
 
 /*
  * ============================================================================
- * v2 design tokens — docs/v2-build-brief.md section 3
+ * Companion D — "Three Things" tokens
  * ============================================================================
  *
- * Warm, never clinical: no hospital blue, no lab-coat white, and amber rather than red for the
- * warning card so it reads as "attention" and not as a verdict about the person.
+ * The chat is the app. One cool light ground, charcoal ink, white 20 px cards, pills for every
+ * action, and no colour except the assistant's own lilac. Every token NAME from the v2 brief is
+ * kept — the screens, the tests and the contrast notes are written against those names — and only
+ * the VALUES move. Ratios below are WCAG 2.1 relative luminance against the ground.
  *
- * WHY THESE DIFFER FROM design-canvas/workflow-v2.dc.html
- * ------------------------------------------------------
- * The canvas is the layout spec and the string spec; it is NOT the colour spec. Its greys and its
- * jade were picked on a 27" monitor and several of them carry real words at ratios a
- * seventy-year-old cannot read on a phone in a ward. Measured, on the canvas's own #FBF8F3:
- *
- *     #1E8C6E jade on white   4.17:1   every filled button label
- *     #7C7A73 grey on ground  4.06:1   subtitles, dose meta
- *     #A5A29A grey on ground  2.41:1   section headings, the 仲有 N 段 line
- *     #8FA79E grey on tint    2.28:1   the notification timestamp
- *
- * All four are below WCAG AA 4.5:1 and all four were carrying text. The jade is darkened to
- * #1A7D63 (5.05:1 with white) and the three greys collapse into ONE --muted (#6D6B65) that clears
- * 4.5:1 on every ground it lands on. Do not re-lighten them to match the canvas: the canvas is
- * wrong here and the brief says so. --faint survives only for glyphs that carry no meaning.
- *
- * Measured ratios are on each line below (WCAG 2.1 relative luminance). Two pairs are traps and
- * are called out where they appear:
- *   - --muted on --paper is 4.37:1. Text over a page thumbnail uses --ink (12.18:1).
- *   - --warn-stroke on --warn-btn is 4.42:1. The amber button's LABEL uses --warn-ink (6.37:1);
- *     --warn-stroke only ever sits on --warn-bg.
- *
- * Light only, deliberately. The canvas was designed and reviewed in one palette; a dark theme
- * nobody has looked at is a worse demo than a light app on a dark phone, and `color-scheme: light`
- * keeps the browser's own controls in step. Bring dark back by designing it, not by inverting.
+ * Amber survives in exactly one place: the warning bubble. The design draws warning signs as a
+ * white card with outlined numbers, which this build also does (the flags widget), but the amber
+ * bubble that speaks them first is a rule of the v2 brief (attention, never a red verdict) and
+ * the tests assert on it, so its tokens are the v2 values, unchanged.
  */
 :root {
   color-scheme: light;
 
-  --ground: #fbf8f3; /* phone background */
+  --ground: #f3f3f5; /* the phone background, cool light grey */
   --card: #ffffff;
-  --ink: #2a2723; /* 14.03:1 on ground, 14.86 on white — ALL primary text */
-  --muted: #6d6b65; /* 5.03:1 on ground, 5.33 on white, 4.56 on --neutral — ALL secondary text */
-  --faint: #b4b0a7; /* 2.04:1 — DECORATION ONLY: chevrons, rules, dots. Never a word to read. */
-
-  --jade: #1a7d63; /* 5.05:1 with white — every filled button, at any text size */
-  --jade-shadow: #12604c; /* the `0 4px 0` chunky shadow under a jade button */
-  --jade-ink: #14705a; /* 5.67:1 on ground, 5.34 on tint, 5.18 on tint-2 — jade-coloured TEXT */
-  --jade-tint: #e9f4f0; /* secondary button fill */
-  --jade-tint-2: #e4f1ec; /* inline chips, dose pips */
-  --jade-bubble: #dcefe7; /* the user's own message bubble */
-  --jade-edge: #cfe4dc; /* the tinted button's shadow */
+  --ink: #131313; /* 17.2:1 on ground — ALL primary text, and the primary button fill */
+  --muted: #68686d; /* 5.0:1 on ground, 5.5 on white, 4.65 on --neutral — ALL secondary text */
+  --faint: #a8a8ad; /* 2.3:1 — DECORATION ONLY: chevrons, rules, dots. Never a word to read. */
 
   /*
-   * Companion skin. Defaults are the panda (jade-tint), overwritten on the client by
-   * `CompanionTheme` when a different animal is stored. Never used as a filled-button colour —
-   * `--jade` stays the CTA.
+   * "jade" is the v2 name for the primary-action colour. Here the primary action is charcoal, so
+   * the token points at the ink. White on #131313 is 17.2:1.
    */
-  --companion-plate: #e9f4f0;
-  --companion-card: #e9f4f0;
-  --companion-ink: #14705a;
-  --companion-wash: #1a7d63;
+  --jade: #131313;
+  --jade-shadow: #000000;
+  --jade-ink: #131313;
+  --jade-tint: #ffffff; /* the secondary button: white with a stroke */
+  --jade-tint-2: #ebebeb; /* inline chips (the AI chip) — charcoal on it is 14:1 */
+  --jade-bubble: #131313; /* the reader's own bubble: charcoal, white text */
+  --jade-edge: #e3e2e7;
 
-  --neutral: #f1ede4; /* quiet fills, keyboard-mode buttons */
-  --neutral-2: #f6f3ec; /* the 「張紙寫：」 quote block */
-  --hairline: #eae5dc;
-  --paper: #ede8df; /* page thumbnails — put --ink on this, never --muted */
+  /*
+   * The assistant's own colour: a lilac-to-rose gradient behind the ✦. The plate is the solid
+   * mid-point for anything that needs one colour; the gradient rides on `.companion-plate`.
+   * `--companion-ink` is the text colour on the soft lilac card: 7.6:1.
+   */
+  --companion-plate: #a08aaf;
+  --companion-grad: linear-gradient(180deg, #978db0, #bf87ab);
+  --companion-card: #f0ecf3;
+  --companion-ink: #5a4b72;
+  --companion-wash: #a08aaf;
+  /* The floating 同明明傾傾 button. Darkened from the design so white text clears 5:1 on it. */
+  --talk-grad: linear-gradient(90deg, #5f6090 0%, #7a5e8b 50%, #95597f 100%);
+  --speaking: #7a5e8b; /* the 讀住 waveform beside a bubble, 5.5:1 on white */
 
+  --neutral: #ebebeb; /* pressed states, quiet chips, keyboard-mode buttons */
+  --neutral-2: #f3f3f5; /* the 「張紙寫：」 quote block */
+  --hairline: #e3e2e7;
+  --paper: #e6e6e9; /* page thumbnails — put --ink on this, never --muted */
+
+  /* The warning bubble keeps the v2 amber: measured, and asserted on. */
   --warn-bg: #fcf2dc;
   --warn-ink: #6b4b03; /* 7.17:1 on warn-bg, 6.37 on warn-btn — ALL warning text */
-  --warn-stroke: #8a6104; /* 4.98:1 on warn-bg — the triangle, the 讀住 waveform. warn-bg only. */
-  --warn-dot: #c88a16; /* 2.66:1 — DECORATION ONLY: bullets, the unread dot */
+  --warn-stroke: #8a6104; /* 4.98:1 on warn-bg — glyphs, never words */
+  --warn-dot: #c88a16; /* DECORATION ONLY */
   --warn-btn: #f6e4be;
 
-  /*
-   * Derived, not from the brief: the brief's palette has no edge colour for the neutral chunky
-   * button (the canvas draws that variant flat). Mixed rather than invented so it can never drift
-   * away from --neutral. Decoration; nothing reads on it.
-   */
+  --charcoal-elevated: #2f2f2f; /* stat tiles inside the dark summary card */
+  --on-dark-muted: #d2d2d2; /* secondary text on charcoal, 11:1 */
+
   --neutral-edge: color-mix(in srgb, var(--neutral) 82%, var(--ink));
 
-  /*
-   * Legacy aliases. Every screen built before the v2 redesign is styled with these names and the
-   * other agents' files still use them, so they are kept and re-pointed at the v2 palette rather
-   * than deleted — one rename would break four files this agent does not own.
-   */
+  /* Legacy aliases, re-pointed. */
   --accent: var(--jade);
   --accent-ink: #ffffff;
   --warning-fg: var(--warn-ink);
   --warning-bg: var(--warn-bg);
-  --danger: #b3402e; /* 5.37:1 on ground, 5.69 on white — not a v2 token, unchanged, still passes */
+  --danger: #b3402e; /* 5.4:1 on ground */
   --card-border: var(--hairline);
   --soft: var(--neutral-2);
   --panel: var(--neutral);
   --track: var(--neutral);
   --chip: var(--jade-tint-2);
 
-  /*
-   * Height reserved for the fixed disclaimer footer, so nothing hides behind it.
-   *
-   * A seed, not the truth: `components/Disclaimer.tsx` measures itself and overwrites this on the
-   * first client frame, because the real height depends on the locale (the English wording runs to
-   * five lines where the Chinese runs to three) and on the phone's own safe-area inset. 3.75rem is
-   * the measured Chinese height at 375 px with no inset — so the value that is wrong for the
-   * shortest possible time is the one that is right for the common case.
-   */
   --disclaimer-height: 3.75rem;
-
-  /*
-   * Desktop rail. Unused on a phone (the sidebar is `display: none` below 1024 px). Named so the
-   * camera overlay can start after the rail without guessing a pixel width.
-   */
   --sidebar-width: 15.5rem;
 
   /*
-   * TYPE.
-   *
-   * Chinese is the SYSTEM HK stack and is never web-loaded. A CJK webfont is several megabytes per
-   * weight; this app gets demoed on conference wifi in a Hong Kong ward, and a mother waiting on a
-   * 4 MB font download to hear her discharge sheet read out is a failed demo. PingFang HK ships on
-   * every iPhone, Noto Sans CJK HK on every Android, and both are what the canvas's Noto Sans HK
-   * was standing in for anyway.
-   *
-   * Latin is Instrument Sans, self-hosted by next/font/google (app/layout.tsx), Latin subset only,
-   * display: swap — about 30 kB, and it never blocks first paint.
+   * TYPE. One family, the system sans, bold for headlines. Chinese is the SYSTEM HK stack and is
+   * never web-loaded (a CJK webfont is megabytes per weight and this is demoed on conference wifi);
+   * Latin is Instrument Sans, self-hosted by next/font, standing in for the design's Visuelt Pro.
    */
   --font-hk:
     "PingFang HK", "PingFang TC", "Hiragino Sans TC", "Noto Sans CJK HK", "Noto Sans HK",
@@ -131,11 +94,6 @@
   --font-noto-sc:
     "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei",
     "Source Han Sans SC", sans-serif;
-  /*
-   * --font-instrument-sans is published by next/font in app/layout.tsx. The system stack after it
-   * is not decoration: if the font fails to load (offline first run, blocked CDN at build time)
-   * every Latin string still renders in SF Pro or Segoe rather than in Times.
-   */
   --font-latin-stack:
     var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
     Roboto, ui-sans-serif, system-ui, sans-serif;
@@ -181,13 +139,16 @@
   --color-track: var(--track);
   --color-chip: var(--chip);
 
-  --radius-card: 16px;
+  --radius-card: 20px;
 
   /* `--font-latin-stack` is the raw token; the theme name must differ or the var self-references. */
   --font-sans: var(--font-latin-stack), var(--font-hk), ui-sans-serif, system-ui, sans-serif;
   --font-hant: var(--font-hk), var(--font-latin-stack), sans-serif;
   --font-hans: var(--font-noto-sc), var(--font-latin-stack), sans-serif;
   --font-latin: var(--font-latin-stack), var(--font-hk), sans-serif;
+  --color-charcoal-elevated: var(--charcoal-elevated);
+  --color-on-dark-muted: var(--on-dark-muted);
+  --color-speaking: var(--speaking);
 
   /*
    * Sizes are the canvas's own and are deliberately large: page titles 30/700, agent bubbles
@@ -211,9 +172,9 @@
   --text-fine--line-height: 1.45;
 
   /* One soft, layered card shadow. Separation comes from the shadow, not from an outline. */
-  --shadow-card: 0 1px 3px rgb(42 39 35 / 0.08);
-  --shadow-raised: 0 6px 18px rgb(26 125 99 / 0.24);
-  --shadow-sheet: 0 -10px 34px rgb(42 39 35 / 0.16);
+  --shadow-card: none;
+  --shadow-raised: 0 8px 24px rgb(0 0 0 / 0.12);
+  --shadow-sheet: 0 -10px 34px rgb(19 19 19 / 0.16);
 
   /*
    * The canvas's five animations, plus 明明's idle breathe. No hop: speaking is a pose, not a bounce.
@@ -226,6 +187,8 @@
   --animate-sheet-up: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
   --animate-edge: edge 2.2s ease-in-out infinite;
   --animate-breathe: breathe 3.2s ease-in-out infinite;
+  --animate-scanline: scanline 2.4s ease-in-out infinite alternate;
+  --animate-fade-up: fadeUp 0.25s ease both;
 }
 
 /*
@@ -292,6 +255,25 @@
     transform: scale(1.03);
   }
 }
+/* Three Things: the scan line sweeps the page; widgets fade up into the thread. */
+@keyframes scanline {
+  0% {
+    top: 8%;
+  }
+  100% {
+    top: 88%;
+  }
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
 @layer base {
   html {
@@ -305,18 +287,6 @@
      * A wash, not a texture. Follows the animal so 貓仔 and 兔仔 are not the same jade sky.
      * Frosted chrome on flat cream is invisible; this glow is what makes the glass read as glass.
      */
-    background-image:
-      radial-gradient(
-        ellipse 120% 58% at 50% -18%,
-        color-mix(in srgb, var(--companion-wash) 22%, transparent),
-        transparent 68%
-      ),
-      radial-gradient(
-        ellipse 80% 42% at 100% 110%,
-        color-mix(in srgb, var(--warn-dot) 12%, transparent),
-        transparent 62%
-      );
-    background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-sans);
     /* 18px body: the bystander is 72 and reading over a shoulder. */
@@ -338,7 +308,13 @@
     font-family: var(--font-hans);
   }
 
-  h1,
+  /* Bold sans headlines, tight tracking, the way the design sets 「您好。」 */
+  h1 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    text-wrap: balance;
+  }
+
   h2,
   h3 {
     font-weight: 700;
@@ -352,7 +328,7 @@
   }
 
   :where(button, a, [role="button"]):focus-visible {
-    outline: 3px solid var(--jade);
+    outline: 3px solid var(--companion-plate);
     outline-offset: 2px;
   }
 }
@@ -381,6 +357,7 @@
   /* Companion skin — animal-specific, never a CTA fill. */
   .companion-plate {
     background-color: var(--companion-plate);
+    background-image: var(--companion-grad, none);
   }
 
   .companion-card {
@@ -391,11 +368,10 @@
     color: var(--companion-ink);
   }
 
-  /* The grouped-list card: white on the warm ground, no border, one soft shadow. */
+  /* The card: white on the grey ground, 20 px, no shadow. Separation is the ground itself. */
   .surface {
     background-color: var(--card);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
+    border-radius: 20px;
   }
 
   /* The hairline between rows inside one card, inset from the left like iOS. */
@@ -410,23 +386,67 @@
    * (the dose 食咗 button, the camera 完成) can add `.chunky` and set the variable itself.
    */
   .chunky {
-    --chunky-edge: var(--jade-shadow);
-    box-shadow: 0 4px 0 var(--chunky-edge);
+    --chunky-edge: transparent;
+    box-shadow: none;
     transition:
-      transform 0.08s ease,
-      box-shadow 0.08s ease,
+      transform 0.12s ease,
+      opacity 0.12s ease,
       background-color 0.15s ease;
   }
 
   .chunky:active:not(:disabled) {
-    transform: translateY(4px);
-    box-shadow: 0 0 0 var(--chunky-edge);
+    transform: scale(0.98);
+    opacity: 0.9;
   }
 
   /* A pressed-flat chunky button: same footprint, no lift. Used for "already done" states. */
   .chunky-flat {
     box-shadow: none;
     transform: none;
+  }
+
+  /* The header pills: white, a hairline stroke, 36–44 px. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .pill-dark {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #ffffff;
+  }
+
+  /* The dark summary card: charcoal, 20 px, white text. */
+  .ceremony {
+    background-color: var(--ink);
+    color: #ffffff;
+    border-radius: 20px;
+  }
+
+  /* The assistant's ✦ avatar. */
+  .spark {
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    background-image: var(--companion-grad);
+    color: #ffffff;
+  }
+
+  /* The floating 同明明傾傾 button on 今日. */
+  .talk-grad {
+    background-image: var(--talk-grad);
   }
 }
 
@@ -483,7 +503,7 @@
 }
 
 .desktop-sidebar {
-  background: color-mix(in srgb, var(--companion-card) 72%, var(--ground));
+  background: color-mix(in srgb, var(--companion-card) 40%, var(--ground));
 }
 
 @media (min-width: 1024px) {
@@ -495,27 +515,12 @@
    * The phone chunky press is a 4 px hard shadow a thumb can see at arm's length. On a desk that
    * edge reads as a toy, so the same class becomes a soft lift that still sinks a little on press.
    */
-  .chunky {
-    box-shadow:
-      0 1px 2px rgb(42 39 35 / 0.06),
-      0 6px 16px rgb(26 125 99 / 0.14);
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.12s ease,
-      background-color 0.15s ease;
-  }
-
   .chunky:hover:not(:disabled) {
-    box-shadow:
-      0 2px 4px rgb(42 39 35 / 0.06),
-      0 10px 22px rgb(26 125 99 / 0.18);
+    opacity: 0.92;
   }
 
   .chunky:active:not(:disabled) {
-    transform: translateY(1px);
-    box-shadow:
-      0 1px 2px rgb(42 39 35 / 0.06),
-      0 3px 8px rgb(26 125 99 / 0.12);
+    transform: scale(0.99);
   }
 
   .desktop-chat-col {
