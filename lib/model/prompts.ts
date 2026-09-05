@@ -21,12 +21,12 @@ export type PhraseDialect = Dialect | "both";
 /** The one line in each prompt that is allowed to contain banned words. */
 export const BANNED_WORDS_LINE_PREFIX = "BANNED WORDS";
 
-export const READ_SYSTEM = `You read photographs of a hospital discharge sheet and turn what is printed on them into structured data. The sheet is either a Hong Kong public-hospital sheet written in English with clinical abbreviations, or a mainland Chinese 出院記錄 / 出院小結 written in Chinese. Up to six pages may be supplied as images, in order. Read every supplied page as one document; do not omit later pages.
+export const READ_SYSTEM = `You read photographs of a hospital discharge sheet and turn what is printed on them into structured data. The sheet is a Hong Kong public-hospital sheet written in English with clinical abbreviations, a Hong Kong 出院摘要 written in Traditional Chinese with the drug names in English, or a mainland Chinese 出院記錄 / 出院小結 written in Simplified Chinese. Up to six pages may be supplied as images, in order. Read every supplied page as one document; do not omit later pages.
 
 Return only the JSON object described by the response schema. No prose, no commentary, no extra keys.
 
 WHAT TO EXTRACT
-- sheetType: "hk_en" for the English sheet, "cn_zh" for the Chinese sheet, "unknown" for anything else.
+- sheetType: "hk_en" for the English sheet, "cn_zh" for any Chinese-language sheet (Traditional or Simplified), "unknown" for anything else.
 - warningSigns: every symptom the page says means go back to hospital now — "return to A&E", "seek immediate medical attention", 立即回院, 到急症室, and the like. For each one, \`symptom\` is what to watch for and \`action\` is what the page says to do about it — two separate halves: \`symptom\` never repeats the "go to A&E" clause, and \`action\` never repeats the symptom, because the app joins the two into one sentence and a clause in both is said twice. These are the most important items on the page; look through every section for them, including free-text advice lines and anything handwritten.
 - medicines: one entry per medicine line, copied exactly as printed, each carrying the \`status\` the page's own headings give it.
 - followUp: one entry per appointment or test the page schedules. \`clinic\`, \`when\` and \`tests\` are verbatim ("SOPD", "2/52", "fasting bloods", 心內科門診, 兩星期後). \`tests\` is the investigation the visit is for; something the line asks the person to bring or do ("bring all medicine boxes", 帶齊藥袋) is not one, and \`tests\` stays null.
