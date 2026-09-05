@@ -63,7 +63,7 @@ import { PENDING_IMAGES_KEY } from "@/components/Capture";
 import ChatBar from "@/components/chat/ChatBar";
 import ChatHeader from "@/components/chat/ChatHeader";
 import ChatMessage from "@/components/chat/ChatMessage";
-import ReadingProgress from "@/components/chat/ReadingProgress";
+import ReadingProgress, { type ReadPhase } from "@/components/chat/ReadingProgress";
 import { ThreadWidgetView } from "@/components/chat/Widgets";
 import {
   ListeningBubble,
@@ -96,6 +96,7 @@ import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
 import { remaining } from "@/lib/rules/doses";
 import { detectMedicineChange } from "@/lib/rules/refusal";
 import { REFUSED_MEDICINE_CHANGE } from "@/lib/rules/template-fallback";
+import { detectShareIntent } from "@/lib/share/card";
 import {
   appendMessage,
   loadSheets,
@@ -173,6 +174,9 @@ function ChatScreen() {
   const [status, setStatus] = useState<Status>("boot");
   const [variant, setVariant] = useState<DeclineVariant>("notASheet");
   const [pageCount, setPageCount] = useState(0);
+  /** Which half of the read the reader is watching, and the page they sent, for the reading card. */
+  const [readPhase, setReadPhase] = useState<ReadPhase>("reading");
+  const [firstPage, setFirstPage] = useState<string | null>(null);
   const [speakerOn, setSpeakerOn] = useState(true);
   const [langOpen, setLangOpen] = useState(false);
   const [sourceFor, setSourceFor] = useState<{ source: SourceReference; title: string } | null>(
@@ -609,7 +613,24 @@ function ChatScreen() {
       }
 
       /**
-       * Gate 3: 明明 asked a question and this is the answer to it.
+       * Gate 3: 「發畀我個女」 — the reader wants the card, not an answer.
+       *
+       * A rule (`detectShareIntent`), so it costs no round trip and cannot come back as 「張紙冇講
+       * 呢樣」. The reply is fixed copy and the card under it is drawn from the sheet on this phone.
+       */
+      if (detectShareIntent(text)) {
+        const line = display(t("share.cardLine"));
+        setSpeakingId("share");
+        say(line, () => {
+          appendMessage({ role: "agent", text: line, origin: "rule", widget: "share" });
+          setSpeakingId(null);
+          driving.current = false;
+        });
+        return;
+      }
+
+      /**
+       * Gate 4: 明明 asked a question and this is the answer to it.
        *
        * "Yeah" is the commonest thing anyone says to this app. Posting it to a model to be told it
        * means yes would put a network round trip, a cost and a failure mode in the middle of every
@@ -877,6 +898,8 @@ function ChatScreen() {
     const images = takePendingImages();
     if (images) {
       setPageCount(images.length);
+      setFirstPage(`data:${images[0].mediaType};base64,${images[0].base64}`);
+      setReadPhase("reading");
       setStatus("reading");
       // The read takes twenty seconds or more, and a phone that goes silent for that long looks
       // broken. 明明 says he is reading — a fixed line, spoken and shown — and once more a while
@@ -889,13 +912,15 @@ function ChatScreen() {
         setReadingLine(still);
         say(still);
       }, STILL_READING_MS);
-      let outcome = await readSheet(images, {});
+      // The first card arriving is the one true progress event: looking is over, writing has begun.
+      const readHandlers = { onCard: () => setReadPhase("writing") };
+      let outcome = await readSheet(images, readHandlers);
 
       // contracts/api-read.md: on 413 the client re-downscales and retries ONCE. The pages are
       // shrunk further in memory and never stored; a second 413 falls to the honest decline.
       if (outcome.kind === "too_large") {
         const smaller = await shrinkImages(images, RETRY_LONG_EDGE);
-        if (smaller) outcome = await readSheet(smaller, {});
+        if (smaller) outcome = await readSheet(smaller, readHandlers);
       }
 
       switch (outcome.kind) {
@@ -1078,7 +1103,12 @@ function ChatScreen() {
   if (status === "reading") {
     return (
       <main className="mx-auto flex h-[calc(100dvh-var(--disclaimer-height))] w-full max-w-md flex-col lg:h-full lg:max-w-none">
-        <ReadingProgress pageCount={pageCount} line={readingLine} />
+        <ReadingProgress
+          pageCount={pageCount}
+          line={readingLine}
+          phase={readPhase}
+          pageImage={firstPage}
+        />
       </main>
     );
   }

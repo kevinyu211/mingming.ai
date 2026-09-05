@@ -7,6 +7,7 @@
  *   pills    the medicine checklist — tap a slot when a dose is taken
  *   visits   the follow-up rows with 加入日曆
  *   flags    the numbered warning signs and the hospital's own contact line
+ *   share    the discharge card as a PNG, when the reader asks to send it on
  *
  * Every number here is a rule's number and every sentence is the page's own or a fixed template.
  * The checklist counts times remaining today off `lib/rules/doses.ts` and never shows a clock
@@ -20,6 +21,7 @@ import { useState } from "react";
 import AiLabel from "@/components/AiLabel";
 import { useLocale } from "@/components/LocaleProvider";
 import { fill, formatYmd } from "@/components/home/format";
+import ShareCard from "@/components/share/ShareCard";
 import DoseSlots from "@/components/track/DoseSlots";
 import { useAddToCalendar } from "@/components/track/useAddToCalendar";
 import type { StoredReading } from "@/lib/domain/schemas";
@@ -54,6 +56,8 @@ export function ThreadWidgetView({
       return <VisitsWidget plan={ctx.sheet.plan} reading={ctx.sheet.reading} />;
     case "flags":
       return <FlagsWidget reading={ctx.sheet.reading} display={ctx.display} />;
+    case "share":
+      return <ShareCard sheet={ctx.sheet} />;
   }
 }
 

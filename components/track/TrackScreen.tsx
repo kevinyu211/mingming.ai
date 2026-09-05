@@ -181,7 +181,7 @@ export default function TrackScreen() {
               <div>
                 <WarningSigns reading={active.reading} />
                 <div className="mt-3 flex justify-center">
-                  <ShareButton reading={active.reading} />
+                  <ShareButton sheet={active} />
                 </div>
               </div>
             </div>

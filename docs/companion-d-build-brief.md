@@ -65,6 +65,22 @@ Every v2 token **name** is kept (screens, tests and contrast notes are written a
 7. **No mascot in the artboard** — 明明 stays in the header, on 記錄 and on the empty states (the animal picker and its tests still exist); the thread avatar is the artboard's ✦.
 8. **Two contrast fixes** — `#6E6E73` → `#68686D` for secondary text, and the talk-pill gradient darkened.
 
+## 4b. Second pass (2026-09-05, later that morning)
+
+- **Scan and reading as drawn.** The captured page shows inside the dark card on `/capture`; the
+  reading screen on `/chat` shows the sent page under the artboard's ring-and-percent overlay. The
+  percent is an estimate on a clock calibrated to page count (`components/chat/ReadingProgress.tsx`
+  says so in its header); the line under it flips from 「讀緊 N 頁…」 to 「用簡單嘅話講。」 on a real
+  event, the first card arriving from `/api/read`.
+- **The discharge card is a PNG.** `lib/share/card.ts` builds it by rule (warning signs first,
+  medicines verbatim with the printed clause, the one parsed visit date, the AI line and the
+  disclaimer on its face; no name, no diagnosis); `lib/share/png.ts` draws it with the canvas on the
+  device; `components/share/ShareCard.tsx` shares the file through the phone's share sheet, saving
+  it where the sheet cannot take a file, with the plain-text version one tap behind. It appears in
+  the thread when the reader asks to send it on (`detectShareIntent`, a rule, gate 3 in the chat)
+  and behind 分享俾屋企人 on 今日. The artboard's QR is still not drawn: the sheet never leaves the
+  phone, so there is nothing for it to open.
+
 ## 5. Verification
 
 ```

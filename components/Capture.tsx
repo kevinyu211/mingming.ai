@@ -297,6 +297,7 @@ export default function Capture() {
       {view === "camera" ? (
         <CameraChrome
           pages={pages.length}
+          lastPage={pages[pages.length - 1] ?? null}
           busy={busy}
           onClose={leave}
           onShutter={shoot}
@@ -356,6 +357,7 @@ export default function Capture() {
  */
 function CameraChrome({
   pages,
+  lastPage,
   busy,
   onClose,
   onShutter,
@@ -363,6 +365,8 @@ function CameraChrome({
   onDone,
 }: {
   pages: number;
+  /** The most recent page, shown inside the card the way the artboard shows the photograph. */
+  lastPage: DownscaledImage | null;
   busy: boolean;
   onClose: () => void;
   onShutter: () => void;
@@ -417,6 +421,15 @@ function CameraChrome({
           className="relative w-full max-w-[320px] overflow-hidden rounded-[24px] bg-ink"
           style={{ aspectRatio: "0.8", maxHeight: "100%" }}
         >
+          {lastPage ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a data URL that stays on the phone
+            <img
+              src={`data:${lastPage.mediaType};base64,${lastPage.base64}`}
+              alt=""
+              className="absolute top-1/2 left-1/2 w-[72%] -translate-x-1/2 -translate-y-1/2 -rotate-[1.5deg] rounded-[4px] object-cover"
+              style={{ aspectRatio: "0.72", boxShadow: "0 18px 40px rgba(0,0,0,.5)" }}
+            />
+          ) : null}
           <div className="absolute inset-[18px] rounded-[14px] border-[1.5px] border-white/35" />
           <div
             className="animate-scanline absolute right-[18px] left-[18px] h-[2px]"
