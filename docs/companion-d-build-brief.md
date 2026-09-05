@@ -82,6 +82,9 @@ Results on 2026-09-05 (branch `feat/companion-atoms`, commit after this brief):
   `brief.intro` sentence, the picker / laptop capture flows and the language switch — and the
   same 8 fail on this branch for the same reasons (the e2e specs are owned by the submission
   merge and were being repaired there). No failure is introduced by this branch.
+- After merging `origin/main` (a8089cf: the deployed model path and the repaired specs) into the
+  branch with no conflicts: tsc clean, 1263 unit tests passed, `next build` clean, and the full
+  Playwright suite passed on both phone profiles (116 passed, 0 failed).
 - Tests touched: `tests/unit/design-system.test.tsx` (the default companion plate colour pin).
 - The e2e helpers require a visible heading named 記錄 / 跟進 on the two tabs; the artboard has no
   page title, so it is rendered small above the hero rather than dropped.
