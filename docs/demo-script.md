@@ -6,10 +6,14 @@ product, and they should watch it rather than be told about it.
 
 The pitch window is **5–8 minutes including Q&A**. This script is about five, which leaves room.
 
-**The one number to know cold:** a read takes **25 to 60 seconds** and can reach 90 on a bad
-network. Measured on the deployed app: 24 s, 54 s, 57 s, 92 s across four runs. That is the only
-dead air in the demo and section 1:00 exists to fill it. Never photograph a sheet and then stand in
-silence.
+**The one number to know cold:** a read takes **about 25 seconds** (measured on the deployed app
+on 4 Sept, Claude Sonnet 5 through the Vercel AI Gateway: 23 s, 23 s, 24 s, 26 s). A question
+answers in **about 5 seconds** once the app is warm. That is the only dead air in the demo and
+section 1:00 exists to fill it. Never photograph a sheet and then stand in silence.
+
+**The number that will ruin you if you skip the warm-up:** the FIRST request after the app has sat
+idle for a few minutes takes **75–80 seconds** — measured four separate times today, and every
+request after it was under 6 s. So the warm-up below is not optional.
 
 ---
 
@@ -23,6 +27,11 @@ silence.
   that hold is lost by construction, every time, on any phone. Grant it once beforehand and every
   hold on stage opens immediately. (The app now says 「麥克風未開到。撳住耐啲再講一次」 rather than
   「我冇聽到」, but you do not want to spend a beat explaining that.)
+- **Warm it up, two minutes before you are called.** Open 用示範紙 on the phone and ask it one
+  throwaway question — 「有咩要注意？」 — and wait for the answer. The first request after a few
+  idle minutes takes 75–80 s; the one after takes 5. Do this and every question on stage is fast.
+  Skip it and your first live question is eighty seconds of silence in front of the judges.
+  Then clear the sample sheet.
 - 記錄 empty, no active sheet.
 - **Ring/silent switch OFF.** Check it. This is the failure that looks exactly like a broken app.
 - Volume up, speaker toggle in the chat header ON.
