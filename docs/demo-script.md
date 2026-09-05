@@ -146,6 +146,7 @@ twice.
 | Microphone | tap the bar and type | "she can type; a lot of daughters do" |
 | Voice silent | check the ring/silent switch first, then the speaker toggle | nothing |
 | Phone dead | the backup video on the laptop | "recorded on this phone an hour ago, one continuous run" |
+| You want the greeting again for the judges | tap ↺ 從頭講 in the chat header: same sheet, nothing re-read | nothing |
 
 The backup video in `docs/backup-video/` shows the previous look of the app. Re-record on the
 phone with sound before you go if there is time; the script for the recording is the click-list
