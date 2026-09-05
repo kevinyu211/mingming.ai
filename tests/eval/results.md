@@ -551,3 +551,25 @@ That case is now its own test, and the demo script asks an answerable question i
 **Not yet measured:** the venue network (every number here is a home connection in Shanghai, and
 several requests failed outright with connection errors mid-session), the production build, and
 prompt-cache hit rates. Voice is unmeasured: MiniMax needs `MINIMAX_GROUP_ID`.
+
+## Production verification after the merge — 2026-09-05 (build `2b4d67b`, mingming.app)
+
+The merge of `feat/companion-apple-ui` into `main` (`fe2599e`) went to production through the git
+integration; `mingming.app` was confirmed serving the new build by the arrival of `/api/warm`.
+
+| Check | Result |
+| --- | --- |
+| `GET /` | 200 in 0.66 s |
+| `POST /api/warm` | answers; `{"warmed":false,"reason":"recent"}` when a warm is under 90 s old; server log `route: 'warm', ms: 1564–2029, cache_read: 2869` (prompt cache hit) |
+| `POST /api/ask`, hk_en fixture, 「空腹係咩意思？」, curl | 200; first byte 4.3 s / 6.3 s, total 5.7 s / 7.4 s; events `early` → `outcome` → `answer` → `done`, the early sentence identical to the answer's `yue` |
+| Read timings on this build | rendered sheets 27.6 / 36.6 / 38.0 / 43.6 s server-side; `cn_zh_photo` 46.3 / 48.0 s end to end, 3/3 medicines (tests/eval/stress.md) |
+| Browser suite, merged tree, clean worktree | 108/116 first pass; the 8 remaining pass on re-run alone (chat-voice's third microphone hold is timing-sensitive under load) |
+| Unit / types / lint / build | 1263 tests, tsc, eslint, `next build` clean |
+
+One measurement trap, recorded so nobody chases it again: a Node `fetch` (tsx script) from this Mac
+showed 114–117 s to first byte on the same ask, twice, while curl showed 4–6 s and the server
+logged 4 s. That is a local connection stall in Node's undici after idle, not the handler; time the
+deployed app with curl or a browser.
+
+Still open on this build: the degraded `messy` stress photo (422 after 288 s alone), and the
+listening test for the voice pick (`tests/eval/voices.md`).
