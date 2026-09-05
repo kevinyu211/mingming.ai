@@ -533,7 +533,7 @@ function cleanForms(
   spoken: string | null,
   quotes: PrintedLines,
 ): Speakable | null {
-  const own = spoken ?? answer[dialect];
+  const own = settle(answer[dialect], spoken);
   if (!checkTextAgainstQuotes(own, quotes).ok) return null;
   const out: Speakable = { ...answer, [dialect]: own };
   for (const form of FORMS) {
@@ -555,6 +555,21 @@ function withSpoken(
   dialect: "yue" | "cmn" | "en",
   spoken: string | null,
 ): Speakable {
-  if (spoken === null || answer[dialect] === spoken) return answer;
-  return { ...answer, [dialect]: spoken };
+  const own = settle(answer[dialect], spoken);
+  return own === answer[dialect] ? answer : { ...answer, [dialect]: own };
+}
+
+/**
+ * Which string the reader's form ends up as: the sentence already said aloud, unless the final
+ * form merely continues it.
+ *
+ * The early sentence and the final form are the same string by the scanner's construction, so
+ * this is normally a no-op. Once, live, the early sentence arrived as a bare prefix of the final
+ * ("PRN is short for a Latin phrase meaning ") — cause not found, three reruns clean — and
+ * pinning it would have left that fragment as the whole answer. A final that starts with what
+ * was said is the same sentence finished, and wins; anything else keeps what the phone said.
+ */
+function settle(final: string, spoken: string | null): string {
+  if (spoken === null) return final;
+  return final.startsWith(spoken) ? final : spoken;
 }

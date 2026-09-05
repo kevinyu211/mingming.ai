@@ -144,7 +144,7 @@ guardrail on audio. Every sentence he says is text first, checked against a bann
 the card it cites, and only then spoken. We stream the one language she's listening to the moment
 it's written, so it feels live — but it never skips the check."
 
-*Numbers if pressed: 20 of 20 outcomes correct on the last live eval, zero banned terms.*
+*Numbers if pressed: 20 of 20 outcomes correct on the last live eval against the 1.2.0 rubric — five of them now answered as a labelled general explanation or a boundary reply ("that's one for the doctor", then the page's own warning signs) where the old rubric expected a plain refusal — zero banned terms.*
 
 ---
 

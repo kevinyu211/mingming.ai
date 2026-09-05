@@ -357,3 +357,37 @@ describe("what was said early is what the final answer says", () => {
     ]);
   });
 });
+
+describe("an early sentence that is only the start of the final one", () => {
+  it("lets the finished sentence win, for a general explanation", async () => {
+    const prefix = "PRN is short for a Latin phrase meaning ";
+    const finished = `${prefix}"when needed". You take it only when you need it.`;
+    streaming({ kind: "general", citedCardIds: [], text: prefix }, () => ({
+      kind: "general",
+      citedCardIds: [],
+      answer: { yue: "PRN即係有需要先食。", cmn: "PRN就是需要时才吃。", en: finished },
+    }));
+
+    const events: AskEvent[] = [];
+    for await (const event of runAsk(request("What does PRN mean?", "en"), { provider: streamingProvider })) {
+      events.push(event);
+    }
+    expect(events[0]).toEqual({ event: "early", dialect: "en", outcome: "explained", text: prefix });
+    expect(events[2]).toEqual({
+      event: "answer",
+      answer: { yue: "PRN即係有需要先食。", cmn: "PRN就是需要时才吃。", en: finished },
+    });
+  });
+
+  it("keeps what was said when the final form is a different sentence", async () => {
+    const said = "PRN即係有需要先食。";
+    streaming({ kind: "general", citedCardIds: [], text: said }, () => ({
+      kind: "general",
+      citedCardIds: [],
+      answer: { yue: "PRN係需要嗰陣先食嘅意思。", cmn: "PRN就是需要时才吃。", en: "PRN means when needed." },
+    }));
+
+    const events = await collect("PRN係咩意思？", streamingProvider);
+    expect(events[2]).toMatchObject({ event: "answer", answer: { yue: said } });
+  });
+});
