@@ -27,18 +27,27 @@
  * that helps everyone.
  */
 import Image from "next/image";
-import { useState, type CSSProperties } from "react";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
+import {
+  DEFAULT_MASCOT,
+  loadState,
+  readMascotAnimal,
+  subscribe,
+  type MascotAnimal,
+} from "@/lib/storage/local";
 
-export type MascotAnimal = "cat" | "panda" | "puppy" | "rabbit";
+export {
+  DEFAULT_MASCOT,
+  MASCOT_ANIMALS,
+  type MascotAnimal,
+} from "@/lib/storage/local";
 
-/**
- * ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
- * │  THIS ONE WORD IS THE MASCOT. Change it to "cat", "puppy" or "rabbit" and every 明明 in the  │
- * │  app changes with it — the thread avatar, the home screen, the reading screen, the check-in  │
- * │  notice. All four animals are already in `public/mascot/`; nothing else needs touching.      │
- * └─────────────────────────────────────────────────────────────────────────────────────────────┘
- */
-export const MASCOT: MascotAnimal = "panda";
+/** Alias of `DEFAULT_MASCOT` so existing tests that import `MASCOT` keep compiling. */
+export const MASCOT: MascotAnimal = DEFAULT_MASCOT;
+
+function readStoredAnimal(): MascotAnimal {
+  return readMascotAnimal(loadState());
+}
 
 /** The four sizes the canvas draws. Nothing else is designed, so nothing else is offered. */
 export type MascotSize = 30 | 44 | 64 | 92;
@@ -46,8 +55,8 @@ export type MascotSize = 30 | 44 | 64 | 92;
 /**
  * `speaking` is 明明 mid-sentence; `listening` is him with the microphone open, and it also breathes
  * a ring around him. Both are status, never a control — the same rule as the 讀住 waveform (brief
- * section 6). `greeting` waves, and is the one nothing calls yet. Reduced motion stops the ring
- * (globals.css).
+ * section 6). `greeting` is the unread / empty-home pose. The wrapper only breathes; it does not
+ * hop. Reduced motion stops every motion (globals.css).
  */
 export type MascotState = "idle" | "speaking" | "listening" | "greeting";
 
@@ -55,10 +64,10 @@ export type MascotState = "idle" | "speaking" | "listening" | "greeting";
 const ART: readonly MascotState[] = ["idle", "speaking", "listening", "greeting"];
 
 /**
- * Above the fold, and only there. 64 is the home screen's empty state and 92 is the reading
- * screen — one of each, both the first thing on their page, both worth a preload. 30 is the thread
- * avatar, which repeats on every message: preloading that would put twenty identical `<link>` tags
- * in the head for one small file the browser fetches once anyway.
+ * Above the fold, and only there. 64 is the home conversation row and 92 is the empty-home /
+ * consent plate — one of each, both the first thing on their page, both worth a preload. 30 is
+ * the thread avatar, which repeats on every message: preloading that would put twenty identical
+ * `<link>` tags in the head for one small file the browser fetches once anyway.
  */
 const PRELOAD_FROM: MascotSize = 64;
 
@@ -66,33 +75,63 @@ export interface MascotProps {
   /** 30 notification avatar · 44 thread avatar · 64 empty state · 92 the reading screen. */
   size?: MascotSize;
   state?: MascotState;
+  /**
+   * Overrides the on-device choice. Settings preview tiles pass this so each tile can show a
+   * different animal without writing storage. Everywhere else omits it and follows the picker.
+   */
+  animal?: MascotAnimal;
+  /**
+   * A slow idle breathe on the wrapper. No bounce, no hop: the speaking and greeting poses
+   * already say what he is doing. Settings tiles pass false so the picker grid does not pulse.
+   */
+  motion?: boolean;
   /** Extra classes for the wrapper — opacity, margins. The drawing itself is fixed. */
   className?: string;
   style?: CSSProperties;
 }
 
-export default function Mascot({ size = 44, state = "idle", className = "", style }: MascotProps) {
+function motionClass(_state: MascotState, motion: boolean): string {
+  if (!motion) return "";
+  return "animate-breathe";
+}
+
+export default function Mascot({
+  size = 44,
+  state = "idle",
+  animal,
+  motion = true,
+  className = "",
+  style,
+}: MascotProps) {
   // The one thing that can go wrong with an image: it does not arrive. Then we draw him instead.
-  const [broken, setBroken] = useState(false);
+  // Remembered per file, not as a flag: a 404 on one file must not freeze every later animal on
+  // the CSS blob — that blob is the same panda-shaped face for all four, which is how a switch
+  // could look like it did nothing. A different file starts clean without an effect to reset it.
+  const [brokenFile, setBrokenFile] = useState<string | null>(null);
+  const stored = useSyncExternalStore(subscribe, readStoredAnimal, () => DEFAULT_MASCOT);
+  const chosen = animal ?? stored;
   const art = ART.includes(state) ? state : "idle";
+  const file = `${chosen}-${art}`;
+  const broken = brokenFile === file;
 
   return (
     <span
       aria-hidden="true"
-      className={`relative block shrink-0 ${className}`}
+      className={`relative block shrink-0 ${motionClass(state, motion)} ${className}`.trim()}
       style={{ width: size, height: size, ...style }}
     >
       {broken ? (
         <MascotDrawing size={size} state={state} />
       ) : (
         <Image
-          src={`/mascot/${MASCOT}/${art}.webp`}
+          key={file}
+          src={`/mascot/${chosen}/${art}.webp`}
           alt=""
           width={size}
           height={size}
           priority={size >= PRELOAD_FROM}
           unoptimized
-          onError={() => setBroken(true)}
+          onError={() => setBrokenFile(file)}
           className="block h-full w-full object-contain"
         />
       )}

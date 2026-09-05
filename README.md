@@ -40,9 +40,24 @@ to `browser` (the phone's own voice); the demo build runs `minimax`. `.env.examp
 transcribed by OpenAI; set both to `browser` to keep audio on the phone. What each provider receives
 is spelled out in `docs/submission/data-statement.md`.
 
+## Keeping it warm
+
+The first question after the app has sat idle was measured at 75–80 s on the deployed build, and
+every one after it under 10 s. `POST /api/warm` makes one fixed model call (a constant card and
+the greeting 你好 — nothing from any reader) on the same code path a question takes. It is hit by
+a Vercel cron every four minutes (`vercel.json`) and by the phone itself when the app opens and
+whenever it comes back into view (`components/Warmer.tsx`, production builds only). Warm-ups
+closer together than 90 s per instance are a single call. The demo checklist still does a manual
+warm-up before walking on, as belt and braces.
+
+A question is spoken as soon as the reader's own language has been written: `/api/ask` streams
+the model's JSON, and the moment `kind`, the citations and the reader's spoken form have closed
+their quotes — through the same gates as the full answer — it sends an `early` event and the phone
+starts talking, while the other two languages are still being written.
+
 ## Venue fallback
 
-1. Hosted link (Vercel) with a QR code.
+1. Hosted link (Vercel) with a QR code: `https://mingming.app` — `docs/qr.png`.
 2. Laptop: `npm run build && npm start`, phone on the laptop's hotspot, QR to the LAN address.
 3. Sample sheets inside the app if the model route is unreachable.
 
@@ -70,7 +85,7 @@ Playwright uses the installed Google Chrome (`channel: "chrome"`); run
 ## Layout
 
 ```
-app/            pages (/ 記錄, /chat 傾偈, /track 跟進, /capture, /settings; /read, /ask and /plan redirect) and API routes (read, ask, phrase, tts, stt)
+app/            pages (/ 記錄, /chat 傾偈, /track 跟進, /capture, /settings; /read, /ask and /plan redirect) and API routes (read, ask, phrase, tts, stt, warm)
 components/     UI
 lib/domain/     Zod schemas (single source of truth)
 lib/model/      Gateway client and frozen prompts (server only)
@@ -78,6 +93,7 @@ lib/rules/      deterministic gates: card order, banned terms, diet line, refusa
 lib/server/     read and ask pipelines, NDJSON streaming
 lib/speech/     TTS/STT provider adapters and the client speech layer
 lib/storage/    on-device state (one key, delete-everything)
+lib/share/      the share-with-family text, built on the device from the filtered cards
 lib/i18n/       UI strings (hant/hans/en), script conversion, data statement, referral resources
 fixtures/       synthetic discharge sheets and expected readings
 tests/          unit, e2e, eval

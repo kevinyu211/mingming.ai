@@ -2,6 +2,7 @@
 
 **Track**: Vital (Soft Healthcare), AIx Origin Summit. **Direction**: A, 健康信息赋能与可及性.
 **Team**: Kevin Yue (solo; product/demo lead and compliance lead).
+**Live demo**: https://mingming.app (QR: `docs/qr.png`). App name on the phone: Ming Ming · 明明.
 
 ## The problem
 

@@ -96,9 +96,20 @@ export interface AskResponse {
   answer?: Speakable;
   /** Only for `crisis_referral`: the fixed text and the resource list, built on the client. */
   referral?: AskReferral;
+  /**
+   * The sentence the server sent ahead of the full answer, when it did. Already filtered; the
+   * `answer` above carries the same string in the reader's language. Present on a failure too,
+   * when the stream broke after it was sent — the sentence stands, the citations were lost.
+   */
+  early?: string;
 }
 
 export interface AskHandlers {
+  /**
+   * The reader's own spoken form of the answer, before the rest of it has been written. Fires at
+   * most once, before `onOutcome`. What it carries has passed every gate and may be said at once.
+   */
+  onEarly?: (event: { text: string; outcome: "answered" | "explained" }) => void;
   /** Fires as soon as the outcome is known, before the sentence arrives, so the card can style itself. */
   onOutcome?: (event: {
     outcome: AnswerOutcome;
@@ -125,6 +136,13 @@ interface OutcomeEvent {
   source?: SourceReference | null;
 }
 
+interface EarlyEvent {
+  event: "early";
+  dialect?: string;
+  outcome?: string;
+  text?: string;
+}
+
 interface AnswerEvent {
   event: "answer";
   answer?: Speakable | null;
@@ -139,7 +157,7 @@ interface ErrorEvent {
   error?: string;
 }
 
-type AskEvent = OutcomeEvent | AnswerEvent | DoneEvent | ErrorEvent;
+type AskEvent = OutcomeEvent | EarlyEvent | AnswerEvent | DoneEvent | ErrorEvent;
 
 const ANSWER_OUTCOMES: ReadonlySet<string> = new Set<AnswerOutcome>([
   "answered",
@@ -219,9 +237,11 @@ export async function ask(request: AskRequest, handlers: AskHandlers = {}): Prom
     ...(brief ? { memory: brief } : {}),
   });
 
+  const result: AskResponse = { outcome: "model_unavailable" };
   const fail = (outcome: FailureOutcome): AskResponse => {
     handlers.onFailure?.(outcome);
-    return { outcome };
+    // A sentence already said aloud is kept on the failure, so the page can stand by it.
+    return result.early === undefined ? { outcome } : { outcome, early: result.early };
   };
 
   let response: Response;
@@ -250,7 +270,6 @@ export async function ask(request: AskRequest, handlers: AskHandlers = {}): Prom
 
   if (!response.body) return fail("model_unavailable");
 
-  const result: AskResponse = { outcome: "model_unavailable" };
   // A holder rather than two `let`s: the compiler keeps property types honest across the
   // closure below, where plain locals would stay narrowed to their initial values.
   const state: { answered: AnswerOutcome | null; failure: FailureOutcome | null } = {
@@ -280,6 +299,16 @@ export async function ask(request: AskRequest, handlers: AskHandlers = {}): Prom
         citedCardIds: result.citedCardIds,
         sources: result.sources,
       });
+      return;
+    }
+
+    if (event.event === "early") {
+      if (result.early !== undefined) return;
+      if (typeof event.text !== "string" || event.text.trim().length === 0) return;
+      if (event.outcome !== "answered" && event.outcome !== "explained") return;
+      if (event.dialect !== request.dialect) return;
+      result.early = event.text;
+      handlers.onEarly?.({ text: event.text, outcome: event.outcome });
       return;
     }
 

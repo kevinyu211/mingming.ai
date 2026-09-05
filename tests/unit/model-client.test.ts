@@ -794,3 +794,42 @@ describe("frozen system prompts", () => {
     expect(prompt).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-/i);
   });
 });
+
+describe("answerStream", () => {
+  const RESULT = {
+    kind: "sheet" as const,
+    citedCardIds: ["medicine-0"],
+    answer: SPEAKABLE,
+  };
+
+  it("reports the reader's sentence once, as soon as it and `kind` have closed, then validates the whole", async () => {
+    const full = JSON.stringify(RESULT);
+    const cut = full.indexOf('"cmn"');
+    // The Cantonese sentence closes inside the first delta; the rest arrives afterwards.
+    streamMock.mockReturnValue(fakeStream(canned({ text: full }), [full.slice(0, cut), full.slice(cut)]));
+
+    const early: unknown[] = [];
+    const { result } = await provider().answerStream(
+      { cards: CARDS, question: "幾時覆診？", inputLanguage: "yue", dialect: "yue" },
+      (partial) => early.push(partial),
+    );
+
+    expect(early).toEqual([{ kind: "sheet", citedCardIds: ["medicine-0"], text: SPEAKABLE.yue }]);
+    expect(result).toEqual(RESULT);
+    const request = lastRequest(streamMock);
+    expect(request.providerOptions.gateway.tags).toEqual(["route:ask"]);
+    expect(request.timeout).toEqual({ totalMs: ASK_TIMEOUT_MS });
+  });
+
+  it("reports nothing early when the sentence never closes before the end", async () => {
+    streamMock.mockReturnValue(fakeStream(canned({ text: "{" }), ["{"]));
+    const onEarly = vi.fn();
+    await expect(
+      provider().answerStream(
+        { cards: CARDS, question: "?", inputLanguage: "yue", dialect: "yue" },
+        onEarly,
+      ),
+    ).rejects.toBeInstanceOf(ModelOutputError);
+    expect(onEarly).not.toHaveBeenCalled();
+  });
+});

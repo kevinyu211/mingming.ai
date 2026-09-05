@@ -38,6 +38,9 @@ import {
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import type { z } from "zod";
 
+import { AnthropicCompatProvider, isAnthropicSlug } from "@/lib/model/anthropic-compat";
+
+import { scanEarlyAnswer, type EarlyAnswer } from "@/lib/model/early";
 import {
   ASK_SYSTEM,
   PHRASE_SYSTEM,
@@ -83,6 +86,7 @@ export const MAX_TOKENS = 16000;
 export const READ_TIMEOUT_MS = 240_000;
 export const ASK_TIMEOUT_MS = 50_000;
 
+
 /** Recorded for the eval log; never contains any request or response text. */
 export interface UsageSummary {
   inputTokens: number;
@@ -125,8 +129,20 @@ export interface ModelProvider {
     onPartialText?: (delta: string) => void,
   ): Promise<{ reading: SheetReading; usage: UsageSummary }>;
   answer(input: AnswerInput): Promise<{ result: AskResult; usage: UsageSummary }>;
+  /**
+   * `answer`, streamed. `onEarly` fires at most once, the moment `kind` and the reader's own
+   * spoken form have both closed their quotes — well before the other two languages are
+   * written — with exactly the strings the validated result will carry. Optional so a test
+   * double that only answers still satisfies the interface; callers fall back to `answer`.
+   */
+  answerStream?(
+    input: AnswerInput,
+    onEarly?: (early: EarlyAnswer) => void,
+  ): Promise<{ result: AskResult; usage: UsageSummary }>;
   phrase(input: PhraseInput): Promise<{ result: PhraseResult; usage: UsageSummary }>;
 }
+
+export type { EarlyAnswer };
 
 /* -------------------------------------------------------------------------- */
 /* Errors                                                                     */
@@ -289,7 +305,27 @@ export class GatewayProvider implements ModelProvider {
   }
 
   async answer(input: AnswerInput) {
-    const { value, usage } = await this.send({
+    const { value, usage } = await this.send(this.answerSpec(input));
+    return { result: value, usage };
+  }
+
+  async answerStream(input: AnswerInput, onEarly?: (early: EarlyAnswer) => void) {
+    let text = "";
+    let fired = false;
+    const { value, usage } = await this.sendStreaming(this.answerSpec(input), (delta) => {
+      if (fired || onEarly === undefined) return;
+      text += delta;
+      const early = scanEarlyAnswer(text, input.dialect);
+      // `kind` decides whether the sentence may be said at all, so both must have landed.
+      if (early.kind === null || early.text === null) return;
+      fired = true;
+      onEarly(early);
+    });
+    return { result: value, usage };
+  }
+
+  private answerSpec(input: AnswerInput): CallSpec<AskResult> {
+    return {
       route: "ask",
       model: this.modelAsk,
       system: ASK_SYSTEM,
@@ -303,8 +339,7 @@ export class GatewayProvider implements ModelProvider {
       ),
       schema: AskResultSchema,
       timeoutMs: ASK_TIMEOUT_MS,
-    });
-    return { result: value, usage };
+    };
   }
 
   async phrase(input: PhraseInput) {
@@ -450,10 +485,17 @@ function finish<T>(
     );
   }
 
-  return {
-    value: parsed.data,
-    usage: summariseUsage(completed, spec.model, startedAt),
-  };
+  const usage = summariseUsage(completed, spec.model, startedAt);
+  // One line per model call: the route, how long the provider took, which model served it and
+  // whether the frozen system prompt was a cache hit. Nothing from the request or the reply.
+  console.info({
+    model_call: spec.route,
+    ms: usage.ms,
+    model: usage.model,
+    out: usage.outputTokens,
+    cache_read: usage.cacheReadInputTokens,
+  });
+  return { value: parsed.data, usage };
 }
 
 function summariseUsage(completed: Completed, requestedModel: string, startedAt: number): UsageSummary {
@@ -478,16 +520,43 @@ function envModel(name: "MODEL_READ" | "MODEL_ASK"): string {
 /* Singleton                                                                  */
 /* -------------------------------------------------------------------------- */
 
-let cached: { key: string; provider: GatewayProvider } | null = null;
+let cached: { key: string; provider: ModelProvider } | null = null;
 
 /**
  * The process-wide provider. Cached on the resolved model ids so a route never rebuilds it per
  * request.
+ *
+ * `anthropic/*` slugs take the Anthropic-compatible path (strict `output_config.format`, effort
+ * medium — see ./anthropic-compat) whenever a Gateway key is present; every other slug, and the
+ * key-less local case, takes the AI SDK path above.
  */
 export function getModelProvider(): ModelProvider {
-  const key = `${envModel("MODEL_READ")}|${envModel("MODEL_ASK")}`;
+  const modelRead = envModel("MODEL_READ");
+  const modelAsk = envModel("MODEL_ASK");
+  const compat = Boolean(process.env.AI_GATEWAY_API_KEY?.trim());
+  const key = `${modelRead}|${modelAsk}|${compat ? "compat" : "sdk"}`;
   if (!cached || cached.key !== key) {
-    cached = { key, provider: new GatewayProvider() };
+    cached = { key, provider: buildProvider(modelRead, modelAsk, compat) };
   }
   return cached.provider;
+}
+
+function buildProvider(modelRead: string, modelAsk: string, compat: boolean): ModelProvider {
+  if (compat && isAnthropicSlug(modelRead) && isAnthropicSlug(modelAsk)) {
+    return new AnthropicCompatProvider({ modelRead, modelAsk });
+  }
+  if (compat && (isAnthropicSlug(modelRead) || isAnthropicSlug(modelAsk))) {
+    // Mixed vendors: each route goes to the provider that suits its model.
+    const anthropic = new AnthropicCompatProvider({ modelRead, modelAsk });
+    const sdk = new GatewayProvider({ modelRead, modelAsk });
+    const reader = isAnthropicSlug(modelRead) ? anthropic : sdk;
+    const asker = isAnthropicSlug(modelAsk) ? anthropic : sdk;
+    return {
+      readSheet: (images) => reader.readSheet(images),
+      readSheetStream: (images, onPartialText) => reader.readSheetStream(images, onPartialText),
+      answer: (input) => asker.answer(input),
+      phrase: (input) => asker.phrase(input),
+    };
+  }
+  return new GatewayProvider({ modelRead, modelAsk });
 }

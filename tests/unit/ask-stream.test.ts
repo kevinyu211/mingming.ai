@@ -393,3 +393,62 @@ describe("failures", () => {
     await expect(ask(REQUEST)).resolves.toEqual({ outcome: "model_unavailable" });
   });
 });
+
+/* -------------------------------------------------------------------------- */
+/* The early sentence                                                         */
+/* -------------------------------------------------------------------------- */
+
+describe("the early sentence", () => {
+  const EARLY = JSON.stringify({ event: "early", dialect: "yue", outcome: "answered", text: ANSWER.yue });
+  const OUTCOME = JSON.stringify({
+    event: "outcome",
+    outcome: "answered",
+    citedCardIds: ["medicine-0"],
+    sources: [SOURCE],
+  });
+  const FINAL = JSON.stringify({ event: "answer", answer: ANSWER });
+
+  it("fires onEarly once, before the outcome, and is kept on the result", async () => {
+    fetchMock.mockResolvedValue(ok([`${EARLY}\n`, `${OUTCOME}\n${FINAL}\n`, '{"event":"done"}\n']));
+    const seen: string[] = [];
+    const result = await ask(REQUEST, {
+      onEarly: ({ text, outcome }) => seen.push(`early:${outcome}:${text}`),
+      onOutcome: ({ outcome }) => seen.push(`outcome:${outcome}`),
+      onAnswer: () => seen.push("answer"),
+    });
+    expect(seen).toEqual([`early:answered:${ANSWER.yue}`, "outcome:answered", "answer"]);
+    expect(result.early).toBe(ANSWER.yue);
+    expect(result.answer).toEqual(ANSWER);
+    expect(result.outcome).toBe("answered");
+  });
+
+  it("ignores an early sentence in a language the reader did not ask for", async () => {
+    const other = JSON.stringify({ event: "early", dialect: "cmn", outcome: "answered", text: ANSWER.cmn });
+    fetchMock.mockResolvedValue(ok([`${other}\n${OUTCOME}\n${FINAL}\n`]));
+    const onEarly = vi.fn();
+    const result = await ask(REQUEST, { onEarly });
+    expect(onEarly).not.toHaveBeenCalled();
+    expect(result.early).toBeUndefined();
+  });
+
+  it("keeps the sentence on a failure that arrives after it", async () => {
+    fetchMock.mockResolvedValue(
+      ok([`${EARLY}\n`, '{"event":"error","error":"model_unavailable"}\n']),
+    );
+    const onEarly = vi.fn();
+    const result = await ask(REQUEST, { onEarly });
+    expect(onEarly).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ outcome: "model_unavailable", early: ANSWER.yue });
+  });
+
+  it("drops a malformed early event", async () => {
+    const blank = JSON.stringify({ event: "early", dialect: "yue", outcome: "answered", text: "  " });
+    const odd = JSON.stringify({ event: "early", dialect: "yue", outcome: "refused", text: "x" });
+    fetchMock.mockResolvedValue(ok([`${blank}\n${odd}\n${OUTCOME}\n${FINAL}\n`]));
+    const onEarly = vi.fn();
+    const result = await ask(REQUEST, { onEarly });
+    expect(onEarly).not.toHaveBeenCalled();
+    expect(result.early).toBeUndefined();
+    expect(result.answer).toEqual(ANSWER);
+  });
+});
