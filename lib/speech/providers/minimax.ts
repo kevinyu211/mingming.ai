@@ -217,10 +217,11 @@ interface MinimaxT2aResponse {
  * request succeeded — and every one of those refusals cost 明明 a whole spoken line, because
  * nothing between here and the phone retried: the client treats a 502 as "this line is text-only".
  * A single retry after a short pause turns an intermittent refusal back into a spoken line. The
- * two codes that mean the request itself is wrong are never retried: 1004 (auth) and 2013
- * (invalid params) would fail identically the second time.
+ * three codes that mean the second try is certain to fail the same way are never retried: 1004
+ * (auth), 2013 (invalid params) and 1008 (insufficient balance — measured on 5 September when the
+ * account ran dry: every language answered 1008 in 0.5 s, and a retry only doubled the wait).
  */
-const NEVER_RETRY = new Set([1004, 2013]);
+const NEVER_RETRY = new Set([1004, 2013, 1008]);
 const RETRY_AFTER_MS = 400;
 
 function retryable(httpStatus: number, baseCode: number): boolean {

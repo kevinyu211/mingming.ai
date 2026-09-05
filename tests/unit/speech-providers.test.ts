@@ -281,6 +281,16 @@ describe("minimax tts adapter", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("does not retry an insufficient-balance refusal: the account, not the request, is the problem", async () => {
+    const calls = mockFetch(
+      jsonResponse({ base_resp: { status_code: 1008, status_msg: "insufficient balance" }, data: {} }),
+    );
+    await expect(createMinimaxTtsProvider().synthesize(YUE_TEXT, "yue")).rejects.toBeInstanceOf(
+      SpeechProviderError,
+    );
+    expect(calls).toHaveLength(1);
+  });
+
   it("gives up after the one retry when the refusal repeats", async () => {
     const fetchSpy = vi.fn();
     fetchSpy.mockResolvedValue(
