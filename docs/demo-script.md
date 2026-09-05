@@ -19,7 +19,10 @@ request after it was under 6 s. So the warm-up below is not optional.
 
 ## Before you walk up
 
-- Phone on the **deployed HTTPS URL**, never the LAN address — the microphone needs a secure origin.
+- Phone on **`https://mingming.app`**, never the LAN address — the microphone needs a secure origin,
+  and only Production carries the cloud transcription settings (a preview URL falls back to iOS
+  dictation, which mishears). The first open of the custom domain after idle costs about four
+  seconds on the TLS handshake — measured, harmless, and gone by the second tap.
 - **Tap 明白，開始 before you are on.** That tap is what unlocks audio on iOS; without it 明明 is
   silent. It also gets the consent gate out of your five minutes.
 - **Hold the bar once and grant the microphone before you are on.** The first hold of a session is
