@@ -106,6 +106,21 @@ function numbered(ctx: Ctx, n: number, text: string): Op {
   };
 }
 
+function bullet(ctx: Ctx, text: string): Op {
+  const x = PAD + 40;
+  const body = paragraph(ctx, text, { size: 32, weight: 400, colour: INK, x, maxWidth: CARD_WIDTH - x - PAD, lineHeight: 46, after: 14 });
+  return {
+    height: body.height,
+    draw: (c, y) => {
+      c.fillStyle = INK;
+      c.beginPath();
+      c.arc(PAD + 12, y + 22, 6, 0, Math.PI * 2);
+      c.fill();
+      body.draw(c, y);
+    },
+  };
+}
+
 function pill(ctx: Ctx, text: string): Op {
   font(ctx, 26, 600);
   const w = ctx.measureText(text).width + 56;
@@ -136,6 +151,12 @@ export async function renderShareCardPng(data: ShareCardData): Promise<Blob> {
   if (data.meta) ops.push(paragraph(measure, data.meta, { size: 30, weight: 400, colour: MUTED, x: PAD, maxWidth: width, after: 8 }));
   ops.push(rule());
 
+  if (data.summary) {
+    ops.push(paragraph(measure, data.summaryTitle, { size: 30, weight: 700, colour: INK, x: PAD, maxWidth: width, after: 12 }));
+    ops.push(paragraph(measure, data.summary, { size: 36, weight: 500, colour: INK, x: PAD, maxWidth: width, lineHeight: 52, after: 8 }));
+    ops.push(rule());
+  }
+
   if (data.warnings.length > 0) {
     ops.push(paragraph(measure, data.warningsTitle, { size: 30, weight: 700, colour: INK, x: PAD, maxWidth: width, after: 20 }));
     data.warnings.forEach((line, i) => ops.push(numbered(measure, i + 1, line)));
@@ -156,6 +177,12 @@ export async function renderShareCardPng(data: ShareCardData): Promise<Blob> {
   if (data.visit) {
     ops.push(paragraph(measure, data.visitTitle, { size: 30, weight: 700, colour: INK, x: PAD, maxWidth: width, after: 12 }));
     ops.push(paragraph(measure, data.visit, { size: 34, weight: 400, colour: INK, x: PAD, maxWidth: width, after: 8 }));
+    ops.push(rule());
+  }
+
+  if (data.notes.length > 0) {
+    ops.push(paragraph(measure, data.notesTitle, { size: 30, weight: 700, colour: INK, x: PAD, maxWidth: width, after: 16 }));
+    for (const note of data.notes) ops.push(bullet(measure, note));
     ops.push(rule());
   }
 

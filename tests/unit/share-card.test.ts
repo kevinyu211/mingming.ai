@@ -20,12 +20,22 @@ function reading(): StoredReading {
 
 const strings = {
   eyebrow: UI.hant["share.cardEyebrow"],
+  summaryTitle: UI.hant["share.summaryTitle"],
+  summary: UI.hant["share.summary"],
+  summaryVisit: UI.hant["share.summaryVisit"],
+  countWarnings: UI.hant["count.warnings"],
+  countMedicines: UI.hant["count.medicines"],
+  countFollowUp: UI.hant["count.followUp"],
+  countJoin: UI.hant["count.join"],
   warnings: UI.hant["share.warnings"],
   medicines: UI.hant["share.cardMeds"],
   visit: UI.hant["track.nextVisit"],
   printed: UI.hant["card.printed"],
   missingFrequency: UI.hant["card.missingFrequency"],
   more: UI.hant["share.more"],
+  notes: UI.hant["share.notes"],
+  stoppedLine: UI.hant["share.stoppedLine"],
+  contactLine: UI.hant["share.contactLine"],
   aiLine: UI.hant["aiChip"],
   footer: UI.hant["share.footer"],
   disclaimer: UI.hant["disclaimer"],
@@ -53,6 +63,22 @@ describe("the discharge card", () => {
     }
   });
 
+  it("opens with a summary made of counts, never a diagnosis", () => {
+    expect(card.summary).toContain(`${r.warningSigns.length}樣要留意嘅情況`);
+    expect(card.summary).toContain(`${r.medicines.filter((m) => m.status === "current").length}隻藥`);
+    expect(card.summary).not.toMatch(/肺炎|感染|pneumonia|infection/);
+  });
+
+  it("notes the hospital's own line and the diet line, and names a stopped medicine as stopped", () => {
+    const contact = r.hospitalContact?.text?.trim() ?? "";
+    if (contact) expect(card.notes.some((n) => n.includes(contact))).toBe(true);
+    if (r.dietLine) expect(card.notes.length).toBeGreaterThan(0);
+    const stopped: StoredReading = { ...r, medicines: r.medicines.map((m, i) => (i === 0 ? { ...m, status: "stopped" } : m)) };
+    const withStopped = buildShareCard({ reading: stopped, plan: draftPlan(stopped), cards: buildCards(stopped), dialect: "yue", title: "SOPD", dateLabel: "", visitDate: "", strings });
+    expect(withStopped.medicines.some((m) => m.name.includes(r.medicines[0].name))).toBe(false);
+    expect(withStopped.notes.some((n) => n.includes(r.medicines[0].name))).toBe(true);
+  });
+
   it("puts the warning signs first and carries the AI line and the disclaimer", () => {
     expect(card.warnings.length).toBe(r.warningSigns.length);
     expect(card.aiLine).toBe(UI.hant["aiChip"]);
@@ -63,7 +89,7 @@ describe("the discharge card", () => {
     const lines = [
       card.eyebrow, card.title, card.meta, card.warningsTitle, ...card.warnings,
       card.medicinesTitle, ...card.medicines.flatMap((m) => [m.name, m.printed]),
-      card.visitTitle, card.visit ?? "", card.aiLine, card.footer,
+      card.visitTitle, card.visit ?? "", card.summary ?? "", ...card.notes, card.aiLine, card.footer,
     ];
     for (const line of lines) expect(checkText(line).ok, line).toBe(true);
   });

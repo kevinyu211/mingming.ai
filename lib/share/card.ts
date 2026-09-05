@@ -19,6 +19,16 @@ export const MAX_MEDICINES = 5;
 
 export interface ShareCardStrings {
   eyebrow: string;
+  summaryTitle: string;
+  /** 「呢張紙有{parts}。」 */
+  summary: string;
+  /** 「下次覆診 {date}。」 */
+  summaryVisit: string;
+  /** 「{n}樣要留意嘅情況」 / 「{n}隻藥」 / 「{n}次覆診」 and the joiner between them. */
+  countWarnings: string;
+  countMedicines: string;
+  countFollowUp: string;
+  countJoin: string;
   warnings: string;
   medicines: string;
   visit: string;
@@ -27,6 +37,11 @@ export interface ShareCardStrings {
   missingFrequency: string;
   /** 「仲有 {n} 樣，睇返張紙」 */
   more: string;
+  notes: string;
+  /** 「張紙寫唔使再食：{name}」 */
+  stoppedLine: string;
+  /** 「醫院電話：{text}」 */
+  contactLine: string;
   aiLine: string;
   footer: string;
   disclaimer: string;
@@ -45,6 +60,13 @@ export interface ShareCardData {
   title: string;
   /** 「9月5日」, the day the sheet was read. */
   meta: string;
+  summaryTitle: string;
+  /**
+   * What is on the page, in numbers, and the one date the rules could read. Built from counts
+   * and fixed templates only — the artboard's 「treated for a chest infection」 is a diagnosis and
+   * never appears (constitution I). Null when there is nothing to count.
+   */
+  summary: string | null;
   warningsTitle: string;
   warnings: string[];
   /** 「仲有 N 樣，睇返張紙」 when the page had more warning signs than the card shows. */
@@ -55,6 +77,13 @@ export interface ShareCardData {
   visitTitle: string;
   /** The parsed date in words, else the printed follow-up line, else null (section omitted). */
   visit: string | null;
+  notesTitle: string;
+  /**
+   * The specific things the page says beyond the lists: the diet line, the activity line, medicines
+   * the page has stopped, parts that could not be read, the hospital's own contact line. Each is a
+   * filtered card body or a verbatim line; the section is omitted when there are none.
+   */
+  notes: string[];
   aiLine: string;
   footer: string;
   disclaimer: string;
@@ -93,14 +122,47 @@ export function buildShareCard(input: ShareCardInput): ShareCardData {
   const warnings = warningBodies.slice(0, MAX_WARNINGS);
   const warningsOver = warningBodies.length - warnings.length;
 
-  const targets = doseTargets(input.reading).filter((target) => !target.stopped);
-  const medicines: ShareCardMedicine[] = targets.slice(0, MAX_MEDICINES).map((target) => ({
-    name: target.name,
-    printed: target.printed
-      ? fill(strings.printed, { text: target.printed })
-      : strings.missingFrequency,
-  }));
+  const allTargets = doseTargets(input.reading);
+  const targets = allTargets.filter((target) => !target.stopped);
+  const medicines: ShareCardMedicine[] = targets.slice(0, MAX_MEDICINES).map((target) => {
+    // The printed duration rides on the printed clause, verbatim: 「BD with meals · 7 days」.
+    const source = input.reading.medicines.find((m, index) => `m${index}` === target.key);
+    const duration = source?.duration?.trim() ?? "";
+    const clause = [target.printed, duration].filter((part) => part.length > 0).join(" · ");
+    return {
+      name: target.name,
+      printed: clause ? fill(strings.printed, { text: clause }) : strings.missingFrequency,
+    };
+  });
   const medicinesOver = targets.length - medicines.length;
+
+  // The summary: counts and the one date, nothing the page did not print.
+  const parts: string[] = [];
+  if (warningBodies.length > 0) parts.push(fill(strings.countWarnings, { n: warningBodies.length }));
+  if (targets.length > 0) parts.push(fill(strings.countMedicines, { n: targets.length }));
+  const visits = input.plan.items.filter((item) => item.kind === "appointment").length;
+  if (visits > 0) parts.push(fill(strings.countFollowUp, { n: visits }));
+  let summary: string | null = parts.length > 0 ? fill(strings.summary, { parts: parts.join(strings.countJoin) }) : null;
+  if (summary && input.visitDate) summary = `${summary} ${fill(strings.summaryVisit, { date: input.visitDate })}`;
+
+  // The things to note, in the order the sheet is read: diet, activity, stopped medicines,
+  // unreadable parts, then the hospital's own line.
+  const notes: string[] = [];
+  for (const type of ["diet", "activity"] as const) {
+    for (const card of input.cards.filter((c) => c.type === type)) {
+      const body = display(card.body[input.dialect].trim());
+      if (body.length > 0) notes.push(body);
+    }
+  }
+  for (const target of allTargets.filter((t) => t.stopped)) {
+    notes.push(fill(strings.stoppedLine, { name: target.name }));
+  }
+  for (const card of input.cards.filter((c) => c.type === "unreadable")) {
+    const body = display(card.body[input.dialect].trim());
+    if (body.length > 0) notes.push(body);
+  }
+  const contact = input.reading.hospitalContact?.text?.trim() ?? "";
+  if (contact.length > 0) notes.push(fill(strings.contactLine, { text: contact }));
 
   const appointment = input.plan.items.find((item) => item.kind === "appointment") ?? null;
   let visit: string | null = null;
@@ -114,6 +176,8 @@ export function buildShareCard(input: ShareCardInput): ShareCardData {
     eyebrow: strings.eyebrow,
     title: input.title,
     meta: input.dateLabel,
+    summaryTitle: strings.summaryTitle,
+    summary,
     warningsTitle: strings.warnings,
     warnings,
     warningsMore: warningsOver > 0 ? fill(strings.more, { n: warningsOver }) : null,
@@ -122,6 +186,8 @@ export function buildShareCard(input: ShareCardInput): ShareCardData {
     medicinesMore: medicinesOver > 0 ? fill(strings.more, { n: medicinesOver }) : null,
     visitTitle: strings.visit,
     visit,
+    notesTitle: strings.notes,
+    notes,
     aiLine: strings.aiLine,
     footer: strings.footer,
     disclaimer: strings.disclaimer,
