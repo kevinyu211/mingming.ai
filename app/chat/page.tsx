@@ -80,6 +80,10 @@ import {
   fill,
   hasCountableDose,
   pauseAfter,
+  pieceSpeech,
+  splitCards,
+  warningAsk,
+  warningSpeech,
 } from "@/components/chat/briefing";
 import { classifyReply, classifySection, isQuestionLike } from "@/components/chat/turns";
 import { useVoice } from "@/components/chat/useVoice";
@@ -199,6 +203,24 @@ function ChatScreen() {
   /** What 明明 says while the sheet is being read: fixed lines, never a claim about the page. */
   const [readingLine, setReadingLine] = useState<string | null>(null);
   const stillReading = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * The warning signs `/api/read` has sent ahead of the reading, in index order, for the reading
+   * screen. Each one is said the moment it arrives — the red flags are the first thing on the
+   * page and the last thing a 33-second wait should be holding back (constitution II).
+   */
+  const [earlyWarnings, setEarlyWarnings] = useState<Card[]>([]);
+  /**
+   * What the reading screen has said so far, line by line, in the dialect it was said in. The
+   * warning beat compares this against its own body when the sheet lands: equal means the
+   * reader has heard it, and the beat says only its question. Cleared once consumed, so 「再講一次」
+   * and a language change replay the whole bubble.
+   */
+  const earlySaid = useRef<string[]>([]);
+  /** Lines waiting to be said on the reading screen, and whether one is being said now. */
+  const earlyQueue = useRef<string[]>([]);
+  const earlyBusy = useRef(false);
+  /** Landing the sheet, held until the warning being said has finished. */
+  const afterEarly = useRef<(() => void) | null>(null);
   const beginTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** One clock per mount for the widgets' counters, exactly as 跟進 does it. */
@@ -335,7 +357,21 @@ function ChatScreen() {
       // says instead of standing alone as a message.
       const ack = pendingAck.current;
       pendingAck.current = null;
-      const spoken = ack ? `${ack} ${beatSpeech(beat)}` : beatSpeech(beat);
+      /**
+       * The amber bubble the reader has already heard. The reading screen said each warning as
+       * it streamed in; if what it said is exactly this beat's body, saying it again would be
+       * the same thirty seconds the early cards exist to give back. The bubble is still committed
+       * in full — the record of what was said is the record — but only its question is spoken.
+       * Any difference at all (a line the final pass repaired, a dialect switched mid-read) and
+       * the whole bubble is said, so a corrected warning is never left at its uncorrected version.
+       */
+      const heard =
+        beat.key === "warn" &&
+        earlySaid.current.length > 0 &&
+        earlySaid.current.join("\n") === warningSpeech(splitCards(cards).warnings, { dialect, t, display });
+      if (beat.key === "warn") earlySaid.current = [];
+      const said = heard ? warningAsk({ t, display }) : beatSpeech(beat);
+      const spoken = ack ? `${ack} ${said}` : said;
       const body = ack ? `${ack}\n${beat.text}` : beat.text;
 
       driving.current = true;
@@ -406,7 +442,7 @@ function ChatScreen() {
         // used to finish typing and then sit in silence.
       }, beats.slice(index + 1, index + 4).map(beatSpeech));
     },
-    [at, beats, openCheckinIfEarned, say, setBriefing],
+    [at, beats, cards, dialect, display, openCheckinIfEarned, say, setBriefing, t],
   );
 
   useEffect(() => {
@@ -873,23 +909,65 @@ function ChatScreen() {
   const land = useCallback(
     (next: StoredReading, pages: number, nextCards?: Card[]) => {
       if (stillReading.current !== null) clearTimeout(stillReading.current);
-      // See `seedSample`: writing the legacy `reading` field here forged a sheet to archive.
-      startSheet(next, pages, nextCards);
-      rememberReading(next, dialect);
-      setSheets(loadSheets());
-      setStatus("ready");
+      const now = () => {
+        // See `seedSample`: writing the legacy `reading` field here forged a sheet to archive.
+        startSheet(next, pages, nextCards);
+        rememberReading(next, dialect);
+        setSheets(loadSheets());
+        setEarlyWarnings([]);
+        setStatus("ready");
+      };
+      // A warning still being said on the reading screen finishes first: cutting a red flag off
+      // mid-sentence to start the greeting is the wrong order twice over.
+      if (earlyBusy.current) afterEarly.current = now;
+      else now();
     },
     [dialect],
+  );
+
+  /** Forgets everything the reading screen said or was about to say. */
+  const dropEarly = useCallback(() => {
+    earlyQueue.current = [];
+    earlyBusy.current = false;
+    earlySaid.current = [];
+    afterEarly.current = null;
+    setEarlyWarnings([]);
+  }, []);
+
+  /**
+   * Says the reading screen's lines one after another. `say` cancels whatever is in the air, so
+   * a second warning arriving mid-sentence has to wait its turn rather than take it.
+   */
+  const sayEarly = useCallback(
+    (line: string) => {
+      earlyQueue.current.push(line);
+      if (earlyBusy.current) return;
+      const drain = () => {
+        const next = earlyQueue.current.shift();
+        if (next === undefined) {
+          earlyBusy.current = false;
+          const landed = afterEarly.current;
+          afterEarly.current = null;
+          landed?.();
+          return;
+        }
+        earlyBusy.current = true;
+        say(next, drain);
+      };
+      drain();
+    },
+    [say],
   );
 
   const decline = useCallback(
     (next: DeclineVariant) => {
       if (stillReading.current !== null) clearTimeout(stillReading.current);
       cancel();
+      dropEarly();
       setVariant(next);
       setStatus("declined");
     },
-    [cancel],
+    [cancel, dropEarly],
   );
 
   const cancelRead = useCallback(() => {
@@ -899,9 +977,10 @@ function ChatScreen() {
     if (stillReading.current !== null) clearTimeout(stillReading.current);
     stillReading.current = null;
     cancel();
+    dropEarly();
     setStatus("boot");
     router.push("/");
-  }, [cancel, router]);
+  }, [cancel, dropEarly, router]);
 
   const begin = useCallback(async () => {
     const requested = searchParams.get("sample");
@@ -920,6 +999,7 @@ function ChatScreen() {
       setPageCount(images.length);
       setFirstPage(`data:${images[0].mediaType};base64,${images[0].base64}`);
       setReadPhase("submitting");
+      dropEarly();
       setStatus("reading");
       // The read takes twenty seconds or more, and a phone that goes silent for that long looks
       // broken. 明明 says he is reading — a fixed line, spoken and shown — and once more a while
@@ -929,16 +1009,51 @@ function ChatScreen() {
       say(opening);
       stillReading.current = setTimeout(() => {
         if (readController.signal.aborted || sequence !== readSequence.current) return;
+        // A warning already on screen is worth more than a line saying he is still at it.
+        if (earlySaid.current.length > 0) return;
         const still = t("reading.still");
         setReadingLine(still);
         say(still);
       }, STILL_READING_MS);
-      // Status events describe progress; cards are committed only with a complete validated reading.
+      // Status events describe progress; cards are committed only with a complete validated
+      // reading. The exception is a warning sign sent ahead of it: shown and said at once, replaced
+      // in place if the final copy differs, withdrawn if the reading it came from was unusable.
       const readHandlers = {
         signal: readController.signal,
         onStatus: (phase: string) => {
           if (readController.signal.aborted || sequence !== readSequence.current) return;
           if (phase === "reading" || phase === "checking") setReadPhase(phase);
+        },
+        onCard: (card: Card, arrival: { early: boolean }) => {
+          if (readController.signal.aborted || sequence !== readSequence.current) return;
+          if (card.type !== "warning") return;
+          setEarlyWarnings((prev) =>
+            prev.some((c) => c.id === card.id)
+              ? prev.map((c) => (c.id === card.id ? card : c))
+              : [...prev, card],
+          );
+          if (!arrival.early) {
+            // The final pass changed a line that was already said. What was heard is no longer
+            // the bubble, so the bubble will be said in full when the sheet lands.
+            earlySaid.current = [];
+            return;
+          }
+          const line = display(pieceSpeech(card, dialect));
+          if (earlySaid.current.length === 0) {
+            const lead = display(t("brief.warnLead"));
+            earlySaid.current.push(lead, line);
+            setReadingLine(null);
+            sayEarly(`${lead}\n${line}`);
+          } else {
+            earlySaid.current.push(line);
+            sayEarly(line);
+          }
+        },
+        onRetract: () => {
+          if (readController.signal.aborted || sequence !== readSequence.current) return;
+          // The reading those warnings came from was unusable; the retry starts from nothing.
+          cancel();
+          dropEarly();
         },
       };
       let outcome = await readSheet(images, readHandlers);
@@ -984,7 +1099,7 @@ function ChatScreen() {
       return;
     }
     router.replace("/");
-  }, [decline, land, router, say, searchParams, seedSample, t]);
+  }, [cancel, decline, dialect, display, dropEarly, land, router, say, sayEarly, searchParams, seedSample, t]);
 
   useEffect(() => {
     beginTimer.current = setTimeout(() => {
@@ -1151,6 +1266,7 @@ function ChatScreen() {
           line={readingLine}
           phase={readPhase}
           pageImage={firstPage}
+          warnings={earlyWarnings.map((card) => display(pieceSpeech(card, dialect)))}
           onCancel={cancelRead}
         />
       </main>

@@ -5,6 +5,13 @@
  * card set. This module turns that stream into callbacks plus one typed outcome,
  * so a page never has to reason about HTTP status codes or half-arrived lines.
  *
+ * Warning signs may arrive twice. The route sends a red flag ahead of the reading the moment its
+ * JSON is complete (`"early":true`), then sends every card again once the whole reading has been
+ * validated. This module de-duplicates by id: an early card is handed to `onCard` at once; the
+ * final copy is handed over only when its content differs (in which case the page replaces the
+ * early one in place), and is otherwise swallowed. `retract` withdraws early cards whose reading
+ * turned out to be unusable. The outcome's `cards` are always the final set, never an early one.
+ *
  * Every failure is a named outcome, not an exception: the constitution treats failure paths as
  * features, and each one maps to a designed screen (S10) rather than a toast.
  */
@@ -49,11 +56,22 @@ export type ReadOutcome =
   /** 400: the request was malformed, or the photo was rejected before reading. */
   | { kind: "bad_request"; detail: string | null };
 
+export interface CardArrival {
+  /** True for a warning sent ahead of the reading. The final copy follows with `early: false`. */
+  early: boolean;
+}
+
 export interface ReadHandlers {
   /** `{"event":"status","phase":"reading"}` — the server has started. */
   onStatus?: (phase: string) => void;
-  /** One card, already filtered and in the fixed order. */
-  onCard?: (card: Card) => void;
+  /**
+   * One card, already filtered. Early cards come in index order ahead of everything else; final
+   * cards come in the fixed order. A final card identical to an early one already handed over is
+   * not repeated; a differing one is handed over again with `early: false` and replaces it.
+   */
+  onCard?: (card: Card, arrival: CardArrival) => void;
+  /** Early cards with these ids are withdrawn: remove them, and anything said from them stands corrected. */
+  onRetract?: (ids: string[]) => void;
   signal?: AbortSignal;
 }
 
@@ -66,7 +84,8 @@ export function splitLines(buffer: string): { lines: string[]; rest: string } {
 
 type StreamEvent =
   | { event: "status"; phase?: string }
-  | { event: "card"; card: Card }
+  | { event: "card"; card: Card; early?: boolean }
+  | { event: "retract"; ids?: unknown }
   | { event: "unknown" }
   | { event: "done"; reading: unknown; filter?: FilterCounts }
   | { event: "error"; error?: string };
@@ -124,6 +143,11 @@ async function errorOutcome(response: Response): Promise<ReadOutcome> {
   }
   const outcome = outcomeForError(name, response.status);
   return outcome.kind === "bad_request" ? { kind: "bad_request", detail } : outcome;
+}
+
+/** Same words, same line: what "the final card is the early card" means. */
+function sameContent(a: Card, b: Card): boolean {
+  return JSON.stringify({ body: a.body, source: a.source }) === JSON.stringify({ body: b.body, source: b.source });
 }
 
 /**
@@ -231,11 +255,13 @@ export async function readSheet(
   // TypeScript keeps the declared types honest across the reader loop that way.
   const state: {
     cards: Card[];
+    /** Early cards by id, so the final copy of each can be told from a change. */
+    early: Map<string, Card>;
     reading: StoredReading | null;
     filter: FilterCounts | null;
     declined: boolean;
     failure: ReadOutcome | null;
-  } = { cards: [], reading: null, filter: null, declined: false, failure: null };
+  } = { cards: [], early: new Map(), reading: null, filter: null, declined: false, failure: null };
 
   const reader = response.body.getReader();
   activeReader = reader;
@@ -272,8 +298,28 @@ export async function readSheet(
             state.failure = { kind: "invalid_reading" };
             break;
           }
-          state.cards.push(result.data);
-          handlers.onCard?.(result.data);
+          const card = result.data;
+          if (parsed.early === true) {
+            // At most once per id: a second early copy of the same id is the server repeating itself.
+            if (state.early.has(card.id)) break;
+            state.early.set(card.id, card);
+            handlers.onCard?.(card, { early: true });
+            break;
+          }
+          state.cards.push(card);
+          const prior = state.early.get(card.id);
+          if (prior !== undefined && sameContent(prior, card)) break;
+          handlers.onCard?.(card, { early: false });
+        }
+        break;
+      case "retract":
+        {
+          const ids = Array.isArray(parsed.ids)
+            ? parsed.ids.filter((id): id is string => typeof id === "string")
+            : [];
+          if (ids.length === 0) break;
+          for (const id of ids) state.early.delete(id);
+          handlers.onRetract?.(ids);
         }
         break;
       case "unknown":

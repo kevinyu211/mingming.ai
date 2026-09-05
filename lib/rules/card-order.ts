@@ -9,7 +9,14 @@
  * Every card carries its `SourceReference` (principle IV). The only cards without one are the two
  * rule-generated kinds, `noWarnings` and `referral`, which quote nothing off the page.
  */
-import type { Card, CardType, SheetReading, Speakable, StoredReading } from "@/lib/domain/schemas";
+import type {
+  Card,
+  CardType,
+  SheetReading,
+  Speakable,
+  StoredReading,
+  WarningSign,
+} from "@/lib/domain/schemas";
 
 /** The fixed order. Not configurable. `noWarnings` rides in the `warning` slot. */
 export const CARD_ORDER: CardType[] = [
@@ -73,6 +80,38 @@ function unreadableBody(section: string, description: string): Speakable {
 }
 
 /**
+ * One warning sign as a card. `index` is its position in `warningSigns`, which is the id the UI
+ * and `/api/ask` citations agree on.
+ *
+ * Exported because `/api/read` builds this card twice for the same sign: once from the partial
+ * JSON while the model is still writing the medicines (`lib/server/early-cards.ts`), and once from
+ * the validated reading. Both go through this one function, so the early copy is the final copy
+ * byte for byte — anything else would let the family hear one wording and see another.
+ */
+export function warningCard(sign: WarningSign, index: number): Card {
+  return {
+    id: `warning-${index}`,
+    type: "warning",
+    body: {
+      yue: joinWarning(sign.symptom.yue, sign.action.yue),
+      cmn: joinWarning(sign.symptom.cmn, sign.action.cmn),
+      en: joinWarning(sign.symptom.en, sign.action.en, ", "),
+    },
+    source: sign.source,
+    aiGenerated: true,
+    // A warning card's facts are the model's own phrasing, not printed page text, so the
+    // English template needs its own copy: an English frame around a Cantonese clause is not
+    // a sentence anybody can read aloud.
+    facts: {
+      symptom: sign.symptom.yue,
+      action: sign.action.yue,
+      symptomEn: sign.symptom.en,
+      actionEn: sign.action.en,
+    },
+  };
+}
+
+/**
  * Builds the displayable cards for a reading, strictly in `CARD_ORDER`. Ids are stable for the
  * same reading (type plus index), so the UI and `/api/ask` citations agree across renders.
  *
@@ -99,28 +138,7 @@ export function buildCards(reading: SheetReading | StoredReading): Card[] {
       aiGenerated: false,
     });
   } else {
-    reading.warningSigns.forEach((sign, i) => {
-      cards.push({
-        id: `warning-${i}`,
-        type: "warning",
-        body: {
-          yue: joinWarning(sign.symptom.yue, sign.action.yue),
-          cmn: joinWarning(sign.symptom.cmn, sign.action.cmn),
-          en: joinWarning(sign.symptom.en, sign.action.en, ", "),
-        },
-        source: sign.source,
-        aiGenerated: true,
-        // A warning card's facts are the model's own phrasing, not printed page text, so the
-        // English template needs its own copy: an English frame around a Cantonese clause is not
-        // a sentence anybody can read aloud.
-        facts: {
-          symptom: sign.symptom.yue,
-          action: sign.action.yue,
-          symptomEn: sign.symptom.en,
-          actionEn: sign.action.en,
-        },
-      });
-    });
+    reading.warningSigns.forEach((sign, i) => cards.push(warningCard(sign, i)));
   }
 
   reading.medicines.forEach((m, i) => {

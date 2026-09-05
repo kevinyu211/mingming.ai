@@ -5,8 +5,15 @@
  * `lib/server/reading-pipeline.ts`; every model call lives in `lib/model/client.ts`.
  *
  * Valid input is acknowledged immediately with a reading status. Extraction and all safety
- * checks finish before cards are emitted. Failures after acceptance are terminal NDJSON errors;
- * malformed or oversized requests retain ordinary 400/413 responses.
+ * checks finish before the final cards are emitted. Failures after acceptance are terminal NDJSON
+ * errors; malformed or oversized requests retain ordinary 400/413 responses.
+ *
+ * One exception, for the family's sake: a warning sign whose JSON has fully arrived and passed
+ * the same filter the final pass applies is sent ahead of the rest as `{"event":"card",…,
+ * "early":true}` (`lib/server/early-cards.ts`), so the red flags are heard while the model is
+ * still writing the medicines. The final pass still emits every card; the client de-duplicates
+ * by id. If the reading then fails validation, the early ids are retracted before the retry or
+ * the error line.
  *
  * Privacy (constitution V, contracts/api-read.md § Server guarantees): the decoded image never
  * leaves this function's scope — no module state, no disk, no cache. Nothing logs a request or
@@ -29,6 +36,7 @@ import {
   type ImageInput,
   type ModelProvider,
 } from "@/lib/model/client";
+import { earlyWarningTracker } from "@/lib/server/early-cards";
 import { NdjsonBuffer, jsonError, ndjsonResponse } from "@/lib/server/ndjson";
 import { runReadingPipeline, type FilterCounts } from "@/lib/server/reading-pipeline";
 import { READ_MAX_BODY_BYTES, READ_PROCESSING_TIMEOUT_MS } from "@/lib/domain/read-policy";
@@ -84,6 +92,10 @@ type ReadEvent =
   | { event: "status"; phase: "reading"; chars?: number }
   | { event: "status"; phase: "checking" }
   | { event: "card"; card: Card }
+  /** A warning sign complete in the stream before the reading is: the final pass repeats it. */
+  | { event: "card"; card: Card; early: true }
+  /** The early cards with these ids are withdrawn: the reading they came from was unusable. */
+  | { event: "retract"; ids: string[] }
   | { event: "unknown" }
   | { event: "done"; reading: StoredReading; filter: FilterCounts }
   | { event: "error"; error: string };
@@ -98,6 +110,8 @@ export async function POST(request: Request): Promise<Response> {
   const startedAt = Date.now();
   let logged = false;
   const stages = { bodyMs: 0, modelMs: 0, checkingMs: 0 };
+  /** How many warning cards went out ahead of the reading. A count, never a card (principle V). */
+  let early = 0;
   let pageCount = 0;
   let requestBytes = 0;
   const timed = async <T>(stage: "modelMs" | "checkingMs", call: () => Promise<T>): Promise<T> => {
@@ -111,7 +125,7 @@ export async function POST(request: Request): Promise<Response> {
     // Codes only, never a body: `code` is our own error class's identifier plus, for a rejected
     // request, the HTTP status the provider gave us. Without it a 502 is unattributable, and
     // "the model refused" and "that model does not accept this parameter" look identical.
-    console.info({ route: "read", status, ms: Date.now() - startedAt, filter, code, ...stages, pageCount, requestBytes });
+    console.info({ route: "read", status, ms: Date.now() - startedAt, filter, code, ...stages, pageCount, requestBytes, early });
   };
   const fail = (status: number, body: { error: string; detail?: string }): Response => {
     log(status, null, body.error);
@@ -170,12 +184,29 @@ export async function POST(request: Request): Promise<Response> {
     filter: null,
   };
 
+  /**
+   * The early cards of the attempt in flight. Withdrawn — one `retract` line — the moment that
+   * attempt turns out not to be the reading the family gets: before a retry's first delta, before
+   * an error line, before `unknown`. Never after the final cards, which are the same cards.
+   */
+  const sent: { ids: string[] } = { ids: [] };
+  const retract = (): void => {
+    if (sent.ids.length === 0) return;
+    buffer.emit({ event: "retract", ids: sent.ids });
+    sent.ids = [];
+  };
+  const onEarly = (card: Card): void => {
+    early += 1;
+    sent.ids.push(card.id);
+    buffer.emit({ event: "card", card, early: true });
+  };
+
   const worker = (async () => {
     buffer.emit(STATUS_READING);
     buffer.markOpen();
     try {
       const { reading } = await timed("modelMs", () => withinSignal(budget.signal, () =>
-        readWithOneRetry(provider, images, buffer, budget.signal, deadline),
+        readWithOneRetry(provider, images, buffer, budget.signal, deadline, onEarly, retract),
       ));
       buffer.emit({ event: "status", phase: "checking" });
       const result = await timed("checkingMs", () => withinSignal(budget.signal, () =>
@@ -183,6 +214,7 @@ export async function POST(request: Request): Promise<Response> {
       ));
 
       if (result.kind === "unknown") {
+        retract();
         buffer.emit({ event: "unknown" });
         return;
       }
@@ -193,7 +225,10 @@ export async function POST(request: Request): Promise<Response> {
     } catch (error) {
       outcome.failure = budget.signal.aborted ? abortFailure(budget.signal) : error;
       // Already streaming: the status is spent, so the failure goes out as the last line.
-      if (buffer.isOpen) buffer.emit({ event: "error", error: codeFor(outcome.failure) });
+      if (buffer.isOpen) {
+        retract();
+        buffer.emit({ event: "error", error: codeFor(outcome.failure) });
+      }
     } finally {
       budget.dispose();
       buffer.close();
@@ -231,25 +266,41 @@ async function readWithOneRetry(
   buffer: NdjsonBuffer,
   signal: AbortSignal,
   deadline: number,
+  onEarly: (card: Card) => void,
+  retract: () => void,
 ): Promise<{ reading: Awaited<ReturnType<ModelProvider["readSheet"]>>["reading"] }> {
   if (signal.aborted) throw abortFailure(signal);
   if (Date.now() >= deadline) throw new ModelTimeoutError();
   try {
-    return await provider.readSheetStream(images, heartbeat(buffer), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
+    return await provider.readSheetStream(images, onDelta(buffer, onEarly), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
   } catch (error) {
     if (!(error instanceof ModelOutputError)) throw error;
     if (signal.aborted || deadline - Date.now() < 5_000) {
       if (signal.aborted) throw abortFailure(signal);
       throw new ModelTimeoutError();
     }
-    return await provider.readSheetStream(images, heartbeat(buffer), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
+    // The warnings of an unusable reading are not warnings the family may keep.
+    retract();
+    return await provider.readSheetStream(images, onDelta(buffer, onEarly), { signal, timeoutMs: Math.max(1, deadline - Date.now()) });
   }
 }
 
 /**
- * Counts characters, never keeps them. A fresh counter per attempt, so a retry restarts the
- * client's progress indicator instead of doubling it.
+ * What one text delta does: a heartbeat, then any warning sign it completed. The heartbeat goes
+ * first because it is what opens the stream — an early card is only ever sent after the response
+ * has been committed. Fresh state per attempt, so a retry restarts the client's progress
+ * indicator instead of doubling it, and starts its warning indices again from zero.
  */
+function onDelta(buffer: NdjsonBuffer, onEarly: (card: Card) => void): (delta: string) => void {
+  const beat = heartbeat(buffer);
+  const tracker = earlyWarningTracker();
+  return (delta: string) => {
+    beat(delta);
+    for (const card of tracker.push(delta)) onEarly(card);
+  };
+}
+
+/** Counts characters, never keeps them. */
 function heartbeat(buffer: NdjsonBuffer): (delta: string) => void {
   let chars = 0;
   let lastAt = 0;

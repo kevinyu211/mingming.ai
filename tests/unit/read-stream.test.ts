@@ -252,6 +252,101 @@ describe("readSheet", () => {
     expect(await readSheet(images)).toEqual({ kind: "invalid_reading" });
   });
 
+  /**
+   * Warnings arrive twice: early, the moment the model has finished writing one, then again with
+   * the validated set. The page hears the early one at once and must not hear it twice.
+   */
+  describe("early warning cards", () => {
+    const flagged: StoredReading = {
+      ...reading,
+      warningSigns: [
+        {
+          symptom: { yue: "胸口痛", cmn: "胸口痛", en: "chest pain" },
+          action: { yue: "即刻返急症室", cmn: "马上去急诊", en: "go straight to A&E" },
+          source: { section: "Follow-up Plan", lineIndex: 4, quote: "Return to A&E immediately if chest pain" },
+        },
+      ],
+    };
+    const finalCards = buildCards(flagged);
+    const warning = finalCards[0];
+    const line = (value: unknown) => `${JSON.stringify(value)}\n`;
+    const finalLines = finalCards.map((card) => line({ event: "card", card })).join("");
+
+    it("hands an early card over at once, and swallows the identical final copy", async () => {
+      mockFetch(streamed([
+        line({ event: "status", phase: "reading" }),
+        line({ event: "card", card: warning, early: true }),
+        line({ event: "status", phase: "checking" }),
+        finalLines,
+        line({ event: "done", reading: flagged }),
+      ]));
+      const arrived: [string, boolean][] = [];
+      const outcome = await readSheet(images, { onCard: (c, a) => arrived.push([c.id, a.early]) });
+      expect(arrived).toEqual([["warning-0", true], ["medicine-0", false]]);
+      expect(outcome.kind).toBe("reading");
+      if (outcome.kind !== "reading") throw new Error("expected a reading");
+      // The final set, once each: no early card survives into what is persisted.
+      expect(outcome.cards).toEqual(finalCards);
+    });
+
+    it("hands the final copy over again when its content differs, so the page can replace it", async () => {
+      const draft: Card = { ...warning, body: { ...warning.body, en: "chest pain, go to A&E" } };
+      mockFetch(streamed([
+        line({ event: "card", card: draft, early: true }),
+        finalLines,
+        line({ event: "done", reading: flagged }),
+      ]));
+      const arrived: [string, boolean, string][] = [];
+      const outcome = await readSheet(images, { onCard: (c, a) => arrived.push([c.id, a.early, c.body.en]) });
+      expect(arrived).toEqual([
+        ["warning-0", true, "chest pain, go to A&E"],
+        ["warning-0", false, warning.body.en],
+        ["medicine-0", false, finalCards[1].body.en],
+      ]);
+      if (outcome.kind !== "reading") throw new Error("expected a reading");
+      expect(outcome.cards).toEqual(finalCards);
+    });
+
+    it("hands a repeated early id over only once", async () => {
+      mockFetch(streamed([
+        line({ event: "card", card: warning, early: true }),
+        line({ event: "card", card: warning, early: true }),
+        finalLines,
+        line({ event: "done", reading: flagged }),
+      ]));
+      const onCard = vi.fn();
+      await readSheet(images, { onCard });
+      expect(onCard.mock.calls.filter(([c]) => (c as Card).id === "warning-0")).toHaveLength(1);
+    });
+
+    it("withdraws retracted early cards, and reports the failure that follows", async () => {
+      mockFetch(streamed([
+        line({ event: "card", card: warning, early: true }),
+        line({ event: "retract", ids: ["warning-0"] }),
+        line({ event: "error", error: "invalid_reading" }),
+      ]));
+      const onRetract = vi.fn();
+      const onCard = vi.fn();
+      expect(await readSheet(images, { onCard, onRetract })).toEqual({ kind: "invalid_reading" });
+      expect(onCard).toHaveBeenCalledTimes(1);
+      expect(onRetract).toHaveBeenCalledWith(["warning-0"]);
+    });
+
+    it("treats a retracted-then-resent warning as new, and its final copy as a duplicate again", async () => {
+      mockFetch(streamed([
+        line({ event: "card", card: warning, early: true }),
+        line({ event: "retract", ids: ["warning-0"] }),
+        line({ event: "card", card: warning, early: true }),
+        finalLines,
+        line({ event: "done", reading: flagged }),
+      ]));
+      const arrived: [string, boolean][] = [];
+      const outcome = await readSheet(images, { onCard: (c, a) => arrived.push([c.id, a.early]) });
+      expect(arrived).toEqual([["warning-0", true], ["warning-0", true], ["medicine-0", false]]);
+      expect(outcome.kind).toBe("reading");
+    });
+  });
+
   it("bounds an uncooperative fetch and clears its timer", async () => {
     vi.useFakeTimers();
     mockFetch(() => new Promise<Response>(() => {}));

@@ -250,6 +250,32 @@ export const CHECK_KEYS = [
 export const MEDICINES_PER_CHECK = 2;
 
 /**
+ * The amber bubble's body: the lead-in, then every warning sign on its own line, without the
+ * question that closes it.
+ *
+ * Its own function because it is said in two places. The reading screen says the warnings one at
+ * a time as `/api/read` streams them ahead of the rest of the sheet, and when the sheet lands the
+ * script must know whether the amber bubble is something the reader has already heard. Building
+ * both from this one string is what lets `app/chat/page.tsx` compare them: if what was said early
+ * is this text, the warning beat says only its question; if anything differs — a repaired line, a
+ * changed dialect — the bubble is said in full, so nothing corrected is ever left half-heard.
+ */
+export function warningSpeech(
+  warnings: Card[],
+  ctx: Pick<BeatContext, "dialect" | "t" | "display">,
+): string {
+  const empty = warnings.every((card) => card.type === "noWarnings");
+  const body = warnings.map((card) => ctx.display(pieceSpeech(card, ctx.dialect))).join(JOIN);
+  const lead = empty ? "" : `${ctx.display(ctx.t("brief.warnLead"))}${JOIN}`;
+  return `${lead}${body}`;
+}
+
+/** The question that closes the amber bubble. */
+export function warningAsk(ctx: Pick<BeatContext, "t" | "display">): string {
+  return ctx.display(ctx.t("ask.warn"));
+}
+
+/**
  * The pieces with the run the reader asked for moved to the front, the rest in card order. A
  * warning is never a piece, so a "focus" on it changes nothing; an absent or unknown type leaves
  * the order alone.
@@ -349,12 +375,10 @@ export function buildBeats(cards: Card[], ctx: BeatContext): Beat[] {
    * shown half of them.
    */
   if (warnings.length > 0) {
-    const body = warnings.map((card) => display(pieceSpeech(card, dialect))).join(JOIN);
-    const lead = empty ? "" : `${display(t("brief.warnLead"))}${JOIN}`;
     beats.push({
       key: "warn",
       lead: null,
-      text: `${lead}${body}${ASK_GAP}${display(t("ask.warn"))}`,
+      text: `${warningSpeech(warnings, ctx)}${ASK_GAP}${warningAsk(ctx)}`,
       origin: warnings.some((card) => card.aiGenerated) ? "model" : "rule",
       tone: empty ? null : "warn",
       sources: warnings

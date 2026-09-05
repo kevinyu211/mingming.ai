@@ -36,10 +36,13 @@ and filtered by rules before it is returned.
 ## Response
 
 Valid input receives HTTP 200 and a `reading` status before waiting for the model. Progress is
-streamed as newline-delimited JSON; all cards are withheld until extraction and safety checks finish:
+streamed as newline-delimited JSON; the final card set is withheld until extraction and safety
+checks finish (the one exception, a checked warning sign sent early, is described below):
 
 ```
 {"event":"status","phase":"reading"}
+{"event":"status","phase":"reading","chars":2048}
+{"event":"card","card":{ ...warning Card... },"early":true}
 {"event":"status","phase":"checking"}
 {"event":"card","card":{ ...Card... }}
 {"event":"card","card":{ ...Card... }}
@@ -48,6 +51,22 @@ streamed as newline-delimited JSON; all cards are withheld until extraction and 
 
 - Cards are emitted in the fixed order (warning signs first). If the model returns no warning signs,
   the server emits the rule-generated `noWarnings` card first.
+- **Early warning cards.** The model writes the JSON in schema order, so every warning sign is
+  complete in the stream long before the medicines are. The moment one is — its closing brace has
+  arrived, it matches `WarningSignSchema`, and the card built from it passes the banned-term
+  filter unchanged — the server sends it ahead of the reading as
+  `{"event":"card","card":{ ...Card... },"early":true}`, at most once per index, in index order,
+  between the `reading` heartbeats. The card is built by the same function the final pass uses
+  (`warningCard` in `lib/rules/card-order.ts`), so it is byte-identical to the final card of the
+  same id; a warning the final pass would repair is never sent early. The final set is still
+  emitted in full after checking, so a warning arrives twice, and the client de-duplicates by id:
+  an early card is shown and spoken at once, replaced in place if the final copy's text or source
+  differs, otherwise the duplicate is dropped. If the reading the early cards came from turns out
+  to be unusable — the schema retry, a terminal `invalid_reading`, or `unknown` — the server
+  first sends `{"event":"retract","ids":["warning-0", ...]}` and the client removes them; a retry
+  then starts its indices and heartbeats again from zero. Early cards are text-delta driven, so
+  they are only ever sent after the response has been committed, and the 400/413/422/502
+  semantics are unchanged. The log line gains `early: <count>`, never a card.
 - `sheetType: "unknown"` → a single event `{"event":"unknown"}` and no cards (FR-006).
 - Every `Speakable` string in every card has passed the banned-term filter; on a hit the server
   attempts one regeneration via the phrase prompt, then uses a checked template if needed. `filter` reports

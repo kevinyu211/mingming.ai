@@ -25,6 +25,8 @@ import {
   pieceSpeech,
   splitCards,
   trackLinkIndex,
+  warningAsk,
+  warningSpeech,
   withFocusFirst,
   type Beat,
 } from "@/components/chat/briefing";
@@ -299,6 +301,23 @@ describe("the script 明明 plays", () => {
    * the screen filling with small alternating boxes — content, question, content, question — which
    * is what it looked like on a real phone and what got it called "shooting out a lot of text".
    */
+  /**
+   * The reading screen says the warnings one at a time as `/api/read` streams them, before the
+   * sheet has landed. When it does land, the script decides whether the amber bubble has already
+   * been heard by comparing what was said with `warningSpeech`, so the two have to be the same
+   * string by construction: the bubble is that text, a gap, and the question.
+   */
+  it("builds the red-flag bubble from warningSpeech and warningAsk, so an early hearing can be recognised", () => {
+    const { warnings } = splitCards(cards);
+    const said = warningSpeech(warnings, CTX);
+    expect(said.startsWith(CTX.t("brief.warnLead"))).toBe(true);
+    expect(said.split("\n").slice(1)).toEqual(warnings.map((card) => pieceSpeech(card, "yue")));
+    expect(beats[at("warn")].text).toBe(`${said}\n\n${warningAsk(CTX)}`);
+    // A page that printed no warnings has no lead-in to have been said early.
+    const none = splitCards(buildCards(reading({ medicines: [medicine()] }))).warnings;
+    expect(warningSpeech(none, CTX)).toBe(pieceSpeech(none[0], "yue"));
+  });
+
   it("asks inside the red-flag bubble, and only when there is more to come", () => {
     expect(beats[at("warn")].text).toContain(CTX.t("ask.warn"));
     expect(beats[at("warn")].awaits).toBe(true);

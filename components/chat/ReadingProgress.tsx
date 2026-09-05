@@ -7,7 +7,9 @@
  * The stage changes on actual submission, model, and checking events from `/api/read`. Elapsed
  * seconds show waiting without pretending to know how much model work remains.
  *
- * Nothing on this screen says anything about the sheet. The app has not read it yet.
+ * Nothing on this screen says anything about the sheet until the sheet says it: the one thing
+ * shown before the reading lands is a warning sign whose line `/api/read` has already completed
+ * and checked, handed over ahead of the rest so the red flags are not the last thing heard.
  */
 import { useEffect, useState } from "react";
 import { useT } from "@/components/LocaleProvider";
@@ -21,6 +23,7 @@ export default function ReadingProgress({
   line = null,
   phase = "submitting",
   pageImage = null,
+  warnings = [],
   onCancel,
 }: {
   pageCount: number;
@@ -30,6 +33,8 @@ export default function ReadingProgress({
   phase?: ReadProgressPhase;
   /** The first page, as a data URL, shown inside the card. Null on the sample path. */
   pageImage?: string | null;
+  /** Warning signs already streamed ahead of the reading, in the reader's script, in page order. */
+  warnings?: string[];
   onCancel: () => void;
 }) {
   const t = useT();
@@ -94,6 +99,17 @@ export default function ReadingProgress({
         <p role="status" className="surface mt-1 max-w-xs px-5 py-4 text-[17px] leading-[1.5] text-ink">
           {line}
         </p>
+      ) : null}
+      {warnings.length > 0 ? (
+        <ol
+          role="status"
+          aria-live="polite"
+          className="mt-1 w-full max-w-xs list-decimal rounded-[18px] bg-warn-bg px-5 py-4 pl-9 text-left text-[17px] leading-[1.5] font-medium text-warn-ink"
+        >
+          {warnings.map((warning, i) => (
+            <li key={i} className="whitespace-pre-line">{warning}</li>
+          ))}
+        </ol>
       ) : null}
       {elapsed >= 30_000 ? <p className="text-[15px] text-muted">{t("reading.slow")}</p> : null}
       <ChunkyButton type="button" variant="tinted" className="mt-1" onClick={onCancel}>

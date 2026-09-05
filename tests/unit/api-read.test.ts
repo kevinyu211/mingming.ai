@@ -205,6 +205,115 @@ describe("POST /api/read — success", () => {
   });
 });
 
+/**
+ * The red flags ahead of the reading. The JSON is written warnings-first, so each one is complete
+ * in the stream long before the medicines are; the route sends it the moment it is, and sends it
+ * again with the final set. What is asserted: the order, that the early copy IS the final copy,
+ * that a warning the filter would repair waits for the repair, and that an unusable reading takes
+ * its early warnings back with it.
+ */
+describe("POST /api/read — early warning cards", () => {
+  /** Streams the reading's own JSON in small deltas, then settles with it (or throws). */
+  function streamed(reading: SheetReading, settle: () => { reading: SheetReading; usage: typeof USAGE }) {
+    return async (_images: ImageInput[], onPartialText?: (delta: string) => void) => {
+      const text = JSON.stringify(reading);
+      for (let i = 0; i < text.length; i += 64) onPartialText?.(text.slice(i, i + 64));
+      return settle();
+    };
+  }
+
+  it("sends each warning as soon as its JSON is complete, ahead of checking and the final cards", async () => {
+    const reading = fixture();
+    providerMock.readSheetStream.mockImplementation(streamed(reading, () => ({ reading, usage: USAGE })));
+
+    const lines = await events(await POST(post({ images: [IMAGE] })));
+    const kinds = lines.map((line) =>
+      line.event === "card" ? (line.early === true ? "early" : "card") : (line.event as string),
+    );
+    expect(kinds.slice(0, 5)).toEqual(["status", "status", "early", "early", "early"]);
+    expect(kinds.indexOf("early")).toBeLessThan(kinds.indexOf("card"));
+    expect(kinds.filter((k) => k === "early")).toHaveLength(3);
+    // The checking status separates the stream from the validated set.
+    const checking = lines.findIndex((line) => line.event === "status" && line.phase === "checking");
+    expect(checking).toBeGreaterThan(kinds.lastIndexOf("early"));
+    expect(checking).toBeLessThan(kinds.indexOf("card"));
+    expect(lines.at(-1)?.event).toBe("done");
+
+    // The dedupe contract: one early copy per id, and it is the final copy, byte for byte.
+    const early = lines.filter((line) => line.event === "card" && line.early === true);
+    const final = lines.filter((line) => line.event === "card" && line.early !== true);
+    const ids = early.map((line) => (line.card as { id: string }).id);
+    expect(ids).toEqual(["warning-0", "warning-1", "warning-2"]);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const line of early) {
+      const match = final.find((f) => (f.card as { id: string }).id === (line.card as { id: string }).id);
+      expect(match?.card).toEqual(line.card);
+    }
+    // Still every final card, in the fixed order, exactly as before.
+    expect(final.map((line) => (line.card as { id: string }).id).slice(0, 4)).toEqual([
+      "warning-0",
+      "warning-1",
+      "warning-2",
+      "medicine-0",
+    ]);
+    expect(lines.some((line) => line.event === "retract")).toBe(false);
+
+    // The one log line carries the count, never a card.
+    const logged = vi.mocked(console.info).mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(logged.early).toBe(3);
+    expect(JSON.stringify(logged)).not.toContain("胸口痛");
+  });
+
+  it("holds back a warning the filter would repair, and lets the final pass say it", async () => {
+    const reading = fixture();
+    reading.warningSigns[1].action.en = "you must go straight back to A&E";
+    providerMock.readSheetStream.mockImplementation(streamed(reading, () => ({ reading, usage: USAGE })));
+    providerMock.phrase.mockRejectedValue(new Error("no phrasing today"));
+
+    const lines = await events(await POST(post({ images: [IMAGE] })));
+    const early = lines.filter((line) => line.event === "card" && line.early === true);
+    expect(early.map((line) => (line.card as { id: string }).id)).toEqual(["warning-0", "warning-2"]);
+    const final = lines.filter((line) => line.event === "card" && line.early !== true);
+    const repaired = final.find((line) => (line.card as { id: string }).id === "warning-1");
+    expect(repaired).toBeDefined();
+    expect((repaired?.card as { aiGenerated: boolean }).aiGenerated).toBe(false);
+    expect((lines.at(-1) as { filter: unknown }).filter).toEqual({ regenerated: 0, templated: 1 });
+  });
+
+  it("retracts the early warnings of an unusable reading before the retry, and before the error", async () => {
+    const reading = fixture();
+    providerMock.readSheetStream
+      .mockImplementationOnce(streamed(reading, () => { throw new ModelOutputError("schema"); }))
+      .mockImplementationOnce(streamed(reading, () => ({ reading, usage: USAGE })));
+
+    const lines = await events(await POST(post({ images: [IMAGE] })));
+    const kinds = lines.map((line) =>
+      line.event === "card" ? (line.early === true ? "early" : "card") : (line.event as string),
+    );
+    const retractAt = kinds.indexOf("retract");
+    expect(retractAt).toBeGreaterThan(kinds.indexOf("early"));
+    expect(lines[retractAt]).toEqual({ event: "retract", ids: ["warning-0", "warning-1", "warning-2"] });
+    // The retry starts its own progress line and its own early cards after the retraction.
+    expect(kinds.slice(retractAt + 1, retractAt + 5)).toEqual(["status", "early", "early", "early"]);
+    expect(lines.at(-1)?.event).toBe("done");
+
+    providerMock.readSheetStream.mockImplementation(streamed(reading, () => { throw new ModelOutputError("schema"); }));
+    const failed = await events(await POST(post({ images: [IMAGE] })));
+    expect(failed.filter((line) => line.event === "retract")).toHaveLength(2);
+    expect(failed.at(-2)).toEqual({ event: "retract", ids: ["warning-0", "warning-1", "warning-2"] });
+    expect(failed.at(-1)).toEqual({ event: "error", error: "invalid_reading" });
+  });
+
+  it("sends nothing early for a sheet that printed no warning signs", async () => {
+    const reading = fixture();
+    reading.warningSigns = [];
+    providerMock.readSheetStream.mockImplementation(streamed(reading, () => ({ reading, usage: USAGE })));
+    const lines = await events(await POST(post({ images: [IMAGE] })));
+    expect(lines.some((line) => line.event === "card" && line.early === true)).toBe(false);
+    expect((lines.find((line) => line.event === "card")?.card as { id: string }).id).toBe("no-warnings");
+  });
+});
+
 describe("POST /api/read — request validation", () => {
   it("rejects a declared oversize body with 413 before reading it", async () => {
     const response = await POST(
