@@ -41,6 +41,11 @@ export interface ChatHeaderProps {
   langOpen: boolean;
   onOpenLang: () => void;
   onCloseLang: () => void;
+  /**
+   * Says the sheet again from the top: the thread is cleared and the briefing restarts. The
+   * page owns the reset (it is the same path a language change takes); the header only asks.
+   */
+  onRestart?: () => void;
   /** Live companion in the chrome. Defaults to idle when the thread is quiet. */
   mascotState?: MascotState;
 }
@@ -53,6 +58,7 @@ export default function ChatHeader({
   langOpen,
   onOpenLang,
   onCloseLang,
+  onRestart,
   mascotState = "idle",
 }: ChatHeaderProps) {
   const { t, dialect, setDialect, setLocale } = useLocale();
@@ -95,6 +101,16 @@ export default function ChatHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        {onRestart && (
+          <button
+            type="button"
+            onClick={onRestart}
+            aria-label={t("chat.restart")}
+            className="tap pill min-h-9 shrink-0 px-3 text-[17px] leading-none"
+          >
+            <span aria-hidden="true">↺</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={onToggleSpeaker}

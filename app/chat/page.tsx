@@ -1148,18 +1148,22 @@ function ChatScreen() {
    * Only an in-session change does this: the ref starts empty, so the first render never resets
    * anything, and a reload leaves what was said alone.
    */
+  const restart = useCallback(() => {
+    takeFloor();
+    askedCheckin.current = null;
+    updateActive(() => ({ thread: [], briefing: { phase: "idle", step: 0 } }));
+    setSheets(loadSheets());
+    play(true);
+  }, [play, takeFloor]);
+
   const spokenIn = useRef<typeof dialect | null>(null);
   useEffect(() => {
     if (status !== "ready" || sheetId === null) return;
     const previous = spokenIn.current;
     spokenIn.current = dialect;
     if (previous === null || previous === dialect) return;
-    takeFloor();
-    askedCheckin.current = null;
-    updateActive(() => ({ thread: [], briefing: { phase: "idle", step: 0 } }));
-    setSheets(loadSheets());
-    play(true);
-  }, [dialect, play, sheetId, status, takeFloor]);
+    restart();
+  }, [dialect, restart, sheetId, status]);
 
   /**
    * Picking the script back up after the reader has had their turn. It waits for the answer to
@@ -1296,6 +1300,7 @@ function ChatScreen() {
         speakerOn={speakerOn}
         onToggleSpeaker={() => setSpeakerOn((on) => !on)}
         onBack={() => router.push("/")}
+        onRestart={restart}
         langOpen={langOpen}
         onOpenLang={() => setLangOpen(true)}
         onCloseLang={() => setLangOpen(false)}
