@@ -20,7 +20,15 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { UI } from "../../lib/i18n/ui";
-import { expectedCards, expectedSource, mockAsk, mockRead, seedConsent } from "./helpers";
+import {
+  askQuestion,
+  expectedCards,
+  expectedSource,
+  mockAsk,
+  mockRead,
+  noSpeechInput,
+  seedConsent,
+} from "./helpers";
 
 /** `components/Capture.tsx`'s hand-off key. Not imported: that file is another agent's. */
 const PENDING_IMAGES_KEY = "fitornot.pending-images";
@@ -48,6 +56,64 @@ const BEAT = 90_000;
  */
 const HELLO_OPENS = UI.hant["brief.summary"].split("{sheet}")[0];
 const OFFERS_A_CHOICE = UI.hant["brief.summary"].split("{parts}")[1];
+
+/** How long one section takes to type itself out and ask its question on a slow machine. */
+const SECTION = 30_000;
+
+/**
+ * The briefing is a conversation with two sides in it (ce5a550): every section ends by asking
+ * whether it was understood and then WAITS — the opening asks where to start, the red-flag bubble
+ * ends in 「明唔明？」, each medicine in 「呢隻清唔清楚？」 — and nothing continues until the reader
+ * answers. So a test that wants to see a later beat has to answer, the way the reader does: type
+ * 「明白」 into the bar. This drives the script forward until `target` is on screen, one answer per
+ * pause, and fails if it takes more answers than the sheet has sections.
+ *
+ * The bar must be in keyboard mode, hence `noSpeechInput(page)` before the load in every test
+ * that calls this.
+ */
+async function briefingPhase(page: Page): Promise<string | null> {
+  return page.evaluate(
+    () =>
+      (JSON.parse(window.localStorage.getItem("fitornot.v1") ?? "{}") as {
+        sheets?: { active?: { briefing?: { phase?: string } } };
+      }).sheets?.active?.briefing?.phase ?? null,
+  );
+}
+
+/**
+ * Says 「明白」 the way the reader does — and only once 明明 has actually handed over. A reply typed
+ * while a bubble is still typing itself out is a QUESTION to the app (app/chat/page.tsx: the
+ * phase is not yet `waiting`, so the text goes to the model), which is exactly the failure this
+ * guard exists for. The phase lives in the sheet store, which the check-in test reads the same way.
+ */
+async function sayUnderstood(page: Page): Promise<void> {
+  await expect.poll(() => briefingPhase(page), { timeout: SECTION }).toBe("waiting");
+  await askQuestion(page, "明白");
+}
+
+async function answerUntil(page: Page, target: ReturnType<Page["getByText"]>): Promise<void> {
+  // Bounded by TIME, not by turns: the sections after the last question — follow-up, diet, the
+  // closing line — arrive on their own and can take a minute to type themselves out, and a loop
+  // that gave up after a fixed number of looks was timing out on exactly that stretch.
+  const deadline = Date.now() + BRIEFING_TIMEOUT;
+  let answers = 0;
+  while (Date.now() < deadline) {
+    if (await target.first().isVisible()) return;
+    if ((await briefingPhase(page)) === "waiting") {
+      if (answers >= 8) break; // more pauses than the sheet has sections: something is wrong
+      await sayUnderstood(page);
+      answers += 1;
+      continue;
+    }
+    try {
+      await target.first().waitFor({ state: "visible", timeout: 2_000 });
+      return;
+    } catch {
+      // Still typing: look again.
+    }
+  }
+  await expect(target.first()).toBeVisible({ timeout: SECTION });
+}
 
 /**
  * Puts one real JPEG into the hand-off slot, as if the camera had just downscaled a page.
@@ -91,38 +157,47 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     page,
   }) => {
     test.setTimeout(BRIEFING_TIMEOUT);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
 
     // 1. 明明 greets, says what is ON the page, and offers a choice of where to start — one
-    //    bubble, all of it fixed template.
+    //    bubble, all of it fixed template. Then he waits for an answer.
     const opening = page.getByText(HELLO_OPENS, { exact: false });
     await expect(opening).toBeVisible({ timeout: BEAT });
     await expect(page.getByText(OFFERS_A_CHOICE, { exact: false })).toBeVisible({ timeout: BEAT });
+    // Nothing from the sheet has been said yet: the red flags wait for the reader, not a timer.
+    await expect(page.getByText(warnings[0].body.yue, { exact: false })).toHaveCount(0);
 
     // 2. The red flags come next — before any medicine, diet or follow-up line, and never behind
-    //    a tap (constitution II). The lead-in is the app's own, the bodies are the page's.
-    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
+    //    a tap (constitution II). One bubble: the app's own lead-in, the page's bodies, and the
+    //    question, so each is matched as a part of that bubble rather than as a bubble of its own.
+    await sayUnderstood(page);
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: false })).toBeVisible({
       timeout: BEAT,
     });
     for (const warning of warnings) {
-      await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
+      await expect(page.getByText(warning.body.yue, { exact: false })).toBeVisible({
         timeout: BEAT,
       });
     }
     // Nothing from the rest of the sheet has been said yet.
-    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(pieces[0].body.yue, { exact: false })).toHaveCount(0);
     // Each red flag traces to its own printed line (constitution IV).
     await expect(
       page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first(),
     ).toBeVisible();
 
-    // 3. Teach-back is asked ONCE, in words, and there is no button to press to make it continue.
-    await expect(page.getByText(UI.hant["brief.checkUnderstand"], { exact: true })).toBeVisible({
+    // 3. Teach-back is asked ONCE, in words, inside the same bubble, and there is no button to
+    //    press to make it continue — the reader answers in the bar.
+    await expect(page.getByText(UI.hant["ask.warn"], { exact: false })).toBeVisible({
       timeout: BEAT,
     });
+    await expect(page.getByText(UI.hant["ask.warn"], { exact: false })).toHaveCount(1);
     for (const gone of ["brief.understand", "brief.repeat"] as const) {
       await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
     }
+    // And still nothing past the red flags until that answer comes.
+    await expect(page.getByText(pieces[0].body.yue, { exact: false })).toHaveCount(0);
   });
 
   test("nothing on the screen is a play button", async ({ page }) => {
@@ -138,25 +213,41 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     ).toBeVisible();
   });
 
-  test("the script plays itself to the end, with nothing to press", async ({ page }) => {
-    test.setTimeout(BRIEFING_TIMEOUT);
+  test("the script reaches the end one answered section at a time, with nothing to press", async ({
+    page,
+  }) => {
+    test.setTimeout(BRIEFING_TIMEOUT * 2);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
 
+    // Every section arrives only after the one before it was answered, in the sheet's order.
     for (const piece of pieces) {
-      await expect(page.getByText(piece.body.yue, { exact: true })).toBeVisible({ timeout: BEAT });
+      await answerUntil(page, page.getByText(piece.body.yue, { exact: false }));
     }
-    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    await answerUntil(page, page.getByText(UI.hant["brief.end"], { exact: false }));
 
-    // The connectives are the app's own and appear once per RUN of a kind, not once per card:
-    // this sheet lists three medicines and gets one 「跟住講藥。」 between them.
-    await expect(page.getByText(UI.hant["lead.medicine"], { exact: true })).toHaveCount(1);
+    // Each medicine is its own turn and is numbered as such: 第1隻藥（總共3隻）, 第2隻, 第3隻 —
+    // one lead per medicine, never one per run and never one that is missing.
+    const medicines = pieces.filter((card) => card.type === "medicine");
+    for (const [index] of medicines.entries()) {
+      const lead = UI.hant["lead.medicineNth"]
+        .replace("{n}", String(index + 1))
+        .replace("{total}", String(medicines.length));
+      await expect(page.getByText(lead, { exact: false })).toHaveCount(1);
+    }
+    // There is no button that continues the script; only the reader's answer does.
+    for (const gone of ["brief.understand", "brief.repeat"] as const) {
+      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
+    }
 
-    // Every card that quotes a printed line still offers that line (constitution IV).
-    const quoting = cards.filter((card) => card.source !== null).length;
+    // Every bubble that quotes printed lines still offers them (constitution IV). A bubble is a
+    // section now: the red flags share one, so their three quotes sit behind one button, and
+    // every piece that quotes the page has its own.
+    const quotingBubbles =
+      (warnings.some((card) => card.source !== null) ? 1 : 0) +
+      pieces.filter((card) => card.source !== null).length;
     await expect(page.getByRole("button", { name: UI.hant["card.sourceLink"] })).toHaveCount(
-      quoting,
+      quotingBubbles,
     );
 
     // The 睇「跟進」 offer appears exactly once, under the last medicine.
@@ -165,10 +256,9 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
 
   test("a spoken fact opens the line it came from", async ({ page }) => {
     test.setTimeout(BRIEFING_TIMEOUT);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(warnings[0].body.yue, { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    await answerUntil(page, page.getByText(warnings[0].body.yue, { exact: false }));
 
     await page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first().click();
 
@@ -180,22 +270,22 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
   });
 
   test("what has been said survives a reload, and the rest still arrives", async ({ page }) => {
-    test.setTimeout(BRIEFING_TIMEOUT);
+    test.setTimeout(BRIEFING_TIMEOUT * 2);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
-    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    await answerUntil(page, page.getByText(pieces[0].body.yue, { exact: false }));
 
     await page.reload();
 
     // What was already said is still in the thread, exactly once…
-    await expect(page.getByText(pieces[0].body.yue, { exact: true })).toHaveCount(1, {
+    await expect(page.getByText(pieces[0].body.yue, { exact: false })).toHaveCount(1, {
       timeout: BEAT,
     });
-    // …and the script picks itself up rather than starting over or stopping.
-    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    await expect(page.getByText(warnings[0].body.yue, { exact: false })).toHaveCount(1);
+    // …and the script picks itself up where it stopped — still waiting for the reader — rather
+    // than starting over or giving up.
+    await answerUntil(page, page.getByText(UI.hant["brief.end"], { exact: false }));
+    await expect(page.getByText(pieces[0].body.yue, { exact: false })).toHaveCount(1);
   });
 });
 
@@ -383,14 +473,14 @@ test.describe("The check-in counts times, never clock times", () => {
     .replace("{printed}", PRINTED);
 
   test("asks after the briefing, quotes the page, and counts down", async ({ page }) => {
-    test.setTimeout(BRIEFING_TIMEOUT);
+    test.setTimeout(BRIEFING_TIMEOUT * 2);
     await seedConsent(page);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
 
-    // The script plays itself out; the check-in becomes available only once it is over.
-    await expect(page.getByText(UI.hant["brief.end"], { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    // The script is answered through to the end; the check-in becomes available only once it
+    // is over.
+    await answerUntil(page, page.getByText(UI.hant["brief.end"], { exact: false }));
 
     // Only now does the in-app check-in become available (brief §6).
     await expect
@@ -578,7 +668,9 @@ test.describe("The bar is one control: hold to talk, tap to type", () => {
 
 test.describe("The speaker toggle is the only voice control", () => {
   test("silencing stops the sound and the text keeps typing", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
     await seedConsent(page);
+    await noSpeechInput(page);
     await page.goto("/chat?sample=hk_en");
 
     // The 讀住 indicator is status: it is there while there is sound, and it is not a button.
@@ -595,9 +687,8 @@ test.describe("The speaker toggle is the only voice control", () => {
     await expect(page.getByText(HELLO_OPENS, { exact: false })).toBeVisible({
       timeout: BEAT,
     });
-    // With the sound off the script keeps playing: the red flags still reach the thread.
-    await expect(page.getByText(warnings[0].body.yue, { exact: true })).toBeVisible({
-      timeout: BEAT,
-    });
+    // With the sound off the conversation carries on: answer the opening and the red flags still
+    // reach the thread, typed out, sound or no sound.
+    await answerUntil(page, page.getByText(warnings[0].body.yue, { exact: false }));
   });
 });
