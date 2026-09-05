@@ -143,11 +143,15 @@ export function logSpeechEvent(event: {
   status: number;
   ms: number;
   bytes?: number;
+  /** The provider's own numeric failure code (MiniMax `base_resp.status_code`); never its text. */
+  code?: number;
+  /** This attempt failed and one more is about to be made. */
+  retried?: boolean;
 }): void {
-  const { provider, op, tag, status, ms, bytes } = event;
+  const { provider, op, tag, status, ms, bytes, code, retried } = event;
   console.info(
     `[speech] provider=${provider} op=${op} lang=${tag} status=${status} ms=${Math.round(ms)}${
       typeof bytes === "number" ? ` bytes=${bytes}` : ""
-    }`,
+    }${typeof code === "number" ? ` code=${code}` : ""}${retried ? " retry=1" : ""}`,
   );
 }
