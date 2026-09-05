@@ -45,6 +45,47 @@ import { prefetch, speak, stopSpeaking } from "@/lib/speech/tts";
  */
 const WARM_AHEAD = 3;
 
+/** How one `say` ended. `heard` is false when no sound was made (speaker off, or no voice). */
+export interface SayResult {
+  heard: boolean;
+}
+
+/**
+ * The longest a finished typing chain waits for its clip to end before the script moves on
+ * anyway. A clip is a few seconds; this only exists so a stuck element can never freeze 明明.
+ */
+export const AUDIO_WAIT_CAP_MS = 45_000;
+
+/**
+ * Decides when one line is over. Both halves have to close — the typing chain AND the clip —
+ * and `onDone` fires exactly once. Pure, so it is tested on its own: the bug it replaces was
+ * `onDone` firing on the typing timer alone, so a Cantonese clip that outlasted the typing was
+ * cut off by the next line's `say`, which is what Kevin heard on every medicine.
+ */
+export function doneGate(onDone: (result: SayResult) => void): {
+  typed: () => void;
+  audio: (heard: boolean) => void;
+} {
+  let typed = false;
+  let audio: boolean | null = null;
+  let fired = false;
+  const fire = () => {
+    if (fired || !typed || audio === null) return;
+    fired = true;
+    onDone({ heard: audio });
+  };
+  return {
+    typed: () => {
+      typed = true;
+      fire();
+    },
+    audio: (heard: boolean) => {
+      if (audio === null) audio = heard;
+      fire();
+    },
+  };
+}
+
 export interface Voice {
   /** The clauses revealed so far, or null when nothing is being typed. */
   typing: string | null;
@@ -60,7 +101,7 @@ export interface Voice {
    * arriving two seconds after the reader has finished reading them. Passing nothing is safe and
    * simply leaves the following line to fetch itself when its turn comes.
    */
-  say: (text: string, onDone?: () => void, next?: string[]) => void;
+  say: (text: string, onDone?: (result: SayResult) => void, next?: string[]) => void;
   /** Re-speaks something already on screen. Never re-types it (再講一次, brief §6). */
   resay: (text: string) => void;
   /**
@@ -112,25 +153,28 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
    * Starts the audio for one line. Fire and forget: the typing chain never waits on it, so a slow
    * or missing voice cannot hold the words off the screen.
    */
-  const utter = useCallback((text: string) => {
-    if (!speakerRef.current || text.trim().length === 0) return;
+  const utter = useCallback((text: string): Promise<boolean> => {
+    if (!speakerRef.current || text.trim().length === 0) return Promise.resolve(false);
     const mine = token.current;
     const controller = new AbortController();
     utterance.current = controller;
     setSpeaking(true);
-
-    void speak(text, dialectRef.current, { signal: controller.signal }).then(({ mode }) => {
-      // A listener added to an already-aborted signal never fires, and every clip now shares one
-      // element — so a silenced utterance is stopped again here rather than being left to finish
-      // out loud on the element the next line is about to claim.
-      if (controller.signal.aborted) {
-        stopSpeaking();
-        return;
-      }
-      if (token.current !== mine) return;
-      setSpeaking(false);
-      setVoiceUnavailable(mode === "text-only");
-    });
+    return speak(text, dialectRef.current, { signal: controller.signal }).then(
+      ({ mode }) => {
+        // A listener added to an already-aborted signal never fires, and every clip now shares one
+        // element — so a silenced utterance is stopped again here rather than being left to finish
+        // out loud on the element the next line is about to claim.
+        if (controller.signal.aborted) {
+          stopSpeaking();
+          return false;
+        }
+        if (token.current !== mine) return false;
+        setSpeaking(false);
+        setVoiceUnavailable(mode === "text-only");
+        return mode !== "text-only";
+      },
+      () => false,
+    );
   }, []);
 
   /**
@@ -151,12 +195,18 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
   }, []);
 
   const say = useCallback(
-    (text: string, onDone?: () => void, next?: string[]) => {
+    (text: string, onDone?: (result: SayResult) => void, next?: string[]) => {
       cancel();
       const mine = token.current;
       const parts = chunks(text);
       setTyping("");
-      utter(text);
+      // The line is over when the words have all arrived AND the clip has finished playing.
+      // Before this, the typing timer alone ended the line, and the next `say` cut the clip.
+      const gate = doneGate((result) => {
+        if (token.current !== mine) return;
+        onDone?.(result);
+      });
+      void utter(text).then((heard) => gate.audio(heard));
       // After `utter`, so this line's own clip is the first request out.
       if (next && next.length > 0) warm(next);
 
@@ -170,7 +220,9 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
       at(CLAUSE_MS * parts.length + COMMIT_MS, () => {
         if (token.current !== mine) return;
         setTyping(null);
-        onDone?.();
+        gate.typed();
+        // A clip that never ends must not freeze the script.
+        at(AUDIO_WAIT_CAP_MS, () => gate.audio(false));
       });
     },
     [at, cancel, utter, warm],

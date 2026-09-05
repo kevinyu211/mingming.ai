@@ -216,6 +216,8 @@ function ChatScreen() {
    * and a language change replay the whole bubble.
    */
   const earlySaid = useRef<string[]>([]);
+  /** False the moment any reading-screen line ended without sound: then the amber bubble is said in full. */
+  const earlyHeard = useRef(true);
   /** Lines waiting to be said on the reading screen, and whether one is being said now. */
   const earlyQueue = useRef<string[]>([]);
   const earlyBusy = useRef(false);
@@ -367,6 +369,7 @@ function ChatScreen() {
        */
       const heard =
         beat.key === "warn" &&
+        earlyHeard.current &&
         earlySaid.current.length > 0 &&
         earlySaid.current.join("\n") === warningSpeech(splitCards(cards).warnings, { dialect, t, display });
       if (beat.key === "warn") earlySaid.current = [];
@@ -930,6 +933,7 @@ function ChatScreen() {
     earlyQueue.current = [];
     earlyBusy.current = false;
     earlySaid.current = [];
+    earlyHeard.current = true;
     afterEarly.current = null;
     setEarlyWarnings([]);
   }, []);
@@ -952,7 +956,10 @@ function ChatScreen() {
           return;
         }
         earlyBusy.current = true;
-        say(next, drain);
+        say(next, ({ heard }) => {
+          if (!heard) earlyHeard.current = false;
+          drain();
+        });
       };
       drain();
     },
