@@ -1,0 +1,347 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Ming Ming · 明明 — how the app is wired",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1690,
+      640
+    ],
+    "views": [
+      {
+        "id": "read",
+        "label": "Read a sheet",
+        "focus": [
+          "phone",
+          "read",
+          "rules",
+          "model",
+          "gateway",
+          "claude"
+        ],
+        "note": "Photo in, NDJSON out: status, each warning sign as it closes, then the validated cards."
+      },
+      {
+        "id": "ask",
+        "label": "Ask a question",
+        "focus": [
+          "phone",
+          "ask",
+          "rules",
+          "model",
+          "gateway",
+          "claude"
+        ],
+        "note": "Crisis and medicine-change gates run before any model call; answers must cite server-built card ids."
+      },
+      {
+        "id": "voice",
+        "label": "Hear and speak",
+        "focus": [
+          "phone",
+          "speech",
+          "minimax",
+          "openai"
+        ],
+        "note": "Filtered text is spoken; a held-down question is recorded and transcribed. One engine per hold."
+      },
+      {
+        "id": "keep",
+        "label": "What stays on the phone",
+        "focus": [
+          "phone",
+          "store"
+        ],
+        "note": "One browser-storage key: reading, thread, counters, memory. One button deletes it all."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "store",
+      "type": "database",
+      "label": "On-device store",
+      "pos": [
+        62,
+        252
+      ],
+      "size": [
+        180,
+        72
+      ]
+    },
+    {
+      "id": "phone",
+      "type": "frontend",
+      "label": "Phone web app",
+      "pos": [
+        277,
+        252
+      ],
+      "size": [
+        160,
+        72
+      ]
+    },
+    {
+      "id": "read",
+      "type": "backend",
+      "label": "/api/read",
+      "pos": [
+        539,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "ask",
+      "type": "backend",
+      "label": "/api/ask",
+      "pos": [
+        539,
+        260
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "speech",
+      "type": "backend",
+      "label": "/api/tts · /api/stt",
+      "pos": [
+        539,
+        410
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "rules",
+      "type": "security",
+      "label": "Rules (lib/rules)",
+      "pos": [
+        790,
+        106
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "model",
+      "type": "backend",
+      "label": "Model client",
+      "pos": [
+        1050,
+        106
+      ],
+      "size": [
+        150,
+        72
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "cloud",
+      "label": "Vercel AI Gateway",
+      "pos": [
+        1260,
+        110
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "claude",
+      "type": "external",
+      "label": "Claude Sonnet 5",
+      "pos": [
+        1480,
+        110
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "minimax",
+      "type": "external",
+      "label": "MiniMax voice",
+      "pos": [
+        1260,
+        410
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "openai",
+      "type": "external",
+      "label": "OpenAI transcription",
+      "pos": [
+        1260,
+        520
+      ],
+      "size": [
+        160,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Phone: the family’s data stays here",
+      "wraps": [
+        "phone",
+        "store"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Vercel Functions — stateless, nothing stored",
+      "wraps": [
+        "read",
+        "ask",
+        "speech",
+        "rules",
+        "model"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Gates around every model call",
+      "wraps": [
+        "rules"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Providers outside Hong Kong",
+      "wraps": [
+        "gateway",
+        "claude",
+        "minimax",
+        "openai"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "keep",
+      "from": "phone",
+      "to": "store",
+      "label": "kept",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "photo",
+      "from": "phone",
+      "to": "read",
+      "label": "photo",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "question",
+      "from": "phone",
+      "to": "ask",
+      "label": "question",
+      "variant": "emphasis"
+    },
+    {
+      "id": "voice",
+      "from": "phone",
+      "to": "speech",
+      "label": "text · clip",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "read-rules",
+      "from": "read",
+      "to": "rules",
+      "label": "order · filter",
+      "variant": "security",
+      "labelDy": 56
+    },
+    {
+      "id": "ask-rules",
+      "from": "ask",
+      "to": "rules",
+      "label": "gates first · cite after",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "rules-model",
+      "from": "rules",
+      "to": "model",
+      "label": "call · check",
+      "labelDy": -26
+    },
+    {
+      "id": "to-gateway",
+      "from": "model",
+      "to": "gateway",
+      "label": "compat"
+    },
+    {
+      "id": "to-claude",
+      "from": "gateway",
+      "to": "claude",
+      "label": "Sonnet 5"
+    },
+    {
+      "id": "to-minimax",
+      "from": "speech",
+      "to": "minimax",
+      "label": "text → audio"
+    },
+    {
+      "id": "to-openai",
+      "from": "speech",
+      "to": "openai",
+      "label": "clip → transcript",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Model reads and phrases; code decides",
+      "items": [
+        "Model: read the page into fields verbatim, and write the sentence a daughter would say (Claude Sonnet 5 via the Vercel AI Gateway)",
+        "Code: warning signs first, refusals and crisis referral before any model call, citations checked against server-built cards, dose counters that never turn a frequency into a clock time",
+        "ESLint forbids lib/rules from importing the model"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "What leaves the phone, and what does not",
+      "items": [
+        "Leaves: the page as a 2400 px JPEG, the cards, the question and the last turns; card text to MiniMax; the recorded question to OpenAI",
+        "Never: a name, a relationship word, a date or an identifier; the server stores and logs nothing",
+        "Stays: one browser-storage key with the reading, thread, counters and memory; one button deletes it all"
+      ]
+    }
+  ]
+}
