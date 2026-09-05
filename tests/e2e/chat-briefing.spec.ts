@@ -26,6 +26,7 @@ import {
   mockAsk,
   mockRead,
   noSpeechInput,
+  noVoiceOutput,
   seedConsent,
   BEAT,
   BRIEFING_TIMEOUT,
@@ -94,6 +95,10 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
   }) => {
     test.setTimeout(BRIEFING_TIMEOUT);
     await noSpeechInput(page);
+    // Since f12f5f1 a line ends when its voice has finished, not when its typing has. This test
+    // checks order and structure, not sound, so it runs without a voice; the device-voice path
+    // is exercised by the speaker-toggle test and the gate has its own unit test.
+    await noVoiceOutput(page);
     await page.goto("/chat?sample=hk_en");
 
     // 1. 明明 greets, says what is ON the page, and offers a choice of where to start — one
