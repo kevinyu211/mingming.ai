@@ -141,6 +141,10 @@ describe("placeholders survive translation", () => {
       "{parts}",
       // Medicine turns are numbered: "第2隻藥（總共3隻）".
       "{total}",
+      // The recap card on 跟進: three counts in one sentence (components/track/followup.ts).
+      "{understood}",
+      "{repeated}",
+      "{asked}",
     ]);
     for (const locale of UI_LOCALES) {
       for (const key of UI_KEYS) {

@@ -21,10 +21,13 @@ import Mascot from "@/components/Mascot";
 import TabBar, { TAB_BAR_HEIGHT } from "@/components/TabBar";
 import CaptureButtons from "@/components/home/CaptureButtons";
 import { homeUnread } from "@/components/home/conversation";
-import { fill } from "@/components/home/format";
+import { daysUntil, fill } from "@/components/home/format";
 import { useSheets } from "@/components/home/useSheets";
 import AppointmentCard from "@/components/track/AppointmentCard";
 import DoseCard from "@/components/track/DoseCard";
+import FollowUpNote from "@/components/track/FollowUpNote";
+import RecapCard from "@/components/track/RecapCard";
+import { followUpLine, hasRecap, recap } from "@/components/track/followup";
 import SheetStrip from "@/components/track/SheetStrip";
 import ShareButton from "@/components/track/ShareButton";
 import WarningSigns from "@/components/track/WarningSigns";
@@ -78,6 +81,16 @@ export default function TrackScreen() {
   const left = active
     ? countable.reduce((sum, x) => sum + remaining(x, active.doses[x.key], today), 0)
     : 0;
+  // 明明's line and the recap: both pure, both from facts the cards below already stand on.
+  const line = active
+    ? followUpLine(
+        { left, countable: countable.length, daysToVisit: daysUntil(active.plan.followUpDate, today) },
+        t,
+      )
+    : "";
+  const talked = active
+    ? recap(active.thread, active.briefing, [t("checkin.took"), t("checkin.notYet")])
+    : null;
 
   return (
     <>
@@ -131,6 +144,8 @@ export default function TrackScreen() {
               <SheetStrip sheet={active} />
             </div>
 
+            <FollowUpNote text={line} />
+
             <div className="lg:mt-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
               <div>
                 {targets.length > 0 ? (
@@ -160,6 +175,7 @@ export default function TrackScreen() {
                 <div className="mt-3">
                   <AppointmentCard plan={active.plan} reading={active.reading} today={today} />
                 </div>
+                {talked && hasRecap(talked) ? <RecapCard recap={talked} /> : null}
               </div>
 
               <div>
