@@ -64,3 +64,6 @@ playwright-report/
 
 # agent tool folder (spec-driven-development scaffolding), local only
 .superpowers/
+
+# backup video and its run log: a deliverable for the organisers, not for the repo
+docs/backup-video/

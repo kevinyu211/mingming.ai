@@ -44,6 +44,11 @@ import {
   seedConsent,
   startReading,
   uploadFixture,
+  BEAT,
+  answerUntil,
+  expectGreeting,
+  noSpeechInput,
+  sayUnderstood,
 } from "./helpers";
 
 /** Copy that lives in `components/DeclineState.tsx`, not in `lib/i18n/ui.ts`. */
@@ -88,9 +93,7 @@ test.describe("A photograph that cannot be read (V7)", () => {
 
     await page.getByRole("button", { name: UI.hant["capture.sample"], exact: true }).click();
     await expect(page.getByText(UI.hant["cards.sampleBanner"], { exact: true })).toBeVisible();
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expectGreeting(page);
 
     await expectNoHorizontalScroll(page);
   });
@@ -120,21 +123,23 @@ test.describe("Speech output is unavailable (V7)", () => {
   }) => {
     await seedConsent(page);
     await noVoiceOutput(page);
+    await noSpeechInput(page);
 
     await page.goto("/chat?sample=hk_en");
 
-    // 1. The words. 明明's opening line is typed out and committed with no sound behind it.
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    // 1. The words. 明明's greeting is typed out and committed with no sound behind it, and he
+    //    waits for the reader as he always does.
+    await expectGreeting(page);
 
-    // 2. The red flags, in full, still first and still not behind a tap (constitution II).
-    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
-      timeout: 30_000,
+    // 2. The red flags, in full, still first and still not behind a tap (constitution II). One
+    //    bubble — lead, bodies and question — so each is matched as a part of it.
+    await sayUnderstood(page);
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: false })).toBeVisible({
+      timeout: BEAT,
     });
     for (const warning of warnings) {
-      await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
-        timeout: 60_000,
+      await expect(page.getByText(warning.body.yue, { exact: false })).toBeVisible({
+        timeout: BEAT,
       });
     }
     // And each of them still traces to its own line, which is the only way to check a silent app.
@@ -158,9 +163,7 @@ test.describe("Speech output is unavailable (V7)", () => {
     ).toBeVisible();
 
     // 5. The script still plays itself out, so a silent phone still gets the whole sheet in words.
-    await expect(page.getByText(UI.hant["brief.checkUnderstand"], { exact: true })).toBeVisible({
-      timeout: 60_000,
-    });
+    await answerUntil(page, page.getByText(UI.hant["brief.end"], { exact: false }));
 
     await expectNoHorizontalScroll(page);
   });
@@ -199,12 +202,7 @@ test.describe("The camera is not the way in (V7)", () => {
     await uploadFixture(page, "hk_en.png", "library");
     await startReading(page);
 
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
-      timeout: 60_000,
-    });
+    await expectGreeting(page);
   });
 });
 
@@ -259,8 +257,6 @@ test.describe("The camera is not the way in, on a laptop (V7)", () => {
       .click();
 
     await startReading(page);
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
+    await expectGreeting(page);
   });
 });

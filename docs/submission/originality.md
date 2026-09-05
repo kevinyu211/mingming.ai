@@ -37,14 +37,7 @@ demo.
   the `hk_en` fixture 3/3 medicines verbatim, warning coverage 100%; and all three demo fixtures in
   `fixtures/demo/` clean — `hk_stopped` 8/8 medicines exact with all three withdrawn drugs marked
   stopped, the two-page `hk_stack` 5/5 with both appointments, `cn_zh_clinic` 5/5 with the
-  uncountable dose clause left uncounted; warning signs 3/3 on each. **Open, and stated plainly:
-  photographed sheets do not read on this build as of the evening of 4 September.** The two photo
-  fixtures — `cn_zh_photo.jpg` (2 of 2 runs) and the `messy` stress photo (3 of 3) — come back
-  「讀唔到呢張紙」 after 44–128 s, while every rendered sheet reads. The cause is identified: the
-  Gateway client stopped sending the `effort: medium` setting the direct client always sent, so
-  the model runs at its default on hard photos and the fuller reading fails the strict schema.
-  The fix is one request parameter and is being applied; until it is verified on production the
-  demo uses uploaded rendered sheets or the bundled sample, not the camera. Effort was dropped from `high` to `medium` on
+  uncountable dose clause left uncounted; warning signs 3/3 on each. **Photographed sheets read again on the deployed build** (`69450f2` and later, promoted 5 September 03:19 UTC): the request goes to the Gateway's Anthropic-compatible endpoint with the same schema-enforced output and `effort: medium` the baselines were measured with (`lib/model/anthropic-compat.ts`). Measured on production from this Mac: the `cn_zh_photo` fixture, which failed 2 of 2 runs on the evening's earlier build, reads in 46–48 s with all three medicines, the warning sign and the one unreadable field matching the answer key; three server-side read completions in the same window at 27.6–43.6 s, none rejected by the schema. The `messy` stress photo — the same page deliberately rotated, blurred, shadowed and with a thumb over two cells — does not complete on this build: alone on the key it returned 「讀唔到呢張紙」 (422 `invalid_reading`) after 288 s, the model's reading rejected by the schema on both attempts; under concurrent load it hit the route's 300 s ceiling instead. On the original direct client the same photo read in 102–111 s with one recorded truncation failure (`tests/eval/stress.md`). The realistic photo fixture reads correctly on this build; the degraded one is carried here as open, with the cause under investigation in `lib/model/anthropic-compat.ts`. The demo does not photograph that sheet. Effort was dropped from `high` to `medium` on
   the original evidence: identical readings,
 - **Voice**: MiniMax `speech-2.8-hd` through its international endpoint, behind a provider adapter.
   ElevenLabs and Azure Speech adapters are written and switchable by one environment variable; the
@@ -100,8 +93,10 @@ are rules is stated on screen (the AI chip, present only on model-written messag
 `model-vs-rules.md`.
 
 The backup video required by `rules.md` section 9 must be **one continuous real run**, not an
-edited montage. It is not in the repository at the time of writing; recording it is a remaining
-task before submission.
+edited montage. One is recorded: `docs/backup-video/mingming-backup-2026-09-05.mp4` (2 min 43 s,
+outside the repository, with a README and a timestamped run log) — a single continuous Playwright-
+driven run of the deployed app at phone viewport, build `394c0ea`, synthetic sheet, every reader
+turn typed, no audio track. A phone recording with the voice, made at the venue, should sit beside it.
 
 Two things about the demo that judges should hear rather than discover:
 

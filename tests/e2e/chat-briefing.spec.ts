@@ -21,13 +21,17 @@
 import { expect, test, type Page } from "@playwright/test";
 import { UI } from "../../lib/i18n/ui";
 import {
-  askQuestion,
   expectedCards,
   expectedSource,
   mockAsk,
   mockRead,
   noSpeechInput,
   seedConsent,
+  BEAT,
+  BRIEFING_TIMEOUT,
+  answerUntil,
+  helloOpens,
+  sayUnderstood,
 } from "./helpers";
 
 /** `components/Capture.tsx`'s hand-off key. Not imported: that file is another agent's. */
@@ -43,77 +47,9 @@ const cards = expectedCards("hk_en");
 const warnings = cards.filter((c) => c.type === "warning");
 const pieces = cards.filter((c) => c.type !== "warning" && c.type !== "noWarnings");
 
-/** How long the whole briefing takes to type itself out: 6 pieces at ~360 ms a clause. */
-const BRIEFING_TIMEOUT = 180_000;
-
-/** Long enough for the script to reach any one beat on a slow machine. */
-const BEAT = 90_000;
-
-/**
- * The opening. Not the old two-beat hello + intro any more: the greeting, the counts of what is on
- * the page, and the offer of where to start are ONE bubble, so the assertion is on the stable
- * halves of that sentence rather than on the whole interpolated string.
- */
-const HELLO_OPENS = UI.hant["brief.summary"].split("{sheet}")[0];
+/** The half of the greeting after the counts: the offer of where to start. */
 const OFFERS_A_CHOICE = UI.hant["brief.summary"].split("{parts}")[1];
-
-/** How long one section takes to type itself out and ask its question on a slow machine. */
-const SECTION = 30_000;
-
-/**
- * The briefing is a conversation with two sides in it (ce5a550): every section ends by asking
- * whether it was understood and then WAITS — the opening asks where to start, the red-flag bubble
- * ends in 「明唔明？」, each medicine in 「呢隻清唔清楚？」 — and nothing continues until the reader
- * answers. So a test that wants to see a later beat has to answer, the way the reader does: type
- * 「明白」 into the bar. This drives the script forward until `target` is on screen, one answer per
- * pause, and fails if it takes more answers than the sheet has sections.
- *
- * The bar must be in keyboard mode, hence `noSpeechInput(page)` before the load in every test
- * that calls this.
- */
-async function briefingPhase(page: Page): Promise<string | null> {
-  return page.evaluate(
-    () =>
-      (JSON.parse(window.localStorage.getItem("fitornot.v1") ?? "{}") as {
-        sheets?: { active?: { briefing?: { phase?: string } } };
-      }).sheets?.active?.briefing?.phase ?? null,
-  );
-}
-
-/**
- * Says 「明白」 the way the reader does — and only once 明明 has actually handed over. A reply typed
- * while a bubble is still typing itself out is a QUESTION to the app (app/chat/page.tsx: the
- * phase is not yet `waiting`, so the text goes to the model), which is exactly the failure this
- * guard exists for. The phase lives in the sheet store, which the check-in test reads the same way.
- */
-async function sayUnderstood(page: Page): Promise<void> {
-  await expect.poll(() => briefingPhase(page), { timeout: SECTION }).toBe("waiting");
-  await askQuestion(page, "明白");
-}
-
-async function answerUntil(page: Page, target: ReturnType<Page["getByText"]>): Promise<void> {
-  // Bounded by TIME, not by turns: the sections after the last question — follow-up, diet, the
-  // closing line — arrive on their own and can take a minute to type themselves out, and a loop
-  // that gave up after a fixed number of looks was timing out on exactly that stretch.
-  const deadline = Date.now() + BRIEFING_TIMEOUT;
-  let answers = 0;
-  while (Date.now() < deadline) {
-    if (await target.first().isVisible()) return;
-    if ((await briefingPhase(page)) === "waiting") {
-      if (answers >= 8) break; // more pauses than the sheet has sections: something is wrong
-      await sayUnderstood(page);
-      answers += 1;
-      continue;
-    }
-    try {
-      await target.first().waitFor({ state: "visible", timeout: 2_000 });
-      return;
-    } catch {
-      // Still typing: look again.
-    }
-  }
-  await expect(target.first()).toBeVisible({ timeout: SECTION });
-}
+const HELLO_OPENS = helloOpens();
 
 /**
  * Puts one real JPEG into the hand-off slot, as if the camera had just downscaled a page.

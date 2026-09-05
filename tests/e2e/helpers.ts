@@ -580,9 +580,15 @@ export async function startReading(page: Page): Promise<void> {
  * on the bar or `noSpeechInput(page)` before the load. There is no separate ask screen any more:
  * the question goes into the same thread the sheet arrived in (brief §6).
  */
-export async function askQuestion(page: Page, text: string): Promise<void> {
-  await page.getByRole("textbox", { name: UI.hant["bar.typePlaceholder"], exact: true }).fill(text);
-  await page.getByRole("button", { name: UI.hant["bar.send"], exact: true }).click();
+export async function askQuestion(
+  page: Page,
+  text: string,
+  locale: "hant" | "hans" = "hant",
+): Promise<void> {
+  await page
+    .getByRole("textbox", { name: UI[locale]["bar.typePlaceholder"], exact: true })
+    .fill(text);
+  await page.getByRole("button", { name: UI[locale]["bar.send"], exact: true }).click();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -662,3 +668,85 @@ export async function expectNoClockTime(page: Page, allowed: RegExp[] = []): Pro
 
 /** Re-exported so a spec can build a thread or a counter without reaching into `lib/`. */
 export type { CheckinState, DoseState, Sheet, ThreadMessage };
+
+/* -------------------------------------------------------------------------- */
+/* The briefing is a conversation                                             */
+/* -------------------------------------------------------------------------- */
+
+/** How long the whole briefing takes to type itself out: 6 pieces at ~360 ms a clause. */
+export const BRIEFING_TIMEOUT = 180_000;
+
+/** Long enough for the script to reach any one beat on a slow machine. */
+export const BEAT = 90_000;
+
+/** How long one section takes to type itself out and ask its question on a slow machine. */
+export const SECTION = 30_000;
+
+/**
+ * The stable opening of 明明's greeting (`brief.summary`, before the sheet word is filled in).
+ * A read has landed when this is on screen; nothing from the page is said until the reader
+ * answers, so a test that wants a later beat has to answer, the way the reader does.
+ */
+export function helloOpens(locale: "hant" | "hans" = "hant"): string {
+  return UI[locale]["brief.summary"].split("{sheet}")[0];
+}
+
+/** The read landed and 明明 is greeting. One bubble, so the match is a part of it. */
+export async function expectGreeting(
+  page: Page,
+  locale: "hant" | "hans" = "hant",
+  timeout: number = BEAT,
+): Promise<void> {
+  await expect(page.getByText(helloOpens(locale), { exact: false }).first()).toBeVisible({
+    timeout,
+  });
+}
+
+/** Where the script is: `sheets.active.briefing.phase` in the store, or null before a sheet. */
+export async function briefingPhase(page: Page): Promise<string | null> {
+  return page.evaluate(
+    () =>
+      (JSON.parse(window.localStorage.getItem("fitornot.v1") ?? "{}") as {
+        sheets?: { active?: { briefing?: { phase?: string } } };
+      }).sheets?.active?.briefing?.phase ?? null,
+  );
+}
+
+/**
+ * Says 「明白」 the way the reader does — and only once 明明 has actually handed over. A reply typed
+ * while a bubble is still typing itself out is a QUESTION to the app (app/chat/page.tsx: the
+ * phase is not yet `waiting`, so the text goes to the model), which is exactly the failure this
+ * guard exists for. The bar must be in keyboard mode: `noSpeechInput(page)` before the load.
+ */
+export async function sayUnderstood(page: Page, locale: "hant" | "hans" = "hant"): Promise<void> {
+  await expect.poll(() => briefingPhase(page), { timeout: SECTION }).toBe("waiting");
+  await askQuestion(page, "明白", locale);
+}
+
+/** Answers pause by pause until `target` is on screen. Bounded by time, not by turns. */
+export async function answerUntil(
+  page: Page,
+  target: ReturnType<Page["getByText"]>,
+): Promise<void> {
+  // The sections after the last question — follow-up, diet, the closing line — arrive on their
+  // own and can take a minute to type themselves out, and a loop that gave up after a fixed
+  // number of looks was timing out on exactly that stretch.
+  const deadline = Date.now() + BRIEFING_TIMEOUT;
+  let answers = 0;
+  while (Date.now() < deadline) {
+    if (await target.first().isVisible()) return;
+    if ((await briefingPhase(page)) === "waiting") {
+      if (answers >= 8) break; // more pauses than the sheet has sections: something is wrong
+      await sayUnderstood(page);
+      answers += 1;
+      continue;
+    }
+    try {
+      await target.first().waitFor({ state: "visible", timeout: 2_000 });
+      return;
+    } catch {
+      // Still typing: look again.
+    }
+  }
+  await expect(target.first()).toBeVisible({ timeout: SECTION });
+}

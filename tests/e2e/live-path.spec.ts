@@ -49,6 +49,10 @@ import {
   startReading,
   storedReading,
   uploadFixture,
+  BEAT,
+  BRIEFING_TIMEOUT,
+  expectGreeting,
+  sayUnderstood,
 } from "./helpers";
 
 /** Copy that lives in `app/chat/page.tsx`, not in `lib/i18n/ui.ts`. */
@@ -102,6 +106,7 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
   });
 
   test("記錄 → 傾偈 → 跟進, all naming the same piece of paper", async ({ page }) => {
+    await noSpeechInput(page);
     const log = await mockRead(page, "hk_en", { delayMs: 600 });
 
     // 1. 記錄, empty: 明明 has nothing to say yet and says exactly that.
@@ -117,11 +122,11 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
 
     // 4. The sheet arrives as a conversation, red flags first. (What it SAYS is
     //    chat-briefing.spec.ts's business; this only proves the read landed here.)
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
-    });
-    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
+    //    明明 greets and waits; the red flags come once the reader answers (brief §2).
+    await expectGreeting(page);
+    await sayUnderstood(page);
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: false })).toBeVisible({
+      timeout: BEAT,
     });
 
     // 5. Privacy is structural (FR-019, SC-009): the body carries the pixels and nothing else.
@@ -136,9 +141,9 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
     // 6. 記錄 now has the sheet on it, titled by rule from the page's own clinic line, with the
     //    page count the camera actually took.
     await page.goto("/");
-    await expect(page.getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
-    await expect(page.getByText("SOPD", { exact: true })).toBeVisible();
-    await expect(page.getByText(UI.hant["home.pages"].replace("{n}", "1"), { exact: false })).toBeVisible();
+    await expect(page.getByRole("main").getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText("SOPD", { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByText(UI.hant["home.pages"].replace("{n}", "1"), { exact: false })).toBeVisible();
 
     // 7. 跟進 follows THAT sheet — the strip names it, which is what makes the tab honest.
     await page.getByRole("link", { name: UI.hant["tab.track"], exact: true }).click();
@@ -161,24 +166,20 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
 
     await uploadFixture(page, "hk_en.png");
     await startReading(page);
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
-    });
+    await expectGreeting(page);
 
     // A second sheet, from the other bundled fixture so the two are told apart by their titles.
     await mockRead(page, "cn_zh");
     await uploadFixture(page, "cn_zh.png");
     await startReading(page);
-    await expect(page.getByText(UI.hant["brief.intro"], { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
-    });
+    await expectGreeting(page);
 
     await page.goto("/");
     // 傾緊呢張 names the NEW sheet, and only it. There is one active sheet, and it is the last
     // piece of paper photographed.
-    await expect(page.getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: /心内科门诊/ })).toHaveCount(1);
-    await expect(page.getByRole("link", { name: /SOPD/ })).toHaveCount(0);
+    await expect(page.getByRole("main").getByText(UI.hant["home.nowTalking"], { exact: true })).toBeVisible();
+    await expect(page.getByRole("main").getByRole("link", { name: /心内科门诊/ })).toHaveCount(1);
+    await expect(page.getByRole("main").getByRole("link", { name: /SOPD/ })).toHaveCount(0);
 
     /*
      * The older sheets sit behind a disclosure. The COUNT is deliberately not pinned: one
@@ -190,10 +191,10 @@ test.describe("A photographed sheet becomes the one active sheet (V1, V4)", () =
     const older = page.getByRole("button", { name: /以前嘅/ });
     await expect(older).toBeVisible();
     await older.click();
-    await expect(page.getByText("SOPD", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("main").getByText("SOPD", { exact: true }).first()).toBeVisible();
     await expect(page.getByText(UI.hant["home.readOnly"], { exact: false }).first()).toBeVisible();
     // 只可以睇 is a promise the markup keeps: an archived row is not a link and does not open.
-    await expect(page.getByRole("link", { name: /SOPD/ })).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("link", { name: /SOPD/ })).toHaveCount(0);
 
     // 跟進 follows the ACTIVE sheet only: the archived one's medicines are not on this screen.
     await page.goto("/track");
@@ -309,6 +310,8 @@ test.describe("The language switch (V1)", () => {
   test("the thread follows the chosen language while the quote stays verbatim", async ({
     page,
   }) => {
+    // Two briefings are answered in this test, one in each language.
+    test.setTimeout(BRIEFING_TIMEOUT);
     await seedConsent(page);
     const warning = expectedCards("cn_zh").filter((card) => card.type === "warning")[0];
     const source = expectedSource("cn_zh", warning.id);
@@ -316,11 +319,15 @@ test.describe("The language switch (V1)", () => {
     // would be visible on screen rather than a theoretical worry.
     expect(toScript(source.quote, "hant")).not.toBe(source.quote);
 
+    await noSpeechInput(page);
     await page.goto("/chat?sample=cn_zh");
 
-    // Cantonese first, which is the default: what 明明 says is the card's Cantonese body.
-    await expect(page.getByText(warning.body.yue, { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
+    // Cantonese first, which is the default: what 明明 says is the card's Cantonese body. He
+    // greets and waits; the red flags are the first thing said once the reader answers.
+    await expectGreeting(page);
+    await sayUnderstood(page);
+    await expect(page.getByText(warning.body.yue, { exact: false })).toBeVisible({
+      timeout: BEAT,
     });
 
     // …and even here, with the interface in traditional characters, the QUOTE is the simplified
@@ -341,8 +348,10 @@ test.describe("The language switch (V1)", () => {
     // switch starts the sheet again in the chosen language rather than rewriting what was already
     // said in the other one — see the comment on `spokenIn` in app/chat/page.tsx.
     await expect(page.getByText(UI.hans["cards.sampleBanner"], { exact: true })).toBeVisible();
-    await expect(page.getByText(warning.body.cmn, { exact: true })).toBeVisible({
-      timeout: TYPING_TIMEOUT,
+    await expectGreeting(page, "hans");
+    await sayUnderstood(page, "hans");
+    await expect(page.getByText(warning.body.cmn, { exact: false })).toBeVisible({
+      timeout: BEAT,
     });
 
     // Everything the PAGE printed does not. Byte for byte the same quote as before the switch.

@@ -6,10 +6,7 @@ product, and they should watch it rather than be told about it.
 
 The pitch window is **5–8 minutes including Q&A**. This script is about five, which leaves room.
 
-**The one number to know cold:** a read takes **about 25 seconds** (measured on the deployed app
-on 4 Sept, Claude Sonnet 5 through the Vercel AI Gateway: 23 s, 23 s, 24 s, 26 s). A question
-answers in **about 5 seconds** once the app is warm. That is the only dead air in the demo and
-section 1:00 exists to fill it. Never photograph a sheet and then stand in silence.
+**The one number to know cold:** a read takes **30–50 seconds** on the deployed build (5 Sept, Claude Sonnet 5 through the Gateway's Anthropic-compatible path: rendered sheets 27.6 / 36.6 / 38.0 / 43.6 s server-side, the realistic photo 46.3 / 48.0 s end to end). **The first ~30 seconds show nothing at all** — the progress bar has nothing to count while the model thinks — then the text streams in over about ten seconds and every card lands at once. That silence is the model working, not a hang: keep talking, which is what section 1:05 exists for. A question answers in **about 5 seconds** once the app is warm. Never photograph a sheet and then stand in silence.
 
 **The number that will ruin you if you skip the warm-up:** the FIRST request after the app has sat
 idle for a few minutes takes **75–80 seconds** — measured four separate times today, and every
