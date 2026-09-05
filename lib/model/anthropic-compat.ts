@@ -32,14 +32,12 @@ import type {
 import type { z } from "zod";
 
 import {
-  ASK_TIMEOUT_MS,
   MAX_TOKENS,
   ModelError,
   ModelOutputError,
   ModelRefusalError,
   ModelRequestError,
   ModelUnavailableError,
-  READ_TIMEOUT_MS,
   type AnswerInput,
   type ModelProvider,
   type UsageSummary,
@@ -80,6 +78,25 @@ export const READ_EFFORT: Effort = (process.env.READ_EFFORT as Effort) || "mediu
 export const ASK_EFFORT: Effort = "medium";
 export const PHRASE_EFFORT: Effort = "medium";
 
+/**
+ * Per-route budgets. The SDK retries a timed-out attempt, so the budget is attempts × timeout and
+ * must fit inside the route's maxDuration (read 300 s, ask/phrase 60 s): a read gets one attempt
+ * with nearly the whole window, because a second attempt could never finish in what is left; an
+ * ask gets two short ones, because its failures are transient 429/5xx far more often than slowness.
+ */
+export const READ_BUDGET = { timeout: 280_000, maxRetries: 0 } as const;
+export const ASK_BUDGET = { timeout: 25_000, maxRetries: 1 } as const;
+
+/**
+ * Output cap for a read. `max_tokens` covers adaptive thinking AND the reply on this model, and
+ * on a hard photo the thinking alone ran to 16 000 tokens (5 September, messy.jpg replayed
+ * against the compat endpoint: stop_reason max_tokens with not one character of reading
+ * written; at 64 000 the same request finished in 177 s with 19 544 output tokens and a valid
+ * reading). Cost follows what is generated, not the cap; the cap only decides whether a long
+ * think can still end in a reading.
+ */
+export const READ_MAX_TOKENS = 64_000;
+
 /** Built once so the schema bytes are identical on every request. */
 export const READ_OUTPUT_FORMAT = betaZodOutputFormat(SheetReadingSchema);
 export const ASK_OUTPUT_FORMAT = betaZodOutputFormat(AskResultSchema);
@@ -97,7 +114,8 @@ interface CallSpec<T> {
   effort: Effort;
   format: BetaJSONOutputFormat;
   schema: z.ZodType<T>;
-  timeoutMs: number;
+  budget: { readonly timeout: number; readonly maxRetries: number };
+  maxTokens: number;
 }
 
 export interface AnthropicCompatProviderOptions {
@@ -121,7 +139,8 @@ export class AnthropicCompatProvider implements ModelProvider {
         // ANTHROPIC_API_KEY from the environment.
         authToken: process.env.AI_GATEWAY_API_KEY,
         apiKey: null,
-        maxRetries: 2,
+        // Per-request budgets below override this; it only covers calls made without one.
+        maxRetries: 1,
       });
     this.modelRead = options.modelRead;
     this.modelAsk = options.modelAsk;
@@ -176,7 +195,8 @@ export class AnthropicCompatProvider implements ModelProvider {
       effort: ASK_EFFORT,
       format: ASK_OUTPUT_FORMAT,
       schema: AskResultSchema,
-      timeoutMs: ASK_TIMEOUT_MS,
+      budget: ASK_BUDGET,
+      maxTokens: MAX_TOKENS,
     };
   }
 
@@ -188,7 +208,8 @@ export class AnthropicCompatProvider implements ModelProvider {
       effort: PHRASE_EFFORT,
       format: PHRASE_OUTPUT_FORMAT,
       schema: PhraseResultSchema,
-      timeoutMs: ASK_TIMEOUT_MS,
+      budget: ASK_BUDGET,
+      maxTokens: MAX_TOKENS,
     });
     return { result: value, usage };
   }
@@ -201,7 +222,8 @@ export class AnthropicCompatProvider implements ModelProvider {
       effort: READ_EFFORT,
       format: READ_OUTPUT_FORMAT,
       schema: SheetReadingSchema,
-      timeoutMs: READ_TIMEOUT_MS,
+      budget: READ_BUDGET,
+      maxTokens: READ_MAX_TOKENS,
     };
   }
 
@@ -209,7 +231,7 @@ export class AnthropicCompatProvider implements ModelProvider {
   params<T>(spec: CallSpec<T>) {
     return {
       model: spec.model,
-      max_tokens: MAX_TOKENS,
+      max_tokens: spec.maxTokens,
       // Single frozen block, cached. Volatile bytes (images, question) follow in `messages`.
       system: [
         {
@@ -227,9 +249,7 @@ export class AnthropicCompatProvider implements ModelProvider {
     const startedAt = Date.now();
     let message: BetaMessage;
     try {
-      message = await this.client.beta.messages.create(this.params(spec), {
-        timeout: spec.timeoutMs,
-      });
+      message = await this.client.beta.messages.create(this.params(spec), spec.budget);
     } catch (error) {
       throw toAnthropicModelError(error);
     }
@@ -243,9 +263,7 @@ export class AnthropicCompatProvider implements ModelProvider {
     const startedAt = Date.now();
     let message: BetaMessage;
     try {
-      const stream = this.client.beta.messages.stream(this.params(spec), {
-        timeout: spec.timeoutMs,
-      });
+      const stream = this.client.beta.messages.stream(this.params(spec), spec.budget);
       if (onPartialText) stream.on("text", (delta: string) => onPartialText(delta));
       message = await stream.finalMessage();
     } catch (error) {

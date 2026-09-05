@@ -50,7 +50,7 @@ describe("the request", () => {
     const { client, create } = fakeClient(message(JSON.stringify(READING)));
     const provider = new AnthropicCompatProvider({ client, modelRead: "anthropic/claude-sonnet-5", modelAsk: "anthropic/claude-sonnet-5" });
     await provider.readSheet(IMAGES);
-    const [params, options] = create.mock.calls[0] as unknown as [Record<string, unknown>, { timeout: number }];
+    const [params, options] = create.mock.calls[0] as unknown as [Record<string, unknown>, { timeout: number; maxRetries: number }];
     expect(params.model).toBe("anthropic/claude-sonnet-5");
     const output = params.output_config as { effort: string; format: { type: string } };
     expect(output.effort).toBe(READ_EFFORT);
@@ -61,7 +61,9 @@ describe("the request", () => {
     const content = (params.messages as { content: { type: string }[] }[])[0].content;
     expect(content[0].type).toBe("image");
     expect(content[content.length - 1].type).toBe("text");
-    expect(options.timeout).toBeGreaterThan(0);
+    expect(options.timeout).toBe(280_000);
+    expect(options.maxRetries).toBe(0);
+    expect(params.max_tokens).toBe(64_000);
     expect(GATEWAY_ANTHROPIC_BASE_URL).toBe("https://ai-gateway.vercel.sh");
   });
 
