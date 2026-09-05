@@ -93,7 +93,12 @@ const NUMERIC_RULES: readonly BannedRule[] = [
     id: "num.perWeightOrDay",
     label: "grams or milligrams per kilogram / per day (e.g. 2 克/日)",
     group: "numeric",
-    pattern: /\d+(?:\.\d+)?\s*(?:g|克|mg|毫克)\s*(?:\/|per|每)\s*(?:kg|公斤|日|天|day)/gi,
+    // The lookahead keeps a printed schedule out of it: 「Bisoprolol 2.5mg 每天一粒」 and
+    // 「Frusemide 40mg 每天早上一粒」 are a strength followed by when to take it, not a daily
+    // target. On 5 September three answers in four that listed all four medicines of the
+    // Traditional Chinese demo sheet were thrown away on this rule and rewritten from one card.
+    pattern:
+      /\d+(?:\.\d+)?\s*(?:g|克|mg|毫克)\s*(?:\/|per|每)\s*(?:kg|公斤|日|天|day)(?![一二兩两三四五六0-9半次粒片顆颗服食吃早晚朝午])/gi,
   },
   {
     id: "num.dailyRequirement",

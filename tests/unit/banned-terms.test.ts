@@ -94,6 +94,25 @@ describe("checkText — English hits", () => {
   });
 });
 
+describe("a printed schedule after a strength is not a daily target", () => {
+  it.each([
+    "Bisoprolol 2.5mg 每天一粒",
+    "Frusemide 40mg 每天早上一粒",
+    "Spironolactone 25mg 每日一次，早餐後服",
+    "Apixaban 5mg 每日兩次，一次一粒",
+    "出院后要吃四种药：Frusemide 40mg 每天早上一粒；Bisoprolol 2.5mg 每天一粒",
+  ])("lets %s through", (line) => {
+    expect(checkText(line).ok).toBe(true);
+  });
+
+  it.each(["2 克/日", "鹽每日不超過 2 克/日", "1.5 mg per kg", "60mg per day"])(
+    "still stops the target %s",
+    (line) => {
+      expect(checkText(line).ok).toBe(false);
+    },
+  );
+});
+
 describe("checkText — numeric targets about the person", () => {
   const hits: [name: string, text: string][] = [
     ["grams per day", "鹽 2g/日"],
