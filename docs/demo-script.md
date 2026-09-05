@@ -26,6 +26,7 @@ of talking, the phone on screen for most of it, slides as a backdrop, the rest f
 | A two-page read | about 3 minutes. **Demo with one page.** |
 | A question, warm | 4 to 9 s; the first sentence is spoken before the rest is written. A refusal is under 1 s: no model call. |
 | First request after a few idle minutes | 75 to 80 s. **The warm-up is not optional.** |
+| Mandarin in, on the Chinese stage sheet | 出院后我要吃什么药？ answered in 5.4 to 6.6 s over five production runs, all four current medicines named and cited; Mandarin in with Cantonese out also works. |
 | Live eval, current build | 20 of 20 in Cantonese and 20 of 20 in Mandarin on the deployed build (5 Sept), zero banned terms; the six stage questions on `demo_en` all correct on production. Timed click-list: `docs/demo-plan.md`. |
 
 ---
@@ -176,7 +177,7 @@ Each is one sentence of problem, one of fix.
 6. **"Twice a day" became "8am"** in the design mock-up. Now counters count times a day, quote the
    printed clause, and a test sweeps every screen for anything shaped like a clock time.
 
-Say the numbers once, at the end: 1,396 unit tests, 122 browser tests, 20 of 20 on the live
+Say the numbers once, at the end: 1,405 unit tests, 122 browser tests, 20 of 20 on the live
 question set in both dialects, zero banned terms. Built alone in the 72 plus 48 hours.
 
 ---

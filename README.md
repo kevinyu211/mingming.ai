@@ -96,7 +96,7 @@ Playwright uses the installed Google Chrome (`channel: "chrome"`); run
 
 ## How it is checked
 
-1,396 unit tests (`npm test`), 122 Playwright end-to-end tests on phone viewports (`npm run e2e`),
+1,405 unit tests (`npm test`), 122 Playwright end-to-end tests on phone viewports (`npm run e2e`),
 reading and question evals against the live model (`tests/eval/`), and a stress set of deliberately
 bad photographs (`tests/eval/stress.md`). Every sheet in `fixtures/` is synthetic — no real
 discharge summary has been read by this app — and the submission pack says so.
