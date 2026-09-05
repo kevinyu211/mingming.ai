@@ -3,12 +3,13 @@
 /**
  * S9 Settings — where the privacy promise is written out in full and where it can be kept.
  *
- * Four things, in this order:
- *   1. the data statement, verbatim from `lib/i18n/data-statement.ts` — the same words that go
+ * Five things, in this order:
+ *   1. which animal body 明明 wears — on this phone only, under the same localStorage key;
+ *   2. the data statement, verbatim from `lib/i18n/data-statement.ts` — the same words that go
  *      into the submission, so the app and the paperwork cannot drift (research.md R13);
- *   2. the agent-limits block (FR-022);
- *   3. the interface language, 繁 / 简 / EN, which is the one setting there is;
- *   4. 刪除所有資料 behind a confirm sheet (FR-017).
+ *   3. the agent-limits block (FR-022);
+ *   4. the interface language, 繁 / 简 / EN, which is the one setting there is;
+ *   5. 刪除所有資料 behind a confirm sheet (FR-017).
  *
  * Delete really deletes. `deleteEverything()` removes the single localStorage key; this screen
  * then clears sessionStorage (the consent mark and any page bytes `Capture` left mid-navigation)
@@ -18,15 +19,25 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import AgentLimits from "@/components/AgentLimits";
 import ConfirmSheet from "@/components/ConfirmSheet";
 import { useLocale } from "@/components/LocaleProvider";
+import Mascot from "@/components/Mascot";
 import UiLanguageToggle from "@/components/UiLanguageToggle";
 import { dataStatementLines } from "@/lib/i18n/data-statement";
-import type { UiLocale } from "@/lib/i18n/ui";
+import { ANIMAL_THEME } from "@/lib/mascot-theme";
+import type { UiKey, UiLocale } from "@/lib/i18n/ui";
 import { resetSpeechSession } from "@/lib/speech/tts";
-import { deleteEverything } from "@/lib/storage/local";
+import {
+  MASCOT_ANIMALS,
+  deleteEverything,
+  loadState,
+  readMascotAnimal,
+  saveMascotAnimal,
+  subscribe,
+  type MascotAnimal,
+} from "@/lib/storage/local";
 
 /** Copy with no key in `lib/i18n/ui.ts`. Same rules as everything there (design.md section 6). */
 const LOCAL: Record<"back" | "language", Record<UiLocale, string>> = {
@@ -34,10 +45,22 @@ const LOCAL: Record<"back" | "language", Record<UiLocale, string>> = {
   language: { hant: "語言", hans: "语言", en: "Language" },
 };
 
+const ANIMAL_LABEL: Record<MascotAnimal, UiKey> = {
+  cat: "mascot.cat",
+  panda: "mascot.panda",
+  puppy: "mascot.puppy",
+  rabbit: "mascot.rabbit",
+};
+
+function readAnimal(): MascotAnimal {
+  return readMascotAnimal(loadState());
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { locale, t } = useLocale();
   const [confirming, setConfirming] = useState(false);
+  const chosen = useSyncExternalStore(subscribe, readAnimal, readAnimal);
 
   const remove = useCallback(() => {
     deleteEverything();
@@ -56,19 +79,51 @@ export default function SettingsPage() {
   }, [router]);
 
   return (
-    <main className="mx-auto w-full max-w-md flex-1 px-5 pt-3 pb-4">
+    <main className="mx-auto w-full max-w-md flex-1 px-5 pt-3 pb-4 lg:max-w-3xl lg:px-10 lg:pt-10 lg:pb-12">
       <header className="flex min-h-12 items-center justify-between gap-3">
-        <h1 className="min-w-0 text-display font-bold text-ink">{t("settings.title")}</h1>
+        <h1 className="min-w-0 text-display font-bold text-ink lg:text-[28px]">{t("settings.title")}</h1>
         <Link
           href="/"
-          className="tap shrink-0 gap-1 rounded-full px-1 text-meta font-semibold text-accent"
+          className="tap shrink-0 gap-1 rounded-full px-1 text-meta font-semibold text-accent lg:hidden"
         >
           <ChevronLeft />
           {LOCAL.back[locale]}
         </Link>
       </header>
 
-      <div className="mt-5 flex flex-col gap-6">
+      <div className="mt-4 flex flex-col gap-4">
+        <section aria-labelledby="companion-heading">
+          <h2 id="companion-heading" className="mb-2 ml-1 text-fine font-semibold text-muted">
+            {t("settings.companion")}
+          </h2>
+          <p className="mb-2 ml-1 text-body leading-relaxed text-muted">{t("settings.companionHint")}</p>
+          <div className="surface p-3">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4" role="group" aria-labelledby="companion-heading">
+              {MASCOT_ANIMALS.map((animal) => {
+                const selected = chosen === animal;
+                const theme = ANIMAL_THEME[animal];
+                return (
+                  <button
+                    key={animal}
+                    type="button"
+                    onClick={() => saveMascotAnimal(animal)}
+                    aria-pressed={selected}
+                    className="tap flex min-h-12 flex-col items-center justify-center gap-1 rounded-[20px] px-2 py-4"
+                    style={{
+                      background: theme.plate,
+                      color: theme.ink,
+                      boxShadow: selected ? `0 0 0 3px ${theme.ink}` : undefined,
+                    }}
+                  >
+                    <Mascot size={64} animal={animal} motion={false} />
+                    <span className="text-meta font-semibold">{t(ANIMAL_LABEL[animal])}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         <section aria-labelledby="data-statement-heading">
           <h2 id="data-statement-heading" className="mb-2 ml-1 text-fine font-semibold text-muted">
             {t("settings.dataStatement")}

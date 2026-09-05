@@ -31,7 +31,7 @@ export default function CaptureButtons({ size = "lg" }: { size?: CaptureButtonsS
   const s = SIZE[size];
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 lg:gap-4">
       <Tile
         href="/capture"
         variant="jade"

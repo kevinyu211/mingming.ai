@@ -3,12 +3,12 @@
 /**
  * 記錄 — the first tab, in its two states (brief §7).
  *
- * **Empty**, before anything has been photographed: the two big buttons, then 明明 sitting quietly
- * at 34% with 「仲未有紙。拍完我就即刻講俾你聽。」 He is faded because there is genuinely nothing
- * for him to say yet; the moment there is, he is at full strength in the thread.
+ * **Empty**, before anything has been photographed: the two big buttons, then 明明 at full
+ * strength in greeting with 「仲未有紙。拍完我就即刻講俾你聽。」
  *
- * **With a sheet**: the same two buttons at the smaller size, the check-in block or the line it
- * collapses into, the active sheet, and 以前嘅 behind a disclosure.
+ * **With a sheet**: the same two buttons at the smaller size, the conversation row (and the
+ * quiet doses line it keeps underneath once the check-in is answered), the active sheet, and
+ * 以前嘅 behind a disclosure.
  *
  * ONE ACTIVE SHEET (brief §1) is the rule the whole screen is shaped around. There is no list of
  * sheets to choose between: there is the sheet being talked about, and behind it, history that can
@@ -16,6 +16,9 @@
  *
  * `today` is created once per mount rather than per render so the counter cannot change under a
  * re-render, and so the pure rules underneath keep taking their clock as an argument.
+ *
+ * Desktop (`lg:` and up) is a two-column workspace around the same facts. The phone column,
+ * the tab bar, and the 92 px greeting stay as they were.
  */
 import Link from "next/link";
 import { useState } from "react";
@@ -24,6 +27,7 @@ import Mascot from "@/components/Mascot";
 import TabBar, { TAB_BAR_HEIGHT } from "@/components/TabBar";
 import CaptureButtons from "@/components/home/CaptureButtons";
 import CheckinNotice from "@/components/home/CheckinNotice";
+import { homeUnread } from "@/components/home/conversation";
 import OlderSheets from "@/components/home/OlderSheets";
 import SheetCard from "@/components/home/SheetCard";
 import { useSheets } from "@/components/home/useSheets";
@@ -39,20 +43,21 @@ export default function HomeScreen() {
   return (
     <>
       <main
-        className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-3.5"
-        style={{ paddingBottom: BOTTOM_GAP }}
+        className="mx-auto flex w-full max-w-md flex-1 flex-col px-6 pt-3.5 pb-[var(--tab-pad)] lg:max-w-none lg:px-10 lg:pt-8 lg:pb-10"
+        style={{ ["--tab-pad" as string]: `${BOTTOM_GAP}px` }}
       >
         <header className="flex items-start justify-between gap-3">
-          <h1 className="text-[30px] leading-[1.3] font-bold text-ink">{t("home.title")}</h1>
+          <h1 className="text-[30px] leading-[1.3] font-bold text-ink lg:text-[28px]">{t("home.title")}</h1>
           {/*
             The canvas has no control here. This one stays because `/settings` is the only route to
             刪除所有資料, and the constitution requires that control to exist and be reachable
             (principle V). It is a 48px target and it says what it is to a screen reader.
+            On a desktop the rail already has Settings, so the gear hides at `lg`.
           */}
           <Link
             href="/settings"
             aria-label={t("settings.title")}
-            className="tap shrink-0 rounded-full text-muted"
+            className="tap shrink-0 rounded-full text-muted lg:hidden"
           >
             <GearGlyph />
           </Link>
@@ -67,24 +72,31 @@ export default function HomeScreen() {
         ) : active === null ? (
           <EmptyState />
         ) : (
-          <>
-            <div className="mt-[22px]">
-              <CaptureButtons size="sm" />
-            </div>
-
+          <div className="lg:mt-6 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start lg:gap-8">
+            {/*
+              明明 first. Once a sheet exists, the job is to hear it — not to photograph another
+              one. The camera pair drops below the paper so the conversation is the thing a
+              bystander sees from across the table.
+            */}
             <CheckinNotice sheet={active} today={today} />
 
-            <h2 className="mt-[30px] mb-3 px-0.5 text-[15px] font-medium tracking-[0.06em] text-muted">
-              {t("home.nowTalking")}
-            </h2>
-            <SheetCard sheet={active} />
+            <div>
+              <h2 className="mt-[30px] mb-3 px-0.5 text-[15px] font-medium tracking-[0.06em] text-muted lg:mt-0">
+                {t("home.nowTalking")}
+              </h2>
+              <SheetCard sheet={active} />
 
-            <OlderSheets sheets={archive} />
-          </>
+              <div className="mt-5">
+                <CaptureButtons size="sm" />
+              </div>
+
+              <OlderSheets sheets={archive} />
+            </div>
+          </div>
         )}
       </main>
 
-      <TabBar active="record" pending={active?.checkin === "pending"} />
+      <TabBar active="record" pending={active != null && homeUnread(active)} />
     </>
   );
 }
@@ -94,19 +106,19 @@ function EmptyState() {
 
   return (
     <>
-      <p className="mt-1.5 mb-[34px] text-[18px] leading-[1.55] text-muted">
+      <p className="mt-1.5 text-[18px] leading-[1.55] text-muted lg:mx-auto lg:mt-4 lg:max-w-xl lg:text-center">
         {t("home.emptySubtitle")}
       </p>
-      <CaptureButtons size="lg" />
-      <div className="flex flex-1 flex-col items-center justify-center gap-[18px] pb-10">
-        {/*
-          34% is the canvas's own fade, and it is safe here for the one reason it is never safe on
-          text: nothing inside the drawing is a word. The line under him is at full --muted.
-        */}
-        <Mascot size={64} className="opacity-[0.34]" />
-        <p className="max-w-[250px] text-center text-[18px] leading-[1.6] text-muted">
+      <div className="mt-8 mb-5 flex flex-col items-center gap-4 lg:mt-16 lg:mb-10 lg:gap-6">
+        <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full lg:h-[168px] lg:w-[168px]">
+          <Mascot size={92} state="greeting" />
+        </span>
+        <p className="max-w-[280px] text-center text-[20px] leading-[1.55] font-medium text-ink lg:max-w-md lg:text-[22px]">
           {t("home.emptyMascot")}
         </p>
+      </div>
+      <div className="lg:mx-auto lg:w-full lg:max-w-xl">
+        <CaptureButtons size="lg" />
       </div>
     </>
   );

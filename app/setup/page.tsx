@@ -73,7 +73,7 @@ export default function SetupPage() {
   const pending = draft || label;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-3 pb-4">
+    <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-3 pb-4 lg:max-w-lg lg:px-10 lg:pt-10">
       <header className="flex min-h-12 items-center justify-between gap-3">
         {step === 2 ? (
           <button

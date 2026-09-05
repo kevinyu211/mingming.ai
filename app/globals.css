@@ -51,6 +51,16 @@
   --jade-bubble: #dcefe7; /* the user's own message bubble */
   --jade-edge: #cfe4dc; /* the tinted button's shadow */
 
+  /*
+   * Companion skin. Defaults are the panda (jade-tint), overwritten on the client by
+   * `CompanionTheme` when a different animal is stored. Never used as a filled-button colour —
+   * `--jade` stays the CTA.
+   */
+  --companion-plate: #e9f4f0;
+  --companion-card: #e9f4f0;
+  --companion-ink: #14705a;
+  --companion-wash: #1a7d63;
+
   --neutral: #f1ede4; /* quiet fills, keyboard-mode buttons */
   --neutral-2: #f6f3ec; /* the 「張紙寫：」 quote block */
   --hairline: #eae5dc;
@@ -95,6 +105,12 @@
    * shortest possible time is the one that is right for the common case.
    */
   --disclaimer-height: 3.75rem;
+
+  /*
+   * Desktop rail. Unused on a phone (the sidebar is `display: none` below 1024 px). Named so the
+   * camera overlay can start after the rail without guessing a pixel width.
+   */
+  --sidebar-width: 15.5rem;
 
   /*
    * TYPE.
@@ -200,14 +216,16 @@
   --shadow-sheet: 0 -10px 34px rgb(42 39 35 / 0.16);
 
   /*
-   * The canvas's five animations. The @keyframes themselves are declared at the top level below,
-   * not inside @theme, so an inline `animation: rise .4s ease both` works as well as `animate-rise`.
+   * The canvas's five animations, plus 明明's idle breathe. No hop: speaking is a pose, not a bounce.
+   * The @keyframes themselves are declared at the top level below, not inside @theme, so an inline
+   * `animation: rise .4s ease both` works as well as `animate-rise`.
    */
   --animate-wv: wv 0.9s ease-in-out infinite;
   --animate-blink: blink 1.1s infinite;
   --animate-rise: rise 0.4s ease both;
   --animate-sheet-up: sheetUp 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
   --animate-edge: edge 2.2s ease-in-out infinite;
+  --animate-breathe: breathe 3.2s ease-in-out infinite;
 }
 
 /*
@@ -216,7 +234,8 @@
  *   blink    the typing caret and the reading-screen dots
  *   rise     anything that arrives in the thread
  *   sheetUp  the bottom sheet
- *   edge     the camera's document-edge frame
+ *   edge       the camera's document-edge frame
+ *   breathe    明明 — a small scale pulse. Speaking and greeting are poses, not hops.
  * Declared at the top level so plain CSS `animation:` shorthand can name them too.
  */
 @keyframes wv {
@@ -264,6 +283,15 @@
     opacity: 1;
   }
 }
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
 
 @layer base {
   html {
@@ -273,6 +301,22 @@
 
   body {
     background-color: var(--ground);
+    /*
+     * A wash, not a texture. Follows the animal so 貓仔 and 兔仔 are not the same jade sky.
+     * Frosted chrome on flat cream is invisible; this glow is what makes the glass read as glass.
+     */
+    background-image:
+      radial-gradient(
+        ellipse 120% 58% at 50% -18%,
+        color-mix(in srgb, var(--companion-wash) 22%, transparent),
+        transparent 68%
+      ),
+      radial-gradient(
+        ellipse 80% 42% at 100% 110%,
+        color-mix(in srgb, var(--warn-dot) 12%, transparent),
+        transparent 62%
+      );
+    background-attachment: fixed;
     color: var(--ink);
     font-family: var(--font-sans);
     /* 18px body: the bystander is 72 and reading over a shoulder. */
@@ -332,6 +376,19 @@
     font-family: var(--font-latin-stack), var(--font-hk), sans-serif;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.2px;
+  }
+
+  /* Companion skin — animal-specific, never a CTA fill. */
+  .companion-plate {
+    background-color: var(--companion-plate);
+  }
+
+  .companion-card {
+    background-color: var(--companion-card);
+  }
+
+  .companion-ink {
+    color: var(--companion-ink);
   }
 
   /* The grouped-list card: white on the warm ground, no border, one soft shadow. */
@@ -400,7 +457,107 @@
   --cam-chip: #bdeedd; /* the mint pill's label */
 }
 
-/* Respect reduced motion. Kills wv/blink/rise/sheetUp/edge as well as every transition. */
+/*
+ * Skip link. Invisible until focused, then a real jade chip — keyboard users on a desktop with a
+ * persistent sidebar should not have to tab through every nav item to reach the sheet.
+ */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -3.5rem;
+  z-index: 80;
+  border-radius: 999px;
+  background: var(--jade);
+  color: #ffffff;
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+.desktop-chat-col {
+  width: 100%;
+}
+
+.desktop-sidebar {
+  background: color-mix(in srgb, var(--companion-card) 72%, var(--ground));
+}
+
+@media (min-width: 1024px) {
+  :where(a, button, [role="button"]):not(:disabled) {
+    cursor: pointer;
+  }
+
+  /*
+   * The phone chunky press is a 4 px hard shadow a thumb can see at arm's length. On a desk that
+   * edge reads as a toy, so the same class becomes a soft lift that still sinks a little on press.
+   */
+  .chunky {
+    box-shadow:
+      0 1px 2px rgb(42 39 35 / 0.06),
+      0 6px 16px rgb(26 125 99 / 0.14);
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.12s ease,
+      background-color 0.15s ease;
+  }
+
+  .chunky:hover:not(:disabled) {
+    box-shadow:
+      0 2px 4px rgb(42 39 35 / 0.06),
+      0 10px 22px rgb(26 125 99 / 0.18);
+  }
+
+  .chunky:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow:
+      0 1px 2px rgb(42 39 35 / 0.06),
+      0 3px 8px rgb(26 125 99 / 0.12);
+  }
+
+  .desktop-chat-col {
+    max-width: 48rem;
+    margin-inline: auto;
+  }
+
+  /*
+   * Phone sheets rise from the bottom. On a desktop they are a centred dialog, same content,
+   * same focus trap — the grabber is hidden because nothing is draggable.
+   */
+  .sheet-overlay {
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  .sheet-panel {
+    width: min(26rem, 100%);
+    max-height: min(36rem, 80vh);
+    border-radius: 22px;
+    padding-bottom: 1.5rem;
+    animation: rise 0.28s ease both;
+  }
+
+  .sheet-grabber {
+    display: none;
+  }
+
+  .confirm-overlay {
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  .confirm-panel {
+    width: min(24rem, 100%);
+    padding-bottom: 0;
+  }
+}
+
+/* Respect reduced motion. Kills wv/blink/rise/sheetUp/edge/breathe as well as every transition. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

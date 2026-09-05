@@ -33,7 +33,7 @@ export default function WarningSigns({ reading }: { reading: StoredReading }) {
   if (signs.length === 0) {
     const contact = reading.hospitalContact?.text?.trim() ?? "";
     return (
-      <section className="mt-5 rounded-[20px] bg-warn-bg p-5">
+      <section className="mt-5 rounded-[20px] bg-warn-bg p-5 lg:mt-0">
         <h2 className="flex items-center gap-3 text-[20px] leading-[1.35] font-bold text-warn-ink">
           <AlertGlyph />
           {t("card.noWarnings")}
@@ -47,7 +47,7 @@ export default function WarningSigns({ reading }: { reading: StoredReading }) {
   }
 
   return (
-    <section className="mt-5">
+    <section className="mt-5 lg:mt-0">
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

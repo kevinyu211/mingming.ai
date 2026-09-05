@@ -22,7 +22,7 @@ export default function SheetStrip({ sheet }: { sheet: Sheet }) {
   return (
     <Link
       href="/chat"
-      className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-neutral px-[18px] py-4 no-underline"
+      className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-neutral px-[18px] py-4 no-underline lg:px-5 lg:py-5"
     >
       <PageThumb size="xs" />
       <span className="min-w-0 flex-1">

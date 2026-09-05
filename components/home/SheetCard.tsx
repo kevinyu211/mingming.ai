@@ -41,7 +41,7 @@ export default function SheetCard({ sheet }: { sheet: Sheet }) {
   return (
     <Link
       href="/chat"
-      className="surface flex min-h-12 w-full items-center gap-4 rounded-[20px] p-5 no-underline"
+      className="surface flex min-h-12 w-full items-center gap-4 rounded-[20px] p-5 no-underline transition-shadow duration-200 lg:hover:shadow-[0_8px_24px_rgb(42_39_35/0.08)]"
     >
       <PageThumb size="lg" />
       <span className="min-w-0 flex-1">

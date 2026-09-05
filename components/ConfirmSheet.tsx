@@ -54,7 +54,7 @@ export default function ConfirmSheet({
     <div
       // Stops above the disclaimer footer, which stays visible on every screen (rules.md 16).
       // The footer measures and publishes its own height, so this is right in every locale.
-      className="fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col justify-end"
+      className="confirm-overlay fixed inset-x-0 top-0 bottom-[var(--disclaimer-height)] z-50 flex flex-col justify-end"
       onKeyDown={onKeyDown}
       role="presentation"
     >
@@ -70,7 +70,7 @@ export default function ConfirmSheet({
         aria-modal="true"
         aria-labelledby="confirm-sheet-title"
         aria-describedby="confirm-sheet-body"
-        className="relative flex max-h-[80vh] flex-col gap-2 overflow-y-auto px-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
+        className="confirm-panel relative flex max-h-[80vh] flex-col gap-2 overflow-y-auto px-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))]"
       >
         <div className="overflow-hidden rounded-card bg-card/95 backdrop-blur-xl">
           <div className="flex flex-col gap-1.5 px-5 py-[18px] text-center">

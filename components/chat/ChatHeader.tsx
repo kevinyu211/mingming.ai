@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 import BottomSheet from "@/components/BottomSheet";
 import { useLocale } from "@/components/LocaleProvider";
+import Mascot, { type MascotState } from "@/components/Mascot";
 import type { Dialect } from "@/lib/domain/schemas";
 import type { UiLocale } from "@/lib/i18n/ui";
 
@@ -43,6 +44,8 @@ export interface ChatHeaderProps {
   langOpen: boolean;
   onOpenLang: () => void;
   onCloseLang: () => void;
+  /** Live companion in the chrome. Defaults to idle when the thread is quiet. */
+  mascotState?: MascotState;
 }
 
 /**
@@ -69,6 +72,7 @@ export default function ChatHeader({
   langOpen,
   onOpenLang,
   onCloseLang,
+  mascotState = "idle",
 }: ChatHeaderProps) {
   const { t, locale, dialect, setDialect, setLocale } = useLocale();
   const day = useMemo(() => formatDay(capturedAt, locale), [capturedAt, locale]);
@@ -82,15 +86,19 @@ export default function ChatHeader({
   };
 
   return (
-    <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-hairline bg-ground px-3.5 pt-2 pb-3">
+    <header className="relative z-10 flex shrink-0 items-center gap-1.5 border-b border-hairline bg-ground/80 px-3.5 pt-2 pb-3 backdrop-blur-xl lg:gap-3 lg:px-6 lg:py-3.5">
       <button
         type="button"
         onClick={onBack}
         aria-label={t("chat.back")}
-        className="tap shrink-0 text-[26px] leading-none text-muted"
+        className="tap shrink-0 text-[26px] leading-none text-muted lg:hidden"
       >
         <span aria-hidden="true">‹</span>
       </button>
+
+      <span className="companion-plate grid h-12 w-12 shrink-0 place-items-center rounded-full">
+        <Mascot size={44} state={mascotState} />
+      </span>
 
       <div className="min-w-0 flex-1">
         <h1 className="truncate text-[19px] leading-[1.3] font-bold text-ink">{title}</h1>

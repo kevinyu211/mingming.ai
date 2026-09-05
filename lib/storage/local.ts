@@ -13,6 +13,23 @@ import type { SheetsState } from "@/lib/sheets/types";
 /** The one and only key. Bump the suffix if the shape ever changes incompatibly. */
 export const KEY = "fitornot.v1";
 
+/** The four animals already in `public/mascot/`. 明明's name never changes; only the body does. */
+export const MASCOT_ANIMALS = ["cat", "panda", "puppy", "rabbit"] as const;
+export type MascotAnimal = (typeof MASCOT_ANIMALS)[number];
+export const DEFAULT_MASCOT: MascotAnimal = "panda";
+
+export function isMascotAnimal(value: unknown): value is MascotAnimal {
+  return typeof value === "string" && (MASCOT_ANIMALS as readonly string[]).includes(value);
+}
+
+/**
+ * Coerce a stored (or missing) animal to a known one. Invalid values such as `"dragon"` become
+ * the default panda rather than crashing a screen that just wants to draw 明明.
+ */
+export function readMascotAnimal(state: { mascotAnimal?: string }): MascotAnimal {
+  return isMascotAnimal(state.mascotAnimal) ? state.mascotAnimal : DEFAULT_MASCOT;
+}
+
 /** Written form of Chinese. Defaults from the dialect, user-flippable. */
 export type Script = "hant" | "hans";
 
@@ -81,6 +98,11 @@ export interface StoredState {
    * memory layer, never holds an image, and holds nothing about the person.
    */
   memory?: Memory;
+  /**
+   * Which animal body 明明 wears. Optional so a fresh phone — and `emptyState()` — stay exactly
+   * `{ version: 1, consentedAt: null }`. Missing or unknown values read as panda.
+   */
+  mascotAnimal?: MascotAnimal;
 }
 
 /** Keys that would mean an image is about to be written. The sheet photo is never stored (FR-018). */
@@ -141,7 +163,11 @@ export function loadState(): StoredState {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredState> | null;
     if (!parsed || typeof parsed !== "object" || parsed.version !== 1) return emptyState();
-    return { ...emptyState(), ...parsed, version: 1 };
+    const next: StoredState = { ...emptyState(), ...parsed, version: 1 };
+    if (next.mascotAnimal !== undefined && !isMascotAnimal(next.mascotAnimal)) {
+      delete next.mascotAnimal;
+    }
+    return next;
   } catch {
     return emptyState();
   }
@@ -175,6 +201,11 @@ export function saveProfile(profile: Profile): StoredState {
 /** The interface language, remembered across sessions like every other preference. */
 export function saveUiLocale(uiLocale: UiLocale): StoredState {
   return saveState({ uiLocale });
+}
+
+/** Which animal body 明明 wears. Lives under the same key as everything else. */
+export function saveMascotAnimal(animal: MascotAnimal): StoredState {
+  return saveState({ mascotAnimal: animal });
 }
 
 export function saveReading(reading: StoredReading): StoredState {
