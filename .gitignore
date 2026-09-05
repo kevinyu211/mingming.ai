@@ -61,3 +61,6 @@ playwright-report/
 # mascot source art — 20 MB of 1536×1024 PNGs on white. What ships is public/mascot/*.webp,
 # rebuilt from this by scripts/build-mascots.mjs.
 /mascots-v5-natural.zip
+
+# agent tool folder (spec-driven-development scaffolding), local only
+.superpowers/

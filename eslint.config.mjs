@@ -43,6 +43,9 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "fixtures/sheets/out/**",
+    // Local scratch scripts and agent tool folders, never shipped
+    ".scratch/**",
+    ".superpowers/**",
   ]),
 ]);
 
