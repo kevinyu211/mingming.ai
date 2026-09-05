@@ -1,6 +1,6 @@
 # AIx Origin Summit · 香港场 · Checkpoint 1 进度说明
 
-**赛道：** Vital（活域）软医疗 · **队伍：** Ming Ming · 明明 · **提交人：** Kevin Yue · **提交日期：** 2026 年 9 月 5 日
+**赛道：** Vital（活域）软医疗 · **队伍：** Fit or Not（产品：Ming Ming · 明明） · **提交人：** Kevin Yue · **提交日期：** 2026 年 9 月 5 日
 **仓库：** https://github.com/kevinyu211/discharge-sheet-agent · **线上版本：** https://mingming.app（手机打开）
 
 ## 一、项目一句话
@@ -39,7 +39,7 @@
 
 # English summary
 
-**Track:** Vital (soft healthcare) · **Team:** Ming Ming · 明明 · **Repo:** https://github.com/kevinyu211/discharge-sheet-agent · **Live:** https://mingming.app
+**Track:** Vital (soft healthcare) · **Team:** Fit or Not (product: Ming Ming · 明明) · **Repo:** https://github.com/kevinyu211/discharge-sheet-agent · **Live:** https://mingming.app
 
 **Done (deployed and verified):** photograph/upload a discharge sheet (up to 6 pages) → structured reading with warning signs first and every card traceable to a printed line → a turn-taking spoken briefing in Cantonese/Mandarin/English that waits for 「明白」 → questions answered from the sheet, general terms explained with a label, personal judgements handed to the doctor, medicine-change questions refused before any model call (last live eval 20/20, 0 banned terms, ~4 s median) → hold-to-talk voice in/out → a follow-up screen with dose counters (frequencies, never clock times), the appointment countdown, warning signs, family share, 明明's spoken summary and a teach-back recap. On-device storage only; 1,300+ unit tests, 116 browser e2e tests, fixture and stress evals, a continuous real-run backup video.
 

@@ -1,8 +1,16 @@
-# 聽得明 · Discharge Sheet Agent
+# Ming Ming · 明明 — the discharge sheet, explained out loud
 
-Photograph a hospital discharge sheet (Hong Kong English or mainland 出院记录), hear it explained in
-Cantonese or Mandarin with the warning signs first, and ask it questions that are answered only from
-the page. Built for the Vital (Soft Healthcare) track of the AIx Origin Summit.
+**Team: Fit or Not** (Kevin Yue) · AIx Origin Summit 2026, Hong Kong · **Vital (Soft Healthcare) track**
+**Live:** https://mingming.app (open on a phone) · Progress note for Checkpoint 1: `docs/submission/checkpoint-1.md`
+
+Photograph a hospital discharge sheet (Hong Kong English or mainland 出院记录) and 明明 — a companion
+character — reads it to you as a conversation in Cantonese, Mandarin or English: warning signs first,
+one medicine per turn, waiting for 「明白」 before going on. Ask it anything; every answer traces to a
+printed line, general terms are explained with a label, and anything that would change what you DO
+with a medicine is refused before a model is called. Then 跟進 keeps the day: doses counted in
+times (never clock times), the printed appointment, the warning signs, and what you went through.
+
+"聽得明" was the working title; the repository slug `discharge-sheet-agent` is historical.
 
 - Spec, plan, research and tasks: `specs/001-discharge-sheet-agent/`
 - Constitution (the non-negotiable rules): `.specify/memory/constitution.md`
