@@ -19,9 +19,12 @@ const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${port}`;
  * channel and an executablePath is an error.
  */
 const executablePath = process.env.E2E_CHROME;
+// `--mute-audio`: the suite runs with TTS_PROVIDER=browser, so every briefing line would otherwise
+// be spoken by macOS speechSynthesis through the Mac's speakers while the tests run. The specs
+// assert DOM state, never sound.
 const browser = executablePath
-  ? { launchOptions: { executablePath } }
-  : { channel: "chrome" as const };
+  ? { launchOptions: { executablePath, args: ["--mute-audio"] } }
+  : { channel: "chrome" as const, launchOptions: { args: ["--mute-audio"] } };
 
 export default defineConfig({
   testDir: "./tests/e2e",
