@@ -19,6 +19,7 @@
 import { useCallback, useSyncExternalStore, type ReactNode, type SVGProps } from "react";
 import { useLocale } from "@/components/LocaleProvider";
 import Mascot from "@/components/Mascot";
+import LanguagePill from "@/components/home/LanguagePill";
 import type { UiLocale } from "@/lib/i18n/ui";
 import { unlockAudio } from "@/lib/speech/tts";
 import { loadState, setConsented, subscribe } from "@/lib/storage/local";
@@ -107,6 +108,9 @@ export default function ConsentGate({ children }: { children: ReactNode }) {
       {/* `m-auto` rather than `justify-center`: a centred flex child in a scroll container hides
           its own overflow above the top edge, and this column grows in English. */}
       <div className="flex min-h-0 flex-1 flex-col lg:m-0 lg:max-h-full lg:w-full lg:max-w-md lg:flex-none lg:overflow-hidden lg:rounded-[28px] lg:bg-ground lg:shadow-[0_24px_80px_rgb(42_39_35/0.22)]">
+        <div className="flex shrink-0 justify-end px-5 pt-3 pb-1 lg:px-8 lg:pt-5">
+          <LanguagePill />
+        </div>
         <div className="flex flex-1 flex-col overflow-y-auto px-8 lg:px-12">
           <div className="m-auto flex w-full max-w-md flex-col items-center gap-6 py-4 lg:m-0 lg:max-w-none lg:py-10">
             <span className="companion-plate grid h-[132px] w-[132px] place-items-center rounded-full">

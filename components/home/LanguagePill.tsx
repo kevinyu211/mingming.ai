@@ -1,44 +1,47 @@
 "use client";
 
 /**
- * The language pill in the header: one tap cycles 廣東話 → 普通話 → English.
- *
- * It changes the SPOKEN language and the interface language together, exactly as the chip in the
- * chat header does — dialect first, then locale, so the card script follows the dialect and the
- * interface follows what was actually picked. Both persist on the device (`LocaleProvider`).
+ * An explicit language choice, available before consent and on the home screen.
+ * Keep the existing voice/interface pairing and remember both on this device.
  */
 import { useLocale } from "@/components/LocaleProvider";
 import type { Dialect } from "@/lib/domain/schemas";
 import type { UiLocale } from "@/lib/i18n/ui";
 
-const ORDER: Dialect[] = ["yue", "cmn", "en"];
-const LOCALE_FOR: Record<Dialect, UiLocale> = { yue: "hant", cmn: "hans", en: "en" };
-const LABEL: Record<Dialect, "language.yue" | "language.cmn" | "language.en"> = {
-  yue: "language.yue",
-  cmn: "language.cmn",
-  en: "language.en",
-};
+const LANGUAGES: { locale: UiLocale; dialect: Dialect; label: string; lang: string }[] = [
+  { locale: "hant", dialect: "yue", label: "繁體中文", lang: "zh-Hant" },
+  { locale: "hans", dialect: "cmn", label: "简体中文", lang: "zh-Hans" },
+  { locale: "en", dialect: "en", label: "English", lang: "en" },
+];
 
 export default function LanguagePill({ dark = false }: { dark?: boolean }) {
-  const { dialect, setDialect, setLocale, t } = useLocale();
-
-  const cycle = () => {
-    const next = ORDER[(ORDER.indexOf(dialect) + 1) % ORDER.length];
-    setDialect(next);
-    setLocale(LOCALE_FOR[next]);
-  };
+  const { locale, setDialect, setLocale, t } = useLocale();
 
   return (
-    <button
-      type="button"
-      onClick={cycle}
-      aria-label={t("companion.language")}
-      className={`pill min-h-9 ${dark ? "pill-dark" : ""}`}
-    >
-      {t(LABEL[dialect])}
-      <span aria-hidden="true" className={`text-[10px] ${dark ? "opacity-60" : "text-faint"}`}>
+    <div className="relative shrink-0">
+      <select
+        value={locale}
+        onChange={(event) => {
+          const next = LANGUAGES.find((language) => language.locale === event.target.value);
+          if (!next) return;
+          setDialect(next.dialect);
+          setLocale(next.locale);
+        }}
+        aria-label={t("companion.language")}
+        className={`pill min-h-11 cursor-pointer appearance-none !pr-8 ${dark ? "pill-dark" : ""}`}
+      >
+        {LANGUAGES.map((language) => (
+          <option key={language.locale} value={language.locale} lang={language.lang}>
+            {language.label}
+          </option>
+        ))}
+      </select>
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[10px] ${dark ? "opacity-60" : "text-faint"}`}
+      >
         ⌄
       </span>
-    </button>
+    </div>
   );
 }
