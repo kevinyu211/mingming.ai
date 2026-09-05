@@ -37,9 +37,14 @@ demo.
   the `hk_en` fixture 3/3 medicines verbatim, warning coverage 100%; and all three demo fixtures in
   `fixtures/demo/` clean — `hk_stopped` 8/8 medicines exact with all three withdrawn drugs marked
   stopped, the two-page `hk_stack` 5/5 with both appointments, `cn_zh_clinic` 5/5 with the
-  uncountable dose clause left uncounted; warning signs 3/3 on each. The `messy` fixture's
-  warning-sign risk from the original comparison has not been re-run through the Gateway and is
-  the one item still open. Effort was dropped from `high` to `medium` on
+  uncountable dose clause left uncounted; warning signs 3/3 on each. **Open, and stated plainly:
+  photographed sheets do not read on this build as of the evening of 4 September.** The two photo
+  fixtures — `cn_zh_photo.jpg` (2 of 2 runs) and the `messy` stress photo (3 of 3) — come back
+  「讀唔到呢張紙」 after 44–128 s, while every rendered sheet reads. The cause is identified: the
+  Gateway client stopped sending the `effort: medium` setting the direct client always sent, so
+  the model runs at its default on hard photos and the fuller reading fails the strict schema.
+  The fix is one request parameter and is being applied; until it is verified on production the
+  demo uses uploaded rendered sheets or the bundled sample, not the camera. Effort was dropped from `high` to `medium` on
   the original evidence: identical readings,
 - **Voice**: MiniMax `speech-2.8-hd` through its international endpoint, behind a provider adapter.
   ElevenLabs and Azure Speech adapters are written and switchable by one environment variable; the
