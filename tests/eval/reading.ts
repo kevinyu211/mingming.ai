@@ -137,6 +137,8 @@ interface ReadOutcome {
 }
 
 interface ReadEventShape {
+  /** Set on a warning card sent ahead of the validated reading (d582ef1). */
+  early?: boolean;
   event?: string;
   phase?: string;
   card?: Card;
@@ -212,8 +214,13 @@ async function readOnce(base: string, fixture: Fixture, base64: string): Promise
         }
         break;
       case "card":
+        // The first card, early or final, is when the phone starts speaking.
         if (out.msToFirstCard === null) out.msToFirstCard = Date.now() - startedAt;
-        if (event.card) out.cards.push(event.card);
+        // Since the early-warning-cards change (d582ef1) the route sends each warning sign as
+        // soon as it closes in the stream (`early: true`) and then every card again once the
+        // reading is validated. The phone de-duplicates by id (`lib/client/read-stream.ts`);
+        // the scored set here is the final one only, or the validator would see duplicate ids.
+        if (event.card && event.early !== true) out.cards.push(event.card);
         break;
       case "done":
         out.msToDone = Date.now() - startedAt;
