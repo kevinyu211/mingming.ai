@@ -27,6 +27,23 @@ describe("replies that mean carry on", () => {
     expect(classifyReply("  OK！ ")).toBe("continue");
   });
 
+  it("reads 'take me through it one by one' as carry on, not as a question for the model", () => {
+    for (const reply of [
+      "一樣一樣講",
+      "我明白，一樣一樣咁講",
+      "一个一个讲",
+      "你逐樣講",
+      "好，逐個講",
+      "guide me one by one",
+      "okay guide me, say one by one",
+      "walk me through it",
+      "step by step please",
+      "tell me everything",
+    ]) {
+      expect(classifyReply(reply), reply).toBe("continue");
+    }
+  });
+
   it("takes an explicit ask for the next section anywhere in the sentence", () => {
     expect(classifyReply("繼續講啦")).toBe("continue");
     expect(classifyReply("你講埋下一樣")).toBe("continue");

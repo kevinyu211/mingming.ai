@@ -57,6 +57,14 @@ const CONTINUE_MARKERS = [
   /講(?:埋|下去|落去)/,
   /讲(?:下去|下|吧)/,
   /\b(?:next|carry on|go on|keep going|continue|move on)\b/i,
+  /**
+   * "Take me through it, one thing at a time." Kevin's own reply at the opening question, and it
+   * was read as a QUESTION and sent to the model, which answered with the medicines — so the
+   * red flags were heard after the pills. It is an instruction to run the script, so it is a
+   * continue, and the script's own order (warnings first) takes over.
+   */
+  /一樣一樣|一样一样|一個一個|一个一个|逐樣|逐样|逐個|逐个|逐項|逐项|一項一項|一项一项|順住講|顺着讲|由頭講|从头讲|全部講|全部讲|都講|都讲/,
+  /\b(?:one (?:by|at a time)|one at a time|step by step|in order|guide me|walk me through|take me through|talk me through|tell me everything|go through (?:it|them|all))\b/i,
 ];
 
 /**
