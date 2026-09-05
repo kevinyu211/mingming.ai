@@ -209,47 +209,95 @@ interface MinimaxT2aResponse {
   base_resp?: { status_code?: number; status_msg?: string };
 }
 
+/**
+ * MiniMax refusals that are worth one more try, and the ones that are not.
+ *
+ * Measured on production on 5 September: 5 of 11 Mandarin requests in one evening came back HTTP
+ * 200 with a non-zero `base_resp.status_code` and no audio, while every Cantonese and English
+ * request succeeded — and every one of those refusals cost 明明 a whole spoken line, because
+ * nothing between here and the phone retried: the client treats a 502 as "this line is text-only".
+ * A single retry after a short pause turns an intermittent refusal back into a spoken line. The
+ * three codes that mean the second try is certain to fail the same way are never retried: 1004
+ * (auth), 2013 (invalid params) and 1008 (insufficient balance — measured on 5 September when the
+ * account ran dry: every language answered 1008 in 0.5 s, and a retry only doubled the wait).
+ */
+const NEVER_RETRY = new Set([1004, 2013, 1008]);
+const RETRY_AFTER_MS = 400;
+
+function retryable(httpStatus: number, baseCode: number): boolean {
+  if (baseCode !== 0) return !NEVER_RETRY.has(baseCode);
+  return httpStatus === 429 || httpStatus >= 500;
+}
+
 export function createMinimaxTtsProvider(): TtsProvider {
   const creds = readMinimaxCredentials();
+
+  /** One request. Resolves the audio, or the failure it would throw, so the caller can decide. */
+  async function attempt(
+    text: string,
+    dialect: Dialect,
+  ): Promise<
+    | { ok: true; audio: Uint8Array; ms: number }
+    | { ok: false; httpStatus: number; baseCode: number; ms: number }
+  > {
+    const { url, init } = buildMinimaxTtsRequest(text, dialect, creds);
+    const startedAt = Date.now();
+    const response = await fetch(url, init);
+    if (!response.ok) {
+      return { ok: false, httpStatus: response.status, baseCode: 0, ms: Date.now() - startedAt };
+    }
+    const payload = (await response.json()) as MinimaxT2aResponse;
+    const statusCode = payload.base_resp?.status_code ?? 0;
+    if (statusCode !== 0) {
+      return { ok: false, httpStatus: response.status, baseCode: statusCode, ms: Date.now() - startedAt };
+    }
+    return { ok: true, audio: hexToBytes(payload.data?.audio ?? ""), ms: Date.now() - startedAt };
+  }
+
   return {
     id: PROVIDER_ID,
     async synthesize(text, dialect) {
-      const { url, init } = buildMinimaxTtsRequest(text, dialect, creds);
-      const startedAt = Date.now();
-      const response = await fetch(url, init);
-      if (!response.ok) {
+      let result = await attempt(text, dialect);
+      if (!result.ok && retryable(result.httpStatus, result.baseCode)) {
+        // The refusal is logged as its own line, with the numeric code, so a run of them is visible
+        // in the deployment's logs as what it is rather than as a mystery 200 with no bytes.
         logSpeechEvent({
           provider: PROVIDER_ID,
           op: "synthesize",
           tag: dialect,
-          status: response.status,
-          ms: Date.now() - startedAt,
+          status: result.httpStatus,
+          ms: result.ms,
+          code: result.baseCode || undefined,
+          retried: true,
         });
-        throw new SpeechProviderError(PROVIDER_ID, response.status);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_AFTER_MS));
+        result = await attempt(text, dialect);
       }
-      const payload = (await response.json()) as MinimaxT2aResponse;
-      const statusCode = payload.base_resp?.status_code ?? 0;
-      if (statusCode !== 0) {
+      if (!result.ok) {
         logSpeechEvent({
           provider: PROVIDER_ID,
           op: "synthesize",
           tag: dialect,
-          status: response.status,
-          ms: Date.now() - startedAt,
+          status: result.httpStatus,
+          ms: result.ms,
+          code: result.baseCode || undefined,
         });
         // status_msg may echo the submitted text, so only the numeric code is surfaced.
-        throw new SpeechProviderError(PROVIDER_ID, response.status, `base_resp ${statusCode}`);
+        throw new SpeechProviderError(
+          PROVIDER_ID,
+          result.httpStatus,
+          result.baseCode ? `base_resp ${result.baseCode}` : undefined,
+        );
       }
-      const audio = hexToBytes(payload.data?.audio ?? "");
       logSpeechEvent({
         provider: PROVIDER_ID,
         op: "synthesize",
         tag: dialect,
-        status: response.status,
-        ms: Date.now() - startedAt,
-        bytes: audio.byteLength,
+        status: 200,
+        ms: result.ms,
+        bytes: result.audio.byteLength,
       });
-      return { audio, mimeType: "audio/mpeg" };
+      return { audio: result.audio, mimeType: "audio/mpeg" };
     },
   };
 }

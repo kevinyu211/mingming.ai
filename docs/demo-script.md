@@ -34,6 +34,10 @@ request after it was under 6 s. So the warm-up below is not optional.
   Then clear the sample sheet.
 - 記錄 empty, no active sheet.
 - **Ring/silent switch OFF.** Check it. This is the failure that looks exactly like a broken app.
+- **MiniMax balance topped up** (platform.minimax.io) the day before, and one spoken line tried on
+  the phone. MiniMax is prepaid: at zero balance every line comes back as text with 「而家出唔到聲」,
+  which happened on 5 September. If it cannot be topped up, set `TTS_PROVIDER=browser` in the Vercel
+  Production environment and redeploy — the phone's own voice, but a voice.
 - Volume up, speaker toggle in the chat header ON.
 - Printed sheets on the table. Laptop open with the backup video and a QR code to the link.
 

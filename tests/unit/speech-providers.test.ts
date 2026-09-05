@@ -250,7 +250,7 @@ describe("minimax tts adapter", () => {
   });
 
   it("treats a non-zero base_resp.status_code as a failure even on HTTP 200", async () => {
-    mockFetch(
+    const calls = mockFetch(
       jsonResponse({
         base_resp: { status_code: 1004, status_msg: "auth failed" },
         data: {},
@@ -259,6 +259,48 @@ describe("minimax tts adapter", () => {
     await expect(createMinimaxTtsProvider().synthesize(YUE_TEXT, "yue")).rejects.toBeInstanceOf(
       SpeechProviderError,
     );
+    // Auth is not going to pass on a second try: exactly one request.
+    expect(calls).toHaveLength(1);
+  });
+
+  it("retries once when MiniMax refuses with a transient code, and speaks on the second try", async () => {
+    // Production, 5 September: 5 of 11 Mandarin requests came back 200 with a non-zero
+    // base_resp and no audio while every other language passed. One retry recovers the line.
+    const fetchSpy = vi.fn();
+    fetchSpy
+      .mockResolvedValueOnce(
+        jsonResponse({ base_resp: { status_code: 1002, status_msg: "rate limit" }, data: {} }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ base_resp: { status_code: 0 }, data: { audio: AUDIO_HEX } }),
+      );
+    vi.stubGlobal("fetch", fetchSpy);
+    const result = await createMinimaxTtsProvider().synthesize("纸上写着，每天一次。", "cmn");
+    expect(result.mimeType).toBe("audio/mpeg");
+    expect(result.audio.byteLength).toBeGreaterThan(0);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry an insufficient-balance refusal: the account, not the request, is the problem", async () => {
+    const calls = mockFetch(
+      jsonResponse({ base_resp: { status_code: 1008, status_msg: "insufficient balance" }, data: {} }),
+    );
+    await expect(createMinimaxTtsProvider().synthesize(YUE_TEXT, "yue")).rejects.toBeInstanceOf(
+      SpeechProviderError,
+    );
+    expect(calls).toHaveLength(1);
+  });
+
+  it("gives up after the one retry when the refusal repeats", async () => {
+    const fetchSpy = vi.fn();
+    fetchSpy.mockResolvedValue(
+      jsonResponse({ base_resp: { status_code: 1002, status_msg: "rate limit" }, data: {} }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(createMinimaxTtsProvider().synthesize(YUE_TEXT, "yue")).rejects.toBeInstanceOf(
+      SpeechProviderError,
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("rejects a payload that is not hex instead of returning noise", async () => {
