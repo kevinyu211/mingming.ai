@@ -21,11 +21,12 @@ of talking, the phone on screen for most of it, slides as a backdrop, the rest f
 
 | | |
 | --- | --- |
-| A one-page read on production | 30 to 50 s; the first ~30 s are silent while the model thinks |
+| The English stage sheet (`demo_en`), read live | first red flag **spoken at ~13 s**, all three by 16 s, full sheet ~39 s. The red flags are said while the medicines are still being written. |
+| The Chinese stage sheet (`demo_zh_hant`) | first red flag ~49 s, full sheet ~65 s. **Read it at the table before you walk up** and leave it in 記錄 as the earlier sheet. Never promise a fast Chinese read on stage. |
 | A two-page read | about 3 minutes. **Demo with one page.** |
-| A question, warm | 4 to 7 s; the first sentence is spoken before the rest is written |
+| A question, warm | 4 to 9 s; the first sentence is spoken before the rest is written. A refusal is under 1 s: no model call. |
 | First request after a few idle minutes | 75 to 80 s. **The warm-up is not optional.** |
-| Live eval, current build | 20 of 20 outcomes on the 1.2.0 rubric, zero banned terms, both dialects |
+| Live eval, current build | 20 of 20 in Cantonese and 20 of 20 in Mandarin on the deployed build (5 Sept), zero banned terms; the six stage questions on `demo_en` all correct on production. Timed click-list: `docs/demo-plan.md`. |
 
 ---
 
@@ -36,14 +37,16 @@ of talking, the phone on screen for most of it, slides as a backdrop, the rest f
 - **Tap 明白，開始 before you are on.** That tap unlocks audio on iOS and clears the consent gate.
 - **Hold the bar once and grant the microphone before you are on.** The first hold of a session is
   lost to the iOS permission sheet, every time.
-- **Warm it up two minutes before you are called**: open 用示範紙, ask one throwaway question, wait
-  for the answer, then clear the sample sheet. Skip this and your first live question is 80
-  seconds of silence.
-- 記錄 empty, no active sheet. Ring/silent switch OFF. Volume up, speaker toggle ON.
+- **Warm it up ten minutes before you are called**: photograph `demo_zh_hant`, let the read land
+  (~65 s), then ask 「幾時覆診？」 and wait for the answer. That read is the warm-up and the Chinese
+  sheet stays in 記錄 as the earlier sheet. **Do not clear 記錄.** Skip this and your first live
+  question is 80 seconds of silence.
+- 記錄 showing the Chinese sheet. Ring/silent switch OFF. Volume up, speaker toggle ON.
 - MiniMax balance topped up the day before and one spoken line tried. At zero balance every line
   arrives as text. Emergency switch: `TTS_PROVIDER=browser` in Vercel Production, redeploy.
-- **One** printed synthetic sheet on the table (the English appendicectomy sheet reads fastest).
-  Laptop open with the backup video and the QR slide.
+- **Two** printed sheets from the PDFs: `demo_en` for the live read, `demo_zh_hant` for the table
+  beforehand (both Harbour View Hospital / 港灣醫院, both synthetic). The `demo_en` PNG also in the
+  photo library for 上載相片. Laptop open with the backup video and the QR slide.
 
 ---
 
@@ -87,8 +90,9 @@ already looks lost here, stop and give a second example rather than pushing on.
 Tap **拍張紙**, shoot the sheet, tap **講俾我聽**. Point at the line under the thumbnails:
 「張紙留在你電話。你唔send，冇人睇到」— it stays on the phone.
 
-This is the dead-air slot. The model is thinking for about 30 seconds and the screen shows
-nothing. Never stand in silence. Use slide 5 and say the model-versus-code point:
+You have about 13 seconds before the first red flag is spoken, and the whole sheet lands at
+about 39 s. The screen says he is reading. Never stand in silence: use slide 5 and say the
+model-versus-code point, then stop the moment he speaks:
 
 - Two things are the model: reading a page of clinical abbreviations into fields, copied
   character for character, and writing the sentence a daughter would say to her mother.
@@ -97,6 +101,11 @@ nothing. Never stand in silence. Use slide 5 and say the model-versus-code point
   screen. Take the model away and you have a rulebook with nothing to read.
 
 Cut this the moment 明明 starts talking. He is the demo; you are filler.
+
+The timed click-list for the two stage sheets, with six questions verified on production today, is
+`docs/demo-plan.md`; follow it on stage. The table below says what each beat proves. Its 白色嗰粒
+(not on the sheet) and 頭暈 (a boundary) questions are the two reply kinds the run-of-show does not
+show; add them if there is time.
 
 ---
 
@@ -160,9 +169,9 @@ Each is one sentence of problem, one of fix.
 4. **The safety filter hid a printed warning** ("blood sugar below 4.0 mmol/L" became "look at
    the sheet"). Now a number the page prints on the cited line passes; every other number is still
    blocked.
-5. **Thirty seconds of silence** while it reads. Now he says he's reading, and an answer is spoken
-   the moment its first sentence is written, through the same checks, while the other languages
-   finish behind it.
+5. **Thirty seconds of silence** while it reads. Now the red flags are spoken as each one closes
+   in the stream, about 13 s in on the English sheet, and an answer is spoken the moment its first
+   sentence is written, through the same checks, while the rest finishes behind it.
 6. **"Twice a day" became "8am"** in the design mock-up. Now counters count times a day, quote the
    printed clause, and a test sweeps every screen for anything shaped like a clock time.
 
