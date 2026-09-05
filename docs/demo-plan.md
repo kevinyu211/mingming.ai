@@ -13,7 +13,7 @@ Print both from the PDFs. Keep them flat, matte, on a plain table, under even li
 | Story | 68F, pneumonia, Harbour View Hospital, English | 76M, heart failure, 港灣醫院, Traditional Chinese |
 | Medicines | Amoxicillin-Clavulanate 1g BD after food 5d · Paracetamol 500mg 2 tabs QID PRN 5d · Amlodipine 5mg daily 28d · Simvastatin 20mg nocte 28d | Frusemide 40mg 每朝一次 · Bisoprolol 2.5mg 每日一次 · Spironolactone 25mg 早餐後 · Apixaban 5mg 每日兩次 |
 | Stopped | Diclofenac 50mg TDS (must never be scheduled) | Indapamide 2.5mg |
-| Warning signs | shortness of breath at rest or lying flat · fever back above 38 · chest pain that does not go away | 平臥時氣促或夜間喘醒 · 體重兩日升1.5公斤或腳腫加劇 · 胸口痛持續不退 |
+| Warning signs | shortness of breath at rest or lying flat · coughing up blood · chest pain that does not go away after resting | 平臥時氣促或夜間喘醒 · 雙腳水腫明顯加劇 · 胸口痛持續不退 |
 | Follow-up | MED SOPD 07-10-2026 10:15 · **fasting** bloods 30-09-2026 08:00 | 內科專科門診 2026-10-14 09:30 · 空腹抽血 2026-10-07 08:00 |
 | Diet / activity | low salt, no soy sauce at the table / no heavy lifting 2 weeks | 低鹽 / 室內慢行，兩星期內避免搬重物 |
 | Ward phone | Ward 5B 2xxx xxxx | 6B病房 2xxx xxxx |
@@ -56,6 +56,34 @@ keeps several sheets.
 | 4:10 | Close: the ask (docs/demo-script.md) | | the QR slide |
 
 Talk under the phone, not over it. When 明明 is speaking, stop.
+
+## The questions, in order, with what happens
+
+All measured on production against the English demo sheet, warm, in Cantonese. Say them exactly;
+each one shows a different thing.
+
+| # | Say | Time | What comes back | What it shows |
+| --- | --- | --- | --- | --- |
+| 1 | 出院後要食咩藥？ | 7 s | the four medicines, strength, dose and timing | reads the list off the page; first sentence spoken before the rest is written |
+| 2 | 有冇其他藥？ | 7 s | 冇喇 — the same four, and Diclofenac was stopped | the conversation remembers the previous turn |
+| 3 | Diclofenac 仲使唔使食？ | 4 s | 唔使喇，住院期間已經停咗 | a stopped drug is known and never scheduled |
+| 4 | 邊隻藥係夜晚食嘅？ | 5 s | Simvastatin 20mg, one at night, 28 days | a question about one card gets one card |
+| 5 | 退燒藥點食？ | 4 s | Paracetamol 500mg, two when feverish, at most four times a day, 5 days | the whole printed instruction, verbatim, PRN included |
+| 6 | 有咩情況要即刻返急症室？ | 6 s | the three signs: breathless at rest or lying flat, coughing blood, chest pain that does not ease | warning signs, quoted from the page |
+| 7 | 飲食有咩要注意？ | 4 s | low salt, no added salt or soy sauce at the table | the diet line |
+| 8 | 空腹係咩意思？ | 9 s | what fasting means, and that the sheet does not say why | a general word explained, no advice |
+| 9 | BD 係咩意思？ | 6 s | twice a day, usually morning and evening | an abbreviation explained |
+| 10 | 我可唔可以唔食抗生素？ | **under 1 s** | 藥點食、食唔食，張紙冇話得，要問藥劑師 | the guardrail: refused with no model call |
+| 11 | 我係咪好嚴重？ | 7 s | 呢個我答你唔到，要問醫生 — then repeats the three warning signs | the boundary: never assesses the person, still tells her what to watch for |
+| 12 | 幾時覆診？ | 4 s | MED SOPD, 7 Oct 2026, Wed, 10:15, bring the sheet and the drug bags | the appointment; then tap 跟進 to show it in the plan |
+
+For the stage pick six: **1, 2, 3, 8, 10, 12** in that order (list → memory → stopped drug →
+a word explained → the refusal → the appointment). If a judge wants more, 6 and 11 are the two
+that show the safety line best. Keep 4, 5, 7, 9 for Q&A.
+
+Do not ask on stage: anything about a real person, a dose change ("can I take two"), whether
+something is normal, or "what is wrong with me" — the first three are refused on purpose and the
+last is a boundary answer; all correct, none impressive.
 
 ## If something goes wrong
 
