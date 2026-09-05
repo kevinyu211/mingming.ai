@@ -71,3 +71,6 @@ docs/backup-video/
 # Venue-only copies and live-review evidence: kept beside the repo, never in it
 docs/mingming-pitch-deck.html
 docs/review-2026-09-05/
+
+# graphify knowledge graph (10 MB, rebuildable with /graphify)
+graphify-out/
