@@ -93,8 +93,10 @@ are rules is stated on screen (the AI chip, present only on model-written messag
 `model-vs-rules.md`.
 
 The backup video required by `rules.md` section 9 must be **one continuous real run**, not an
-edited montage. It is not in the repository at the time of writing; recording it is a remaining
-task before submission.
+edited montage. One is recorded: `docs/backup-video/mingming-backup-2026-09-05.mp4` (2 min 43 s,
+outside the repository, with a README and a timestamped run log) — a single continuous Playwright-
+driven run of the deployed app at phone viewport, build `394c0ea`, synthetic sheet, every reader
+turn typed, no audio track. A phone recording with the voice, made at the venue, should sit beside it.
 
 Two things about the demo that judges should hear rather than discover:
 
