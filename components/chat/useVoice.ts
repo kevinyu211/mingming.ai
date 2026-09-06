@@ -204,6 +204,10 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
       // Before this, the typing timer alone ended the line, and the next `say` cut the clip.
       const gate = doneGate((result) => {
         if (token.current !== mine) return;
+        // The words stay on screen until the clip has finished too: the page commits the bubble
+        // in `onDone`, so clearing the typing any earlier left the line on no screen at all while
+        // the voice was still saying it.
+        setTyping(null);
         onDone?.(result);
       });
       void utter(text).then((heard) => gate.audio(heard));
@@ -219,7 +223,6 @@ export function useVoice(dialect: Dialect, speakerOn: boolean): Voice {
 
       at(CLAUSE_MS * parts.length + COMMIT_MS, () => {
         if (token.current !== mine) return;
-        setTyping(null);
         gate.typed();
         // A clip that never ends must not freeze the script.
         at(AUDIO_WAIT_CAP_MS, () => gate.audio(false));
