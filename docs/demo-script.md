@@ -43,6 +43,11 @@ of talking, the phone on screen for most of it, slides as a backdrop, the rest f
   sheet stays in 記錄 as the earlier sheet. **Do not clear 記錄.** Skip this and your first live
   question is 80 seconds of silence.
 - 記錄 showing the Chinese sheet. Ring/silent switch OFF. Volume up, speaker toggle ON.
+- **If the page reloads, tap the screen once before you expect sound.** iOS only lets a page play
+  audio on an element a real tap has touched, and a reload throws that away — 明明 carries on
+  typing and the words are all there, but silently until the next tap. Measured on production:
+  after a reload with nothing tapped, the briefing resumed and both clips were refused; one tap
+  anywhere and the next clip played. Do not reload between the warm-up and the stage.
 - MiniMax balance topped up the day before and one spoken line tried. At zero balance every line
   arrives as text. Emergency switch: `TTS_PROVIDER=browser` in Vercel Production, redeploy.
 - **Two** printed sheets from the PDFs: `demo_en` for the live read, `demo_zh_hant` for the table
@@ -145,7 +150,7 @@ twice.
 | Camera | 上載相片 with the photo already in the camera roll | nothing; it's one tap |
 | Network or the model | 用示範紙 | "same flow, bundled sheet, no model call" |
 | Microphone | tap the bar and type | "she can type; a lot of daughters do" |
-| Voice silent | check the ring/silent switch first, then the speaker toggle | nothing |
+| Voice silent | check the ring/silent switch first, then the speaker toggle, then tap the screen once (a reload loses the audio unlock) | nothing |
 | Phone dead | the backup video on the laptop | "recorded on this phone an hour ago, one continuous run" |
 | You want the greeting again for the judges | tap ↺ 從頭講 in the chat header: same sheet, nothing re-read | nothing |
 
