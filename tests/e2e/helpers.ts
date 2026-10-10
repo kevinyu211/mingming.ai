@@ -42,7 +42,7 @@ import type {
   Speakable,
   StoredReading,
 } from "../../lib/domain/schemas";
-import { UI } from "../../lib/i18n/ui";
+import { UI, UI_LOCALES } from "../../lib/i18n/ui";
 import { buildCards } from "../../lib/rules/card-order";
 import { applyDietRules } from "../../lib/rules/diet-line";
 import { draftPlan } from "../../lib/rules/plan-from-reading";
@@ -645,12 +645,20 @@ export async function expectNoHorizontalScroll(page: Page): Promise<void> {
  * prescribing. This walks the rendered text rather than one element, because the rule is about the
  * whole screen: a time that leaked into a card heading is as wrong as one inside a counter.
  *
- * `allowed` is for the timestamps that are legitimately times — 明明's in-app message stamp on 記錄
- * is the only one, and it is a fact about the thread, not about a medicine.
+ * `allowed` is for timestamps that are legitimately times — 明明's in-app message stamp on 記錄
+ * is a fact about the thread, not about a medicine. The 跟進 greeting (早晨 / 午安 / 晚上好)
+ * is the other exception: a fact about the phone's clock (`TrackScreen.greetingKey`), not a
+ * dose time. Without stripping it, this sweep flakes after 18:00 on 「晚上好」.
  */
 export async function expectNoClockTime(page: Page, allowed: RegExp[] = []): Promise<void> {
   const text = ((await page.locator("body").textContent()) ?? "").replace(/\s+/g, " ");
-  const cleaned = allowed.reduce((rest, pattern) => rest.replace(pattern, " "), text);
+  const greetings = UI_LOCALES.flatMap((locale) => [
+    UI[locale]["companion.morning"],
+    UI[locale]["companion.afternoon"],
+    UI[locale]["companion.evening"],
+  ]);
+  const withoutGreeting = greetings.reduce((rest, line) => rest.split(line).join(" "), text);
+  const cleaned = allowed.reduce((rest, pattern) => rest.replace(pattern, " "), withoutGreeting);
 
   const forbidden: { name: string; pattern: RegExp }[] = [
     { name: "a clock time (12:30, 8am, 8 pm)", pattern: /\d{1,2}\s*[:：]\s*\d{2}|\b\d{1,2}\s*[ap]\.?m\.?/i },
