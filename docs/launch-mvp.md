@@ -85,6 +85,8 @@ npm test
 npm run typecheck
 npm run lint
 npm run e2e
+# the stitched 3-minute walk only:
+npx playwright test tests/e2e/launch-mvp.spec.ts
 ```
 
 Browser checks that matter for this cut:
