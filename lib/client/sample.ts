@@ -1,7 +1,7 @@
 /**
  * The bundled sample sheets (FR-023, FR-024).
  *
- * Three synthetic readings ship with the app so the whole flow can be shown when the camera is
+ * Synthetic readings ship with the app so the whole flow can be shown when the camera is
  * unavailable, the network is gone, or the reading service is down — and so a judge can see the
  * product in two taps. They are the same fixtures the unit tests parse, which is the point: the
  * demo path and the tested path are one path.
@@ -10,6 +10,10 @@
  * what the read route would have done afterwards: the deterministic diet rules, the fixed card
  * order, and one defensive pass of the banned-term filter (constitution principles III and VI).
  * `sample: true` is set here so the banner cannot be forgotten.
+ *
+ * Launch MVP keeps two first-class demo paths on 記錄: the English stage sheet and the Hong Kong
+ * Traditional Chinese stage sheet. The three older fixtures stay loadable so existing fallbacks
+ * and `?sample=` links keep working.
  */
 import { SheetReadingSchema, type Card, type StoredReading } from "@/lib/domain/schemas";
 import { checkCard } from "@/lib/rules/banned-terms";
@@ -17,10 +21,13 @@ import { buildCards } from "@/lib/rules/card-order";
 import { applyDietRules } from "@/lib/rules/diet-line";
 import { templateFor } from "@/lib/rules/template-fallback";
 
-/** The three fixtures from `fixtures/sheets/`. */
-export type SampleId = "hk_en" | "cn_zh" | "cn_zh_photo";
+/** The three fixtures from `fixtures/sheets/` plus the two launch stage sheets. */
+export type SampleId = "hk_en" | "cn_zh" | "cn_zh_photo" | "demo_en" | "demo_zh_hant";
 
-export const SAMPLE_IDS: SampleId[] = ["hk_en", "cn_zh", "cn_zh_photo"];
+export const SAMPLE_IDS: SampleId[] = ["hk_en", "cn_zh", "cn_zh_photo", "demo_en", "demo_zh_hant"];
+
+/** The two paths Kevin can finish in under three minutes without a camera or a live model. */
+export const LAUNCH_SAMPLES = ["demo_en", "demo_zh_hant"] as const satisfies readonly SampleId[];
 
 /** The sheet offered by every "use a sample sheet" button: the Hong Kong English demo case. */
 export const DEFAULT_SAMPLE: SampleId = "hk_en";
@@ -31,7 +38,13 @@ export interface SampleReading {
 }
 
 export function isSampleId(value: string | null | undefined): value is SampleId {
-  return value === "hk_en" || value === "cn_zh" || value === "cn_zh_photo";
+  return (
+    value === "hk_en" ||
+    value === "cn_zh" ||
+    value === "cn_zh_photo" ||
+    value === "demo_en" ||
+    value === "demo_zh_hant"
+  );
 }
 
 /**
@@ -46,6 +59,10 @@ async function loadFixture(id: SampleId): Promise<unknown> {
       return (await import("@/fixtures/sheets/cn_zh.expected.json")).default;
     case "cn_zh_photo":
       return (await import("@/fixtures/sheets/cn_zh_photo.expected.json")).default;
+    case "demo_en":
+      return (await import("@/fixtures/demo/demo_en.expected.json")).default;
+    case "demo_zh_hant":
+      return (await import("@/fixtures/demo/demo_zh_hant.expected.json")).default;
   }
 }
 

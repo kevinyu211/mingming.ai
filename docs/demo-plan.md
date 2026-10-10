@@ -29,7 +29,8 @@ keeps several sheets.
 
 1. Phone on **https://mingming.app**. Not a preview URL.
 2. Tap 明白，開始 (unlocks audio). Hold the bar once and grant the microphone (the first hold of a
-   session is always eaten by the iOS permission sheet).
+   session is always eaten by the iOS permission sheet). If you only need the three-minute happy
+   path, skip the camera and tap **英文示範紙** on 記錄.
 3. **Read the Chinese sheet now**: 影相 → photograph `demo_zh_hant` → wait the ~65 s → let 明明
    speak the first red flag, then tap through or let it run. It is now the active sheet.
 4. Ask one throwaway question (「幾時覆診？」) and wait for the answer. This is the warm-up; the first

@@ -58,9 +58,10 @@ describe("the v2 three-tab flow has every string it needs", () => {
   const V2_KEYS: UiKey[] = [
     "tab.record", "tab.chat", "tab.track", "tab.navLabel", "tab.chatPending",
     "mascot.name",
-    "settings.companion", "settings.companionHint",
+    "settings.companion", "settings.companionHint", "settings.honesty", "settings.honestyBody",
     "mascot.cat", "mascot.panda", "mascot.puppy", "mascot.rabbit",
-    "home.title", "home.emptySubtitle", "home.emptyMascot", "home.nowTalking", "home.pages",
+    "home.title", "home.emptySubtitle", "home.emptyMascot", "home.demoLead", "home.demoEn",
+    "home.demoZh", "home.nowTalking", "home.pages",
     "home.medicines", "home.chatNotStarted", "home.chatPartway", "home.chatDone",
     "home.dosesLeft", "home.dosesDone", "home.older", "home.readOnly",
     "capture.photo", "capture.photoSub", "capture.upload", "capture.uploadSub",
@@ -277,6 +278,54 @@ describe("the data statement", () => {
       transcription: "Ears Z",
     });
     expect(statement).toContain("model Model X; voice Voice Y; transcription Ears Z.");
+  });
+});
+
+describe("launch MVP honesty: the photographed page does not stay on the phone", () => {
+  /**
+   * The image leaves Hong Kong to be read. A home or capture line that says it stays is a
+   * false privacy promise (constitution V is about the profile and discarding the photo after
+   * the read, not about never sending it).
+   */
+  const DISHONEST = [
+    "張紙留在你電話",
+    "这张纸留在你手机里",
+    "你影嘅嘢淨係留喺呢部電話",
+    "你拍的东西只留在这部手机里",
+    "你唔send，冇人睇到",
+    "你不发出去，没人看得到",
+    "The page stays on your phone",
+    "What you photograph stays on this phone",
+    "Nobody sees it unless you send it",
+  ];
+
+  it("does not tell the reader the photographed sheet stays on the phone", () => {
+    const failures: string[] = [];
+    for (const locale of UI_LOCALES) {
+      for (const key of UI_KEYS) {
+        const value = UI[locale][key];
+        for (const phrase of DISHONEST) {
+          if (value.includes(phrase)) failures.push(`${locale}.${key} → ${phrase}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  it("says on the capture / home notice that the page leaves Hong Kong", () => {
+    expect(UI.hant["review.onDevice"]).toContain("香港以外");
+    expect(UI.hans["review.onDevice"]).toContain("香港以外");
+    expect(UI.en["review.onDevice"]).toMatch(/outside Hong Kong/i);
+  });
+
+  it("never claims clinical accuracy or that 明明 replaces a nurse explaining", () => {
+    for (const locale of UI_LOCALES) {
+      expect(UI[locale]["settings.honestyBody"]).toMatch(/護士|护士|nurse/i);
+      expect(UI[locale]["agentLimits.cannot"]).toMatch(/護士|护士|nurse/i);
+    }
+    expect(UI.en["settings.honestyBody"]).toMatch(/does not claim the reading is accurate/i);
+    expect(UI.en["settings.honestyBody"]).toMatch(/does not replace a nurse explaining/i);
+    expect(UI.en["agentLimits.cannot"]).toMatch(/will not/i);
   });
 });
 

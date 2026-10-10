@@ -719,6 +719,11 @@ export async function briefingPhase(page: Page): Promise<string | null> {
  */
 export async function sayUnderstood(page: Page, locale: "hant" | "hans" = "hant"): Promise<void> {
   await expect.poll(() => briefingPhase(page), { timeout: SECTION }).toBe("waiting");
+  const button = page.getByRole("button", { name: UI[locale]["brief.understand"], exact: true });
+  if ((await button.count()) > 0) {
+    await button.click();
+    return;
+  }
   await askQuestion(page, "明白", locale);
 }
 

@@ -2,8 +2,8 @@
  * `/chat` — the conversation with 明明, end to end (v2 build brief §6).
  *
  * What is worth proving in a browser rather than in a unit test is the *sequence*: that the red
- * flags are said before anything else, that the script plays itself to the end with no button to
- * press, that what the microphone hears appears in the thread before it is sent, that a refusal
+ * flags are said before anything else, that the script waits for 明白 before the next section,
+ * that what the microphone hears appears in the thread before it is sent, that a refusal
  * lands in the thread instead of on another screen, and that a question never reaches the network
  * when a rule has already answered it.
  *
@@ -128,15 +128,13 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
       page.getByRole("button", { name: UI.hant["card.sourceLink"] }).first(),
     ).toBeVisible();
 
-    // 3. Teach-back is asked ONCE, in words, inside the same bubble, and there is no button to
-    //    press to make it continue — the reader answers in the bar.
+    // 3. Teach-back is asked in words, and 明白 / 再講一次 stay on screen so the wait sticks.
     await expect(page.getByText(UI.hant["ask.warn"], { exact: false })).toBeVisible({
       timeout: BEAT,
     });
     await expect(page.getByText(UI.hant["ask.warn"], { exact: false })).toHaveCount(1);
-    for (const gone of ["brief.understand", "brief.repeat"] as const) {
-      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
-    }
+    await expect(page.getByRole("button", { name: UI.hant["brief.understand"], exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: UI.hant["brief.repeat"], exact: true })).toBeVisible();
     // And still nothing past the red flags until that answer comes.
     await expect(page.getByText(pieces[0].body.yue, { exact: false })).toHaveCount(0);
   });
@@ -154,7 +152,7 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
     ).toBeVisible();
   });
 
-  test("the script reaches the end one answered section at a time, with nothing to press", async ({
+  test("the script reaches the end one answered section at a time, waiting for 明白", async ({
     page,
   }) => {
     test.setTimeout(BRIEFING_TIMEOUT * 2);
@@ -176,10 +174,8 @@ test.describe("The sheet arrives as a conversation, red flags first", () => {
         .replace("{total}", String(medicines.length));
       await expect(page.getByText(lead, { exact: false })).toHaveCount(1);
     }
-    // There is no button that continues the script; only the reader's answer does.
-    for (const gone of ["brief.understand", "brief.repeat"] as const) {
-      await expect(page.getByRole("button", { name: UI.hant[gone], exact: true })).toHaveCount(0);
-    }
+    // Teach-back buttons belong to a wait, not to the closing line.
+    await expect(page.getByRole("button", { name: UI.hant["brief.understand"], exact: true })).toHaveCount(0);
 
     // Every bubble that quotes printed lines still offers them (constitution IV). A bubble is a
     // section now: the red flags share one, so their three quotes sit behind one button, and

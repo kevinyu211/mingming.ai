@@ -16,7 +16,7 @@ const hant = {
   // --- S1 Consent gate -----------------------------------------------------
   "consent.title": "呢個係示範用嘅資料",
   "consent.body1": "入面用嘅出院紙都係我哋自己寫嘅示範紙，唔係真人嘅。",
-  "consent.body2": "你影嘅嘢淨係留喺呢部電話。冇名，冇病名，冇戶口。",
+  "consent.body2": "稱呼同計劃淨係留喺呢部電話。冇名，冇病名，冇戶口。",
   "consent.button": "明白，開始",
 
   // --- S2 Session language -------------------------------------------------
@@ -136,6 +136,9 @@ const hant = {
   "settings.deleted": "全部刪咗喇。",
   "settings.companion": "明明",
   "settings.companionHint": "揀隻動物。明明即係「清楚」。",
+  "settings.honesty": "老實講",
+  "settings.honestyBody":
+    "明明係幫你聽明張紙寫咗咩，唔係護士講解，亦唔會聲稱讀得準。藥物點食、食唔食，要問返醫生或者藥劑師。",
 
   // --- S10 Fallbacks -------------------------------------------------------
   "fallback.noVoice": "睇字",
@@ -183,6 +186,9 @@ const hant = {
   "home.title": "記錄",
   "home.emptySubtitle": "出院張紙，拍咗或者揀相俾我睇。",
   "home.emptyMascot": "仲未有紙。拍完我就即刻講俾你聽。",
+  "home.demoLead": "想先睇下點運作？",
+  "home.demoEn": "英文示範紙",
+  "home.demoZh": "繁中示範紙",
   "home.nowTalking": "傾緊呢張",
   "home.pages": "{n} 頁",
   "home.medicines": "{n} 隻藥",
@@ -229,7 +235,7 @@ const hant = {
   "review.subtitle": "矇嘅可以再拍",
   "review.retake": "再拍",
   "review.addPage": "加一頁",
-  "review.onDevice": "張紙留在你電話。你唔send，冇人睇到。",
+  "review.onDevice": "張紙會傳去香港以外讀，讀完即刻掉。稱呼淨係留喺你電話。",
   "review.start": "講俾我聽",
 
   // --- V2 Reading ----------------------------------------------------------
@@ -453,7 +459,7 @@ const hant = {
   "cautionSuffix": "AI 寫嘅，可能有錯。",
   "agentLimits.title": "佢做到啲咩",
   "agentLimits.can": "佢會做：讀出張紙、答張紙上面嘅嘢、數住今日仲有幾多次藥。",
-  "agentLimits.cannot": "佢唔會做：唔會斷症、唔會改藥、唔會幫你聯絡任何人。",
+  "agentLimits.cannot": "佢唔會做：唔會斷症、唔會改藥、唔會當護士講解、唔會聲稱讀得準、唔會幫你聯絡任何人。",
 } as const;
 
 export type UiKey = keyof typeof hant;
@@ -461,7 +467,7 @@ export type UiKey = keyof typeof hant;
 const hans: Record<UiKey, string> = {
   "consent.title": "这里用的是示范资料",
   "consent.body1": "里面的出院纸都是我们自己写的示范纸，不是真人的。",
-  "consent.body2": "你拍的东西只留在这部手机里。没有名字，没有病名，没有账号。",
+  "consent.body2": "称呼和计划只留在这部手机里。没有名字，没有病名，没有账号。",
   "consent.button": "明白，开始",
 
   "language.question": "妈妈听哪种话？",
@@ -568,6 +574,9 @@ const hans: Record<UiKey, string> = {
   "settings.deleted": "全部删掉了。",
   "settings.companion": "明明",
   "settings.companionHint": "选一只动物。明明就是「清楚」。",
+  "settings.honesty": "老实说",
+  "settings.honestyBody":
+    "明明是帮你听明白纸上写了什么，不是护士讲解，也不会声称读得准。药怎么吃、吃不吃，要问回医生或者药剂师。",
 
   "fallback.noVoice": "看文字",
   "fallback.noVoiceNote": "现在出不了声音，内容在下面看得到。",
@@ -594,6 +603,9 @@ const hans: Record<UiKey, string> = {
   "home.title": "记录",
   "home.emptySubtitle": "出院这张纸，拍一张或者选张照片给我看。",
   "home.emptyMascot": "还没有纸。拍好我就马上讲给你听。",
+  "home.demoLead": "想先看看怎么运作？",
+  "home.demoEn": "英文示范纸",
+  "home.demoZh": "繁中示范纸",
   "home.nowTalking": "在聊这张",
   "home.pages": "{n} 页",
   "home.medicines": "{n} 种药",
@@ -636,7 +648,7 @@ const hans: Record<UiKey, string> = {
   "review.subtitle": "模糊的可以重拍",
   "review.retake": "重拍",
   "review.addPage": "加一页",
-  "review.onDevice": "这张纸留在你手机里。你不发出去，没人看得到。",
+  "review.onDevice": "这张纸会传到香港以外去读，读完马上丢掉。称呼只留在你手机里。",
   "review.start": "讲给我听",
 
   // --- V2 Reading ----------------------------------------------------------
@@ -811,13 +823,13 @@ const hans: Record<UiKey, string> = {
   "cautionSuffix": "AI 写的，可能有错。",
   "agentLimits.title": "它做得到什么",
   "agentLimits.can": "它会做：念出这张纸、回答纸上有的内容、数着今天还有几次药。",
-  "agentLimits.cannot": "它不会做：不会判断病情、不会改药、不会替你联系任何人。",
+  "agentLimits.cannot": "它不会做：不会判断病情、不会改药、不会当作护士讲解、不会声称读得准、不会替你联系任何人。",
 };
 
 const en: Record<UiKey, string> = {
   "consent.title": "This is a demo with made-up sheets",
   "consent.body1": "Every discharge sheet in here was written by us as a sample. None of it is real.",
-  "consent.body2": "What you photograph stays on this phone. No names, no illness names, no account.",
+  "consent.body2": "The word you chose and the plan stay on this phone. No names, no illness names, no account.",
   "consent.button": "Got it, start",
 
   "language.question": "Which language does she listen in?",
@@ -931,6 +943,9 @@ const en: Record<UiKey, string> = {
   "settings.deleted": "All gone.",
   "settings.companion": "Ming Ming",
   "settings.companionHint": "Pick an animal. Ming Ming means “clear.”",
+  "settings.honesty": "What this is not",
+  "settings.honestyBody":
+    "Ming Ming helps you hear what the sheet says. It does not replace a nurse explaining it, and it does not claim the reading is accurate. Whether to take a medicine is a question for a doctor or pharmacist.",
 
   "fallback.noVoice": "Read it instead",
   "fallback.noVoiceNote": "No voice right now. The words are below.",
@@ -958,6 +973,9 @@ const en: Record<UiKey, string> = {
   "home.title": "Sheets",
   "home.emptySubtitle": "Photograph the discharge sheet, or pick a photo of it.",
   "home.emptyMascot": "No sheet yet. Photograph one and I'll read it to you straight away.",
+  "home.demoLead": "Want to see how it works first?",
+  "home.demoEn": "English sample sheet",
+  "home.demoZh": "Traditional Chinese sample sheet",
   "home.nowTalking": "The sheet we're on",
   "home.pages": "{n} pages",
   "home.medicines": "{n} medicines",
@@ -1001,7 +1019,7 @@ const en: Record<UiKey, string> = {
   "review.subtitle": "Anything blurry can be shot again",
   "review.retake": "Retake",
   "review.addPage": "Add a page",
-  "review.onDevice": "The page stays on your phone. Nobody sees it unless you send it.",
+  "review.onDevice": "The page is sent outside Hong Kong to be read, then discarded. Your chosen word stays on this phone.",
   "review.start": "Read it to me",
 
   // --- V2 Reading ----------------------------------------------------------
@@ -1178,7 +1196,7 @@ const en: Record<UiKey, string> = {
   "agentLimits.can":
     "It will: read the sheet out, answer questions about what is on the sheet, and count how many doses are left today.",
   "agentLimits.cannot":
-    "It will not: say what is wrong with anyone, change any medicine, or contact anyone for you.",
+    "It will not: say what is wrong with anyone, change any medicine, replace a nurse explaining the sheet, claim the reading is accurate, or contact anyone for you.",
 };
 
 export const UI: Record<UiLocale, Record<UiKey, string>> = { hant, hans, en };
