@@ -82,6 +82,38 @@ test.describe("Consent and the disclaimer (V1)", () => {
     await expect(gate).toHaveCount(0);
     await expectHomeScreen(page);
     await expectDisclaimer(page);
+    await expect(page.getByText(UI.hant["review.onDevice"], { exact: true })).toBeVisible();
+    await expect(page.getByText(UI.hant["review.onDevice"])).toContainText("香港以外");
+    await expect(page.getByRole("link", { name: UI.hant["home.demoEn"], exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: UI.hant["home.demoZh"], exact: true })).toBeVisible();
+  });
+
+  test("the English demo path lands in 記錄 as a conversation with teach-back", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
+    await seedConsent(page);
+    await noSpeechInput(page);
+    await page.goto("/");
+    await page.getByRole("link", { name: UI.hant["home.demoEn"], exact: true }).click();
+    await expectGreeting(page);
+    await expect(page.getByRole("button", { name: UI.hant["brief.understand"], exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
+    await sayUnderstood(page);
+    await expect(page.getByText(UI.hant["brief.warnLead"], { exact: false })).toBeVisible({
+      timeout: BEAT,
+    });
+  });
+
+  test("the Traditional Chinese demo path lands the same way", async ({ page }) => {
+    test.setTimeout(BRIEFING_TIMEOUT);
+    await seedConsent(page);
+    await noSpeechInput(page);
+    await page.goto("/");
+    await page.getByRole("link", { name: UI.hant["home.demoZh"], exact: true }).click();
+    await expectGreeting(page);
+    await expect(page.getByRole("button", { name: UI.hant["brief.understand"], exact: true })).toBeVisible({
+      timeout: BEAT,
+    });
   });
 
   test("the disclaimer footer is on every screen the demo visits", async ({ page }) => {

@@ -277,8 +277,9 @@ conversation got to); then 以前嘅 (N) collapsing into read-only rows marked �
 **Capture.** `/capture` is the camera; 上載相片 opens a multi-select picker. Ceiling is **6 pages**
 and it is stated in all three places it can bite: the picker subtitle, the dimmed thumbnails once
 you reach it, and the camera hint 「夠 6 頁喇，按「完成」」 with a spent shutter. A medical document
-is never silently truncated. Review shows every page with 再拍 and 加一頁, the on-device notice
-「張紙留在你電話。你唔send，冇人睇到。」, and 講俾我聽 which starts the read.
+is never silently truncated. Review shows every page with 再拍 and 加一頁, the honest notice that the page is sent outside Hong Kong to be read then discarded
+(`review.onDevice` — the launch cut never claims the photograph stays on the phone;
+see `docs/launch-mvp.md`), and 講俾我聽 which starts the read.
 
 The reading screen is the transitional state while `/api/read` streams. Keep the existing
 `lib/client/read-stream.ts` wiring and its failure states (502 → offer the bundled sample, 422 →

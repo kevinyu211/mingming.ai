@@ -1,18 +1,36 @@
 # Ming Ming · 明明 — the discharge sheet, explained out loud
 
 **Team: Fit or Not** (Kevin Yue) · AIx Origin Summit 2026, Hong Kong · **Vital (Soft Healthcare) track**
-**Live:** https://mingming.app (open on a phone) · Progress note for Checkpoint 1: `docs/submission/checkpoint-1.md`
+**Live:** https://mingming.app (open on a phone) · Launch cut: `docs/launch-mvp.md`
 
-Photograph a hospital discharge sheet (Hong Kong English or mainland 出院记录) and 明明 — a companion
-character — reads it to you as a conversation in Cantonese, Mandarin or English: warning signs first,
-one medicine per turn, waiting for 「明白」 before going on. Ask it anything; every answer traces to a
-printed line, general terms are explained with a label, and anything that would change what you DO
-with a medicine is refused before a model is called. Then 跟進 keeps the day: doses counted in
-times (never clock times), the printed appointment, the warning signs, and what you went through.
+Photograph a hospital discharge / clinic sheet on a phone. 明明 reads it aloud in Cantonese,
+Mandarin or English, waits for **明白**, refuses start/stop and 「可唔可以唔食？」, and turns the
+printed follow-ups into 跟進. It is a **sheet companion for a Hong Kong carer (or patient)** —
+understand the paper, not dose it.
+
+## Launch MVP (do not widen)
+
+Steven's four, and only these:
+
+1. **On-phone sheet photo → 記錄** — English and 繁中 demo paths on the empty 記錄 screen
+   (`英文示範紙` / `繁中示範紙`), plus 拍張紙 / 上載相片 for a real page.
+2. **Read-aloud + teach-back that sticks** — 明明 speaks, then waits. 明白 / 再講一次 stay on
+   screen; saying 「明白」 still works.
+3. **Hard refusals + Settings honesty** — medicine-change questions never reach a model.
+   Settings states this is not a nurse explaining the sheet and does not claim clinical
+   accuracy, then names the vendors and that the page leaves Hong Kong.
+4. **One happy path under three minutes** — consent → demo sheet → 明白 → 「可唔可以唔食？」 →
+   跟進 → 設定. Step-by-step in `docs/launch-mvp.md`.
+
+**Soft Healthcare boundary:** photo → hear 粵/中/英 → teach-back → refuse start/stop → clear
+follow-ups. No eHealth sync, no A&E product, no diagnosis, no dose advice. Never tell the reader
+the photographed page “stays on the phone”: it is sent outside Hong Kong to be read, then
+discarded. The profile stays on the device.
 
 "聽得明" was the working title. The repository is https://github.com/kevinyu211/mingming.ai (renamed from
 `discharge-sheet-agent`, which still redirects); the Vercel project keeps the old name.
 
+- Launch MVP: `docs/launch-mvp.md`
 - Spec, plan, research and tasks: `specs/001-discharge-sheet-agent/`
 - Constitution (the non-negotiable rules): `.specify/memory/constitution.md`
 - Design brief: `design.md` · Rulebook: `rules.md` · Provider tests: `provider_shortlist.md`
@@ -26,8 +44,9 @@ cp .env.example .env.local   # then set AI_GATEWAY_API_KEY (a `vercel env pull` 
 npm run dev
 ```
 
-Open the LAN URL on a phone. Without an API key the model routes return 502 and the app offers the
-bundled sample sheets (`/chat?sample=hk_en`), which exercise the whole UI.
+Open the LAN URL on a phone. Without an API key the model routes return 502; the empty 記錄 screen
+still has **英文示範紙** and **繁中示範紙** (`/chat?sample=demo_en`, `/chat?sample=demo_zh_hant`),
+which exercise the whole UI with no network.
 
 ## Scripts
 

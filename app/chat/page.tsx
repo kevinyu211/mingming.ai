@@ -10,12 +10,10 @@
  *
  * ── What changed from the first build, and why ───────────────────────────────────────────────
  *
- * It stopped after every card and waited for a 明白 button. That is not a conversation, it is a
- * form with a progress bar, and it read as an interrogation: 明唔明？ 明唔明？ 明唔明？ So the
- * briefing is a **script that plays itself** now (`buildBeats`): a greeting, the red flags one at a
- * time, ONE teach-back question with no button behind it, then the rest of the page with a quiet
- * connective in front of each run, then a closing line. The reader takes the floor by holding the
- * bar, at any point, which is what stops the talking — not a button that exists to be pressed.
+ * The briefing is a **script** (`buildBeats`): a greeting, the red flags first, then the rest of
+ * the page one section at a time. After every section 明明 asks and **waits**. Launch MVP puts
+ * 明白 / 再講一次 back on that wait so teach-back sticks as a tap, not only as a spoken word.
+ * Holding the bar still takes the floor at any point.
  *
  * ── What is a rule here and what is a model turn ─────────────────────────────────────────────
  *
@@ -70,7 +68,7 @@ import {
   SpeakingBubble,
   TypingBubble,
 } from "@/components/chat/Bubbles";
-import { CheckinPrompt } from "@/components/chat/Prompts";
+import { CheckinPrompt, UnderstandPrompt } from "@/components/chat/Prompts";
 import {
   OPENING_MS,
   type Beat,
@@ -90,7 +88,7 @@ import { useVoice } from "@/components/chat/useVoice";
 import { ask } from "@/lib/client/ask-stream";
 import { readSheet, type ImageInput } from "@/lib/client/read-stream";
 import type { ReadProgressPhase } from "@/lib/domain/read-policy";
-import { DEFAULT_SAMPLE, isSampleId, loadSampleReading } from "@/lib/client/sample";
+import { DEFAULT_SAMPLE, isSampleId, loadSampleReading, type SampleId } from "@/lib/client/sample";
 import type { Card, SourceReference, StoredReading } from "@/lib/domain/schemas";
 import { downscale } from "@/lib/image/downscale";
 import { scriptForDialect, toScript } from "@/lib/i18n/script";
@@ -99,6 +97,7 @@ import { memoryBrief, rememberExchange, rememberReading } from "@/lib/memory";
 import { cardTitle } from "@/lib/rules/card-order";
 import { crisisReferral, detectCrisis } from "@/lib/rules/crisis";
 import { remaining } from "@/lib/rules/doses";
+import { unlockAudio } from "@/lib/speech/tts";
 import { detectMedicineChange } from "@/lib/rules/refusal";
 import { REFUSED_MEDICINE_CHANGE } from "@/lib/rules/template-fallback";
 import { detectShareIntent } from "@/lib/share/card";
@@ -478,6 +477,26 @@ function ChatScreen() {
     },
     [beats],
   );
+
+  /** Tap 明白: the same continue path as saying the word, so the recap counts it. */
+  const onUnderstand = useCallback(() => {
+    unlockAudio();
+    const live = loadSheets().active;
+    if (live?.briefing.phase !== "waiting") return;
+    appendMessage({ role: "user", text: t("brief.understand"), origin: "user" });
+    pendingAck.current = display(t("brief.ackContinue"));
+    resumeFrom(live.briefing.step);
+  }, [display, resumeFrom, t]);
+
+  /** Tap 再講一次: replay the section that was just asked about. */
+  const onRepeat = useCallback(() => {
+    unlockAudio();
+    const live = loadSheets().active;
+    if (live?.briefing.phase !== "waiting") return;
+    appendMessage({ role: "user", text: t("brief.repeat"), origin: "user" });
+    pendingAck.current = display(t("brief.ackRepeat"));
+    resumeFrom(sectionStart(live.briefing.step));
+  }, [display, resumeFrom, sectionStart, t]);
 
   /**
    * Starts, or picks up, the script.
@@ -894,7 +913,7 @@ function ChatScreen() {
   /* ------------------------------------------------------- getting a sheet */
 
   const seedSample = useCallback(
-    async (id: typeof DEFAULT_SAMPLE) => {
+    async (id: SampleId) => {
       const { reading: sampleReading, cards: sampleCards } = await loadSampleReading(id);
       // Deliberately NOT `saveReading()`. The top-level `reading` field is the pre-v2 shape, and
       // `lib/sheets/store.ts` reads it only to migrate an old phone forward. Writing it here made
@@ -1386,6 +1405,10 @@ function ChatScreen() {
           <p role="status" className="mb-2.5 px-1 text-fine text-muted">
             {t("chat.nothingHeard")}
           </p>
+        ) : null}
+
+        {phase === "waiting" && !checkinOpen && !asking && !listening && voice.typing === null ? (
+          <UnderstandPrompt onUnderstand={onUnderstand} onRepeat={onRepeat} />
         ) : null}
 
         {checkinOpen ? <CheckinPrompt onTook={onTook} onNotYet={onNotYet} /> : null}

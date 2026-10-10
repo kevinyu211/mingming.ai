@@ -25,6 +25,7 @@ import Mascot from "@/components/Mascot";
 import TabBar, { TAB_BAR_HEIGHT } from "@/components/TabBar";
 import CaptureButtons from "@/components/home/CaptureButtons";
 import CheckinNotice from "@/components/home/CheckinNotice";
+import DemoPaths from "@/components/home/DemoPaths";
 import LanguagePill from "@/components/home/LanguagePill";
 import { homeUnread } from "@/components/home/conversation";
 import OlderSheets from "@/components/home/OlderSheets";
@@ -130,6 +131,7 @@ function EmptyState() {
 
       <div className="mt-9">
         <CaptureButtons size="lg" />
+        <DemoPaths />
       </div>
 
       <div className="flex-1" />

@@ -373,7 +373,7 @@ export default function Capture() {
  * Both assert something that is not happening: this build hands the shutter to the phone's own
  * camera app rather than running a live viewfinder, so nothing here is detecting an edge and
  * nobody is narrating. What survives is what is true — a frame to line the page up inside, a count
- * of what has been taken, and the promise that the photograph stays on this phone.
+ * of what has been taken, and the honest line about the page leaving Hong Kong to be read.
  */
 function CameraChrome({
   pages,
@@ -525,7 +525,7 @@ function CameraChrome({
           {t("capture.upload")}
         </button>
 
-        {/* The one promise worth making at the moment a camera is pointed at a medical document. */}
+        {/* Honest at the moment a camera is pointed at a medical document: the page leaves HK. */}
         <span className="inline-flex items-center gap-2 text-center text-[13px] leading-[1.4] text-muted">
           <LockGlyph />
           {t("review.onDevice")}

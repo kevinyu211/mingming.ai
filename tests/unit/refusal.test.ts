@@ -15,6 +15,8 @@ type Case = [question: string, reason: MedicineChangeReason];
 
 const CANTONESE: Case[] = [
   ["可唔可以唔食？", "skip"],
+  ["我可唔可以唔食抗生素？", "skip"],
+  ["可唔可以唔食呢隻藥？", "skip"],
   ["唔食得唔得？", "skip"],
   ["佢唔想食呢隻藥", "skip"],
   ["可以唔跟住食嗎？", "skip"],
@@ -63,6 +65,7 @@ const MANDARIN: Case[] = [
 
 const ENGLISH: Case[] = [
   ["can she skip tonight's dose?", "skip"],
+  ["can I skip this medicine?", "skip"],
   ["can I not take the tablet?", "skip"],
   ["she doesn't want it — don't take it tonight?", "skip"],
   ["can I stop taking it?", "stop"],

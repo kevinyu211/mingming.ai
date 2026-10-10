@@ -124,6 +124,15 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        <section aria-labelledby="honesty-heading">
+          <h2 id="honesty-heading" className="mb-2 ml-1 text-fine font-semibold text-muted">
+            {t("settings.honesty")}
+          </h2>
+          <div className="surface p-[18px]">
+            <p className="text-body leading-relaxed text-ink">{t("settings.honestyBody")}</p>
+          </div>
+        </section>
+
         <section aria-labelledby="data-statement-heading">
           <h2 id="data-statement-heading" className="mb-2 ml-1 text-fine font-semibold text-muted">
             {t("settings.dataStatement")}

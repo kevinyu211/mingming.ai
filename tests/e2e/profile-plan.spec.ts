@@ -552,10 +552,16 @@ test.describe("Delete everything (V8, Story 2 scenario 4)", () => {
     expect(before?.profile?.label).toBe("阿媽");
     expect(before?.sheets?.active).not.toBeNull();
 
-    // The whole data statement is on the screen, not behind a disclosure (research.md R13).
+    // Soft Healthcare honesty first: not a nurse, not a clinical-accuracy claim, then the
+    // data statement naming vendors and the border (research.md R13).
+    await expect(
+      page.getByRole("heading", { name: UI.hant["settings.honesty"], exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(UI.hant["settings.honestyBody"], { exact: true })).toBeVisible();
     await expect(
       page.getByRole("heading", { name: UI.hant["settings.dataStatement"], exact: true }),
     ).toBeVisible();
+    await expect(page.getByText("香港以外", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(UI.hant["agentLimits.cannot"], { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: UI.hant["settings.delete"], exact: true }).click();

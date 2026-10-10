@@ -94,7 +94,8 @@ already looks lost here, stop and give a second example rather than pushing on.
 ## 1:10 · Photograph it, and talk over the read (up to 60 s) — slide 4
 
 Tap **拍張紙**, shoot the sheet, tap **講俾我聽**. Point at the line under the thumbnails:
-「張紙留在你電話。你唔send，冇人睇到」— it stays on the phone.
+「張紙會傳去香港以外讀，讀完即刻掉」— the page leaves Hong Kong to be read, then is discarded.
+Do not say it stays on the phone.
 
 You have about 13 seconds before the first red flag is spoken, and the whole sheet lands at
 about 39 s. The screen says he is reading. Never stand in silence: use slide 5 and say the
